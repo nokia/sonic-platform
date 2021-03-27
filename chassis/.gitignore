@@ -1,0 +1,15 @@
+*.pyc
+*/*.egg-info/
+*/*.tar.gz
+*/.cache/
+*/.eggs/
+*/__pycache__/
+*/build/
+*/deb_dist/
+*/dist/
+.eggs/
+
+# Unit test / coverage reports
+coverage.xml
+.coverage
+htmlcov/
