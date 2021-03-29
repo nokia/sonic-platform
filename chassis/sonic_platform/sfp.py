@@ -134,7 +134,7 @@ sff8436_parser = {
     'ext_spec_compliance': [INFO_TYPE, 64,  1, 'parse_ext_specification_compliance'],
     'serialnum':        [INFO_TYPE, 68, 16, 'parse_vendor_sn'],
     'vendor_date':      [INFO_TYPE, 84,  8, 'parse_vendor_date'],
-    'dom_monitor_type': [INFO_TYPE, 92,  2, 'parse_qsfp_dom_capability'],
+    'dom_monitor_type': [INFO_TYPE, 92,  2, 'parse_dom_capability'],
     'ModuleThreshold':  [EXT_CTRL_TYPE, 0, 24, 'parse_module_threshold_values'],
     'ChannelThreshold': [EXT_CTRL_TYPE, 48, 24, 'parse_channel_threshold_values'],
 }
@@ -146,7 +146,7 @@ DD_DOM_STRUCT = 2
 qsfpdd_parser = {
     'RevisionCompliance': [CTRL_TYPE,  1, 1, 'parse_rev_compliance', DD_INFO_STRUCT],
     'summary byte2':      [CTRL_TYPE,  2, 1, 'parse_summary_byte_2', DD_INFO_STRUCT],
-    'dom_monitor_type':   [CTRL_TYPE,  2, 1, 'parse_qsfp_dom_capability', DD_INFO_STRUCT],
+    'dom_monitor_type':   [CTRL_TYPE,  2, 1, 'parse_dom_capability', DD_INFO_STRUCT],
     'FW version':         [CTRL_TYPE,  39, 2, 'parse_FW_rev', DD_INFO_STRUCT],
     'temperature':        [CTRL_TYPE,  14,  2, 'parse_temperature', DD_DOM_STRUCT],
     'voltage':            [CTRL_TYPE,  16,  2, 'parse_voltage', DD_DOM_STRUCT],
