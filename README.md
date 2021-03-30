@@ -1,4 +1,4 @@
 Nokia Platform Support for SONiC
 ================================
 
-Nokia pmon implementation uses standard GRPC communication interface between pmon platform-code and Nokia device-drivers.
+SONiC platform monitoring implementation for Nokia's data center hardwares.
