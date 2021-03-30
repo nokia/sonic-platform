@@ -1,0 +1,12 @@
+{
+    "options": [
+    {
+        "key": "sfp_init_tx_en",
+        "stringval": "yes"
+    },
+    {
+        "key": "midplane_subnet",
+        "stringval": "10.0.5.0"
+    }
+    ]
+}
