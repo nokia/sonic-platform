@@ -22,7 +22,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='protos.platform_ndk',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x1fplatform_ndk/platform_ndk.proto\x12\x13protos.platform_ndk\x1a\x1bgoogle/protobuf/empty.proto\"[\n\x0eResponseStatus\x12\x36\n\x0bstatus_code\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.ResponseCode\x12\x11\n\terror_msg\x18\x02 \x01(\t\"O\n\x0f\x44\x65\x66\x61ultResponse\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\"G\n\x13GetHwDeviceStatusPb\x12\x10\n\x08slot_num\x18\x01 \x01(\r\x12\x0f\n\x07hw_name\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\"P\n\rGetHwStatusPb\x12?\n\rdevice_status\x18\x01 \x03(\x0b\x32(.protos.platform_ndk.GetHwDeviceStatusPb\"c\n\x10GetModulePowerPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x17\n\x0fmodule_maxpower\x18\x02 \x01(\x02\"M\n\x0eGetPowerInfoPb\x12;\n\x0cmodule_power\x18\x01 \x03(\x0b\x32%.protos.platform_ndk.GetModulePowerPb\"Z\n\x0fReqModuleInfoPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x0f\n\x07hw_slot\x18\x02 \x01(\r\"h\n\x0fGetHwPropertyPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x0f\n\x07max_num\x18\x02 \x01(\r\x12\x0c\n\x04slot\x18\x03 \x03(\r\"Q\n\x14GetChassisPropertyPb\x12\x39\n\x0bhw_property\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetHwPropertyPb\"\x94\x04\n\x10RespModuleInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12:\n\x0c\x63hassis_type\x18\x02 \x01(\x0e\x32\".protos.platform_ndk.HwChassisTypeH\x00\x12\x0e\n\x04name\x18\x03 \x01(\tH\x00\x12\x10\n\x06status\x18\x04 \x01(\tH\x00\x12<\n\x0ehw_status_info\x18\x05 \x01(\x0b\x32\".protos.platform_ndk.GetHwStatusPbH\x00\x12\x39\n\npower_info\x18\x06 \x01(\x0b\x32#.protos.platform_ndk.GetPowerInfoPbH\x00\x12\x35\n\x08led_info\x18\x07 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x12\x11\n\x07my_slot\x18\x08 \x01(\rH\x00\x12\x45\n\x10\x63hassis_property\x18\t \x01(\x0b\x32).protos.platform_ndk.GetChassisPropertyPbH\x00\x12\x15\n\x0bmidplane_ip\x18\n \x01(\tH\x00\x12\x19\n\x0fmidplane_status\x18\x0b \x01(\x08H\x00\x12\x19\n\x0fping_status_str\x18\x0c \x01(\tH\x00\x42\r\n\x0bresp_module\"\x1f\n\x0cReqPsuInfoPb\x12\x0f\n\x07psu_idx\x18\x01 \x01(\r\":\n\x0eGetPsuDevicePb\x12\x14\n\x0cpsu_presence\x18\x01 \x01(\x08\x12\x12\n\npsu_status\x18\x02 \x01(\x08\"H\n\rShowPsuInfoPb\x12\x37\n\npsu_device\x18\x01 \x03(\x0b\x32#.protos.platform_ndk.GetPsuDevicePb\"P\n\x0cPsuFruInfoPb\x12\x14\n\x0cproduct_name\x18\x01 \x01(\t\x12\x13\n\x0bpart_number\x18\x02 \x01(\t\x12\x15\n\rserial_number\x18\x03 \x01(\t\"S\n\x0ePsuFaultInfoPb\x12\x13\n\x0bmin_voltage\x18\x01 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x02 \x01(\x02\x12\x17\n\x0fmax_temperature\x18\x03 \x01(\x02\"\xc2\x03\n\rRespPsuInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x12\n\x08num_psus\x18\x02 \x01(\rH\x00\x12\x16\n\x0cpsu_presence\x18\x03 \x01(\x08H\x00\x12\x14\n\npsu_status\x18\x04 \x01(\x08H\x00\x12\x36\n\x08psu_info\x18\x05 \x01(\x0b\x32\".protos.platform_ndk.ShowPsuInfoPbH\x00\x12\x18\n\x0esupplied_power\x18\x06 \x01(\x02H\x00\x12\x35\n\x08\x66ru_info\x18\x07 \x01(\x0b\x32!.protos.platform_ndk.PsuFruInfoPbH\x00\x12\x18\n\x0eoutput_current\x18\x08 \x01(\x02H\x00\x12\x18\n\x0eoutput_voltage\x18\t \x01(\x02H\x00\x12\x16\n\x0coutput_power\x18\n \x01(\x02H\x00\x12\x16\n\x0c\x61mbient_temp\x18\x0b \x01(\x02H\x00\x12\x39\n\nfault_info\x18\x0c \x01(\x0b\x32#.protos.platform_ndk.PsuFaultInfoPbH\x00\x42\t\n\x07get_psu\"n\n\x10UpdateTempInfoPb\x12\x10\n\x08slot_num\x18\x01 \x01(\r\x12\x14\n\x0c\x63urrent_temp\x18\x02 \x01(\x05\x12\x10\n\x08min_temp\x18\x03 \x01(\x05\x12\x10\n\x08max_temp\x18\x04 \x01(\x05\x12\x0e\n\x06margin\x18\x05 \x01(\x05\"n\n\x0fGetTempDevicePb\x12\x13\n\x0bsensor_name\x18\x01 \x01(\t\x12\r\n\x05local\x18\x02 \x01(\x05\x12\x0e\n\x06remote\x18\x03 \x01(\x05\x12\x13\n\x0b\x64\x65vice_desc\x18\x04 \x01(\t\x12\x12\n\ndevice_idx\x18\x05 \x01(\x05\"L\n\x0f\x41llTempDevicePb\x12\x39\n\x0btemp_device\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetTempDevicePb\"\x88\x01\n\x0eShowTempInfoPb\x12\x39\n\x0btemp_device\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetTempDevicePb\x12;\n\x0ctemp_summary\x18\x02 \x03(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPb\"\x8d\x01\n\x0fReqTempParamsPb\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03idx\x18\x02 \x01(\x05\x12\x15\n\x0btemp_offset\x18\x03 \x01(\x05H\x00\x12<\n\x0bhwslot_temp\x18\x04 \x01(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPbH\x00\x42\n\n\x08set_type\"\x95\x03\n\x10RespTempParamsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x13\n\tcurr_temp\x18\x02 \x01(\x05H\x00\x12\x12\n\x08min_temp\x18\x03 \x01(\x05H\x00\x12\x12\n\x08max_temp\x18\x04 \x01(\x05H\x00\x12\x10\n\x06margin\x18\x05 \x01(\x05H\x00\x12\x17\n\rlow_threshold\x18\x06 \x01(\x05H\x00\x12\x18\n\x0ehigh_threshold\x18\x07 \x01(\x05H\x00\x12=\n\x0ctemp_summary\x18\x08 \x01(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPbH\x00\x12<\n\x0ctemp_devices\x18\t \x01(\x0b\x32$.protos.platform_ndk.AllTempDevicePbH\x00\x12\x38\n\ttemp_show\x18\n \x01(\x0b\x32#.protos.platform_ndk.ShowTempInfoPbH\x00\x42\n\n\x08get_type\"9\n\x11ReqFanTrayIndexPb\x12\x13\n\x0b\x66\x61ntray_idx\x18\x01 \x01(\r\x12\x0f\n\x07\x66\x61n_idx\x18\x02 \x01(\r\"+\n\x13GetNumFanTrayInfoPb\x12\x14\n\x0cnum_fantrays\x18\x01 \x01(\r\"4\n\x18GetFanTrayPresenceInfoPb\x12\x18\n\x10\x66\x61ntray_presence\x18\x01 \x01(\x08\"0\n\x16GetFanTrayStatusInfoPb\x12\x16\n\x0e\x66\x61ntray_status\x18\x01 \x01(\t\"1\n\x18GetFanTraySpeedPercentPb\x12\x15\n\rfantray_speed\x18\x01 \x01(\r\"#\n\x0eGetFanDevicePb\x12\x11\n\tfan_state\x18\x01 \x01(\t\"\xb5\x01\n\rShowFanInfoPb\x12\x37\n\nfan_device\x18\x01 \x03(\x0b\x32#.protos.platform_ndk.GetFanDevicePb\x12\x1d\n\x15\x66\x61n_algorithm_disable\x18\x02 \x01(\r\x12\x19\n\x11\x63urrent_fan_speed\x18\x03 \x01(\r\x12\x15\n\rmax_fan_speed\x18\x04 \x01(\r\x12\x1a\n\x12is_force_max_speed\x18\x05 \x01(\x08\"5\n\x15SetFanTrayAlgorithmPb\x12\x1c\n\x14\x66\x61ntray_algo_disable\x18\x01 \x01(\r\",\n\x13RespFanTrayEepromPb\x12\x15\n\rfantray_edata\x18\x01 \x01(\t\"\xe2\x01\n\x0fReqFanTrayOpsPb\x12\x33\n\x03idx\x18\x01 \x01(\x0b\x32&.protos.platform_ndk.ReqFanTrayIndexPb\x12\x17\n\rfantray_speed\x18\x02 \x01(\rH\x00\x12>\n\x08\x66\x61n_algo\x18\x03 \x01(\x0b\x32*.protos.platform_ndk.SetFanTrayAlgorithmPbH\x00\x12\x35\n\x08led_info\x18\x04 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x42\n\n\x08req_type\"\xc3\x05\n\x10RespFanTrayOpsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12<\n\x08\x66\x61n_nums\x18\x02 \x01(\x0b\x32(.protos.platform_ndk.GetNumFanTrayInfoPbH\x00\x12\x45\n\x0c\x66\x61n_presence\x18\x03 \x01(\x0b\x32-.protos.platform_ndk.GetFanTrayPresenceInfoPbH\x00\x12\x41\n\nfan_status\x18\x04 \x01(\x0b\x32+.protos.platform_ndk.GetFanTrayStatusInfoPbH\x00\x12I\n\x10\x66\x61n_speed_target\x18\x05 \x01(\x0b\x32-.protos.platform_ndk.GetFanTraySpeedPercentPbH\x00\x12I\n\x10\x66\x61n_speed_actual\x18\x06 \x01(\x0b\x32-.protos.platform_ndk.GetFanTraySpeedPercentPbH\x00\x12\x36\n\x08\x66\x61n_show\x18\x07 \x01(\x0b\x32\".protos.platform_ndk.ShowFanInfoPbH\x00\x12>\n\nfan_eeprom\x18\x08 \x01(\x0b\x32(.protos.platform_ndk.RespFanTrayEepromPbH\x00\x12\x35\n\x08led_info\x18\t \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x12>\n\rfan_direction\x18\n \x01(\x0e\x32%.protos.platform_ndk.FanDirectionTypeH\x00\x12\x17\n\rfan_tolerance\x18\x0b \x01(\rH\x00\x42\x0b\n\tresp_type\"3\n\rReqLedIndexPb\x12\x11\n\tstart_idx\x18\x01 \x01(\r\x12\x0f\n\x07\x65nd_idx\x18\x02 \x01(\r\"z\n\x0cLedSetInfoPb\x12\x34\n\tled_color\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.LedColorType\x12\x34\n\tled_state\x18\x02 \x01(\x0e\x32!.protos.platform_ndk.LedStateType\"C\n\x0cGetLedInfoPb\x12\x33\n\x08led_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.LedSetInfoPb\"E\n\x0cGetLedShowPb\x12\x0f\n\x07led_idx\x18\x01 \x01(\r\x12\x10\n\x08led_name\x18\x02 \x01(\t\x12\x12\n\nled_status\x18\x03 \x01(\t\"E\n\rShowLedInfoPb\x12\x34\n\tshow_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.GetLedShowPb\"\xab\x01\n\x0cReqLedInfoPb\x12\x31\n\x08led_type\x18\x01 \x01(\x0e\x32\x1f.protos.platform_ndk.ReqLedType\x12\x33\n\x07led_idx\x18\x02 \x01(\x0b\x32\".protos.platform_ndk.ReqLedIndexPb\x12\x33\n\x08led_info\x18\x03 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPb\"\xc8\x01\n\rRespLedInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x34\n\x07led_get\x18\x02 \x01(\x0b\x32!.protos.platform_ndk.GetLedInfoPbH\x00\x12\x36\n\x08led_show\x18\x03 \x01(\x0b\x32\".protos.platform_ndk.ShowLedInfoPbH\x00\x42\x0b\n\tresp_type\"\x99\x01\n\x0eReqSfpEepromPb\x12\x34\n\x05\x65type\x18\x01 \x01(\x0e\x32%.protos.platform_ndk.ReqSfpEepromType\x12\x12\n\nhw_port_id\x18\x02 \x01(\r\x12\x0e\n\x06offset\x18\x03 \x01(\r\x12\x11\n\tnum_bytes\x18\x04 \x01(\r\x12\x0c\n\x04page\x18\x05 \x01(\r\x12\x0c\n\x04\x62\x61nk\x18\x06 \x01(\r\"`\n\x12GetSfpEepromInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"~\n\x0bReqSfpOpsPb\x12\x30\n\x04type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.ReqSfpOpsType\x12\x18\n\x10hw_port_id_begin\x18\x02 \x01(\r\x12\x16\n\x0ehw_port_id_end\x18\x03 \x01(\r\x12\x0b\n\x03val\x18\x04 \x01(\r\"!\n\x0fRespSfpStatusPb\x12\x0e\n\x06status\x18\x01 \x01(\x08\"5\n\x11RespSfpIdStatusPb\x12\x10\n\x08port_idx\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\x08\"T\n\x15RespMultiPortStatusPb\x12;\n\x0bport_status\x18\x01 \x03(\x0b\x32&.protos.platform_ndk.RespSfpIdStatusPb\"\xeb\x01\n\x0cRespSfpOpsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12:\n\nsfp_status\x18\x02 \x01(\x0b\x32$.protos.platform_ndk.RespSfpStatusPbH\x00\x12\x41\n\x0bsfp_mstatus\x18\x03 \x01(\x0b\x32*.protos.platform_ndk.RespMultiPortStatusPbH\x00\x12\x11\n\x07sfp_num\x18\x04 \x01(\rH\x00\x42\x0b\n\tresp_type\"G\n\x0fReqEepromInfoPb\x12\x34\n\x04type\x18\x01 \x01(\x0e\x32&.protos.platform_ndk.ReqEepromInfoType\"\xed\x01\n\x12GetChassisEepromPb\x12\x38\n\x0c\x63hassis_type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.HwChassisType\x12\x1a\n\x12\x63hassis_serial_num\x18\x02 \x01(\t\x12\x18\n\x10\x63hassis_part_num\x18\x03 \x01(\t\x12\x18\n\x10\x63hassis_base_mac\x18\x04 \x01(\t\x12\x19\n\x11\x63hassis_mac_count\x18\x05 \x01(\r\x12\x18\n\x10\x63hassis_clei_num\x18\x06 \x01(\t\x12\x18\n\x10\x63hassis_mfg_date\x18\x07 \x01(\t\"\x98\x03\n\x10RespEepromInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x0e\n\x04\x64\x61ta\x18\x02 \x01(\x0cH\x00\x12\x1b\n\x11\x63\x61rd_product_name\x18\x03 \x01(\tH\x00\x12\x19\n\x0f\x63\x61rd_serial_num\x18\x04 \x01(\tH\x00\x12\x17\n\rcard_part_num\x18\x05 \x01(\tH\x00\x12\x17\n\rcard_base_mac\x18\x06 \x01(\tH\x00\x12\x18\n\x0e\x63\x61rd_mac_count\x18\x07 \x01(\rH\x00\x12\x14\n\ncard_hwsku\x18\x08 \x01(\tH\x00\x12\x1a\n\x10\x63\x61rd_vendor_name\x18\t \x01(\tH\x00\x12\x17\n\rcard_clei_num\x18\n \x01(\tH\x00\x12\x17\n\rcard_mfg_date\x18\x0b \x01(\tH\x00\x12\x41\n\x0e\x63hassis_eeprom\x18\x0c \x01(\x0b\x32\'.protos.platform_ndk.GetChassisEepromPbH\x00\x42\x0b\n\tresp_type\"R\n\x13ReqHwFirmwareInfoPb\x12;\n\x08\x64\x65v_type\x18\x01 \x01(\x0e\x32).protos.platform_ndk.HwFirmwareDeviceType\"t\n\x11HwComponentInfoPb\x12;\n\x08\x64\x65v_type\x18\x01 \x01(\x0e\x32).protos.platform_ndk.HwFirmwareDeviceType\x12\x10\n\x08\x64\x65v_name\x18\x02 \x01(\t\x12\x10\n\x08\x64\x65v_desc\x18\x03 \x01(\t\"M\n\x10HwFirmwareInfoPb\x12\x39\n\tcomponent\x18\x01 \x03(\x0b\x32&.protos.platform_ndk.HwComponentInfoPb\"t\n\x14RespHwFirmwareInfoPb\x12\x11\n\x07version\x18\x01 \x01(\tH\x00\x12>\n\rfirmware_info\x18\x02 \x01(\x0b\x32%.protos.platform_ndk.HwFirmwareInfoPbH\x00\x42\t\n\x07resp_fw\"R\n\x0cReqSfmInfoPb\x12\x30\n\x04type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.ReqSfmOpsType\x12\x10\n\x08imm_slot\x18\x02 \x01(\r\"\xa3\x01\n\x0cGetSfmInfoPb\x12\x0f\n\x07sfm_num\x18\x01 \x01(\r\x12\x0f\n\x07hw_slot\x18\x02 \x01(\r\x12\x12\n\nadmin_down\x18\x03 \x01(\r\x12\x16\n\x0eis_initialized\x18\x04 \x01(\r\x12\x12\n\nnum_ramons\x18\x05 \x01(\r\x12\x10\n\x08presence\x18\x06 \x01(\r\x12\r\n\x05\x65rror\x18\x07 \x01(\r\x12\x10\n\x08instance\x18\x08 \x01(\r\"F\n\x0fGetSfmSummaryPb\x12\x33\n\x08sfm_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.GetSfmInfoPb\"\xa2\x01\n\x0fGetSfmImmLinkPb\x12\x10\n\x08imm_unit\x18\x01 \x01(\r\x12\x10\n\x08imm_link\x18\x02 \x01(\r\x12\x10\n\x08sfm_unit\x18\x03 \x01(\r\x12\x10\n\x08sfm_link\x18\x04 \x01(\r\x12\x16\n\x0elink_status_up\x18\x05 \x01(\x08\x12\x17\n\x0flink_is_isolate\x18\x06 \x01(\x08\x12\x16\n\x0elink_module_id\x18\x07 \x01(\r\"\x95\x01\n\x0fGetSfmImmInfoPb\x12\x10\n\x08imm_slot\x18\x01 \x01(\r\x12\x10\n\x08sfm_slot\x18\x02 \x01(\r\x12\x10\n\x08up_links\x18\x03 \x01(\r\x12\x13\n\x0btotal_links\x18\x04 \x01(\r\x12\x37\n\tlink_info\x18\x05 \x03(\x0b\x32$.protos.platform_ndk.GetSfmImmLinkPb\"\xd4\x01\n\rRespSfmInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12;\n\x0bsfm_summary\x18\x02 \x01(\x0b\x32$.protos.platform_ndk.GetSfmSummaryPbH\x00\x12<\n\x0csfm_imm_info\x18\x03 \x01(\x0b\x32$.protos.platform_ndk.GetSfmImmInfoPbH\x00\x42\n\n\x08resp_sfm\"(\n\x0eReqAdminTechPb\x12\x16\n\x0e\x61\x64mintech_path\x18\x01 \x01(\t\"L\n\x0cReqLogInfoPb\x12\x15\n\rlevel_current\x18\x01 \x01(\t\x12\x15\n\rlevel_default\x18\x02 \x01(\t\x12\x0e\n\x06module\x18\x03 \x01(\t\"\x9f\x01\n\x0fReqLogSettingPb\x12\x31\n\x08log_type\x18\x01 \x01(\x0e\x32\x1f.protos.platform_ndk.ReqLogType\x12\x35\n\x08log_info\x18\x02 \x01(\x0b\x32!.protos.platform_ndk.ReqLogInfoPbH\x00\x12\x17\n\rreset_default\x18\x03 \x01(\x08H\x00\x42\t\n\x07req_log\"E\n\rRespLogShowPb\x12\x34\n\tshow_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.ReqLogInfoPb\"\x94\x01\n\x10RespLogSettingPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x36\n\x08log_show\x18\x02 \x01(\x0b\x32\".protos.platform_ndk.RespLogShowPbH\x00\x42\n\n\x08resp_log*m\n\x0cResponseCode\x12\x0f\n\x0bNDK_SUCCESS\x10\x00\x12\x13\n\x0fNDK_ERR_FAILURE\x10\x01\x12\x17\n\x13NDK_ERR_INVALID_REQ\x10\x02\x12\x1e\n\x1aNDK_ERR_RESOURCE_NOT_FOUND\x10\x03*~\n\rHwChassisType\x12\x1b\n\x17HW_CHASSIS_TYPE_INVALID\x10\x00\x12\x18\n\x14HW_CHASSIS_TYPE_IXR6\x10\x01\x12\x19\n\x15HW_CHASSIS_TYPE_IXR10\x10\x02\x12\x1b\n\x17HW_CHASSIS_TYPE_7220_H3\x10\x03*\xcd\x01\n\x0cHwModuleType\x12\x1a\n\x16HW_MODULE_TYPE_INVALID\x10\x00\x12\x1a\n\x16HW_MODULE_TYPE_CONTROL\x10\x01\x12\x17\n\x13HW_MODULE_TYPE_LINE\x10\x02\x12\x19\n\x15HW_MODULE_TYPE_FABRIC\x10\x03\x12\x16\n\x12HW_MODULE_TYPE_PSU\x10\x04\x12\x1a\n\x16HW_MODULE_TYPE_FANTRAY\x10\x05\x12\x1d\n\x19HW_MODULE_TYPE_MASTER_PSU\x10\x06*\xea\x02\n\x10ReqModuleOpsType\x12\x16\n\x12MODULE_OPS_INVALID\x10\x00\x12\x1f\n\x1bMODULE_OPS_GET_CHASSIS_TYPE\x10\x01\x12\x17\n\x13MODULE_OPS_GET_NAME\x10\x02\x12\x19\n\x15MODULE_OPS_GET_STATUS\x10\x03\x12!\n\x1dMODULE_OPS_GET_CHASSIS_STATUS\x10\x04\x12\x1c\n\x18MODULE_OPS_GET_MAX_POWER\x10\x05\x12\x1a\n\x16MODULE_OPS_GET_MY_SLOT\x10\x06\x12%\n!MODULE_OPS_GET_CHASSIS_PROPERTIES\x10\x07\x12\x1e\n\x1aMODULE_OPS_GET_MIDPLANE_IP\x10\x08\x12$\n MODULE_OPS_IS_MIDPLANE_REACHABLE\x10\t\x12\x1f\n\x1bMODULE_OPS_PING_MIDPLANE_IP\x10\n*\xd4\x02\n\rReqPsuOpsType\x12\x13\n\x0fPSU_OPS_INVALID\x10\x00\x12\x14\n\x10PSU_OPS_NUM_PSUS\x10\x01\x12\x18\n\x14PSU_OPS_GET_PRESENCE\x10\x02\x12\x16\n\x12PSU_OPS_GET_STATUS\x10\x03\x12\x14\n\x10PSU_OPS_SHOW_ALL\x10\x04\x12\x1e\n\x1aPSU_OPS_GET_OUTPUT_CURRENT\x10\x05\x12\x1e\n\x1aPSU_OPS_GET_OUTPUT_VOLTAGE\x10\x06\x12\x1b\n\x17PSU_OPS_GET_TEMPERATURE\x10\x07\x12\x1c\n\x18PSU_OPS_GET_OUTPUT_POWER\x10\x08\x12\x1e\n\x1aPSU_OPS_GET_SUPPLIED_POWER\x10\t\x12\x18\n\x14PSU_OPS_GET_FRU_INFO\x10\n\x12\x1b\n\x17PSU_OPS_GET_FAULT_LIMIT\x10\x0b*\xb7\x02\n\x0eReqTempOpsType\x12\x14\n\x10TEMP_OPS_INVALID\x10\x00\x12\x1c\n\x18TEMP_OPS_SET_TEMP_OFFSET\x10\x01\x12\x1a\n\x16TEMP_OPS_GET_CURR_TEMP\x10\x02\x12\x19\n\x15TEMP_OPS_GET_MIN_TEMP\x10\x03\x12\x19\n\x15TEMP_OPS_GET_MAX_TEMP\x10\x04\x12\x1e\n\x1aTEMP_OPS_GET_LOW_THRESHOLD\x10\x05\x12\x1f\n\x1bTEMP_OPS_GET_HIGH_THRESHOLD\x10\x06\x12!\n\x1dTEMP_OPS_GET_NAME_IDX_MAPPING\x10\x07\x12\x1a\n\x16TEMP_OPS_SHOW_READINGS\x10\x08\x12\x1f\n\x1bTEMP_OPS_UPDATE_HWSLOT_TEMP\x10\t*\xaa\x03\n\x11ReqFanTrayOpsType\x12\x13\n\x0f\x46\x41N_OPS_INVALID\x10\x00\x12\x19\n\x15\x46\x41N_OPS_GET_NUM_TRAYS\x10\x01\x12\x18\n\x14\x46\x41N_OPS_REQ_PRESENCE\x10\x02\x12\x16\n\x12\x46\x41N_OPS_REQ_STATUS\x10\x03\x12\x1c\n\x18\x46\x41N_OPS_GET_TARGET_SPEED\x10\x04\x12\x1c\n\x18\x46\x41N_OPS_GET_ACTUAL_SPEED\x10\x05\x12\x19\n\x15\x46\x41N_OPS_GET_DIRECTION\x10\x06\x12\x1c\n\x18\x46\x41N_OPS_SET_TARGET_SPEED\x10\x07\x12\x1d\n\x19\x46\x41N_OPS_DISABLE_ALGORITHM\x10\x08\x12\x14\n\x10\x46\x41N_OPS_SHOW_ALL\x10\t\x12\x1b\n\x17\x46\x41N_OPS_EEPROM_SERIALNO\x10\n\x12\x19\n\x15\x46\x41N_OPS_EEPROM_PARTNO\x10\x0b\x12\x19\n\x15\x46\x41N_OPS_GET_TOLERANCE\x10\x0c\x12\x1a\n\x16\x46\x41N_OPS_GET_LED_STATUS\x10\r\x12\x1a\n\x16\x46\x41N_OPS_SET_LED_STATUS\x10\x0e*i\n\x10\x46\x61nDirectionType\x12\x17\n\x13\x46\x41N_AIRFLOW_INVALID\x10\x00\x12\x1d\n\x19\x46\x41N_AIRFLOW_FRONT_TO_BACK\x10\x01\x12\x1d\n\x19\x46\x41N_AIRFLOW_BACK_TO_FRONT\x10\x02*y\n\x0cLedStateType\x12\x15\n\x11LED_STATE_INVALID\x10\x00\x12\x11\n\rLED_STATE_OFF\x10\x01\x12\x10\n\x0cLED_STATE_ON\x10\x02\x12\x13\n\x0fLED_STATE_BLINK\x10\x03\x12\x18\n\x14LED_STATE_FAST_BLINK\x10\x04*\x8c\x01\n\x0cLedColorType\x12\x15\n\x11LED_COLOR_INVALID\x10\x00\x12\x12\n\x0eLED_COLOR_NONE\x10\x01\x12\x13\n\x0fLED_COLOR_GREEN\x10\x02\x12\x13\n\x0fLED_COLOR_AMBER\x10\x03\x12\x14\n\x10LED_COLOR_YELLOW\x10\x04\x12\x11\n\rLED_COLOR_RED\x10\x05*X\n\rReqLedOpsType\x12\x13\n\x0fLED_OPS_INVALID\x10\x00\x12\x0f\n\x0bLED_OPS_SET\x10\x01\x12\x0f\n\x0bLED_OPS_GET\x10\x02\x12\x10\n\x0cLED_OPS_SHOW\x10\x03*\x98\x02\n\nReqLedType\x12\x14\n\x10LED_TYPE_INVALID\x10\x00\x12\x10\n\x0cLED_TYPE_ALL\x10\x01\x12\x11\n\rLED_TYPE_PORT\x10\x02\x12\x14\n\x10LED_TYPE_FANTRAY\x10\x03\x12\x10\n\x0cLED_TYPE_SFM\x10\x04\x12\x10\n\x0cLED_TYPE_PSU\x10\x05\x12\x19\n\x15LED_TYPE_BOARD_STATUS\x10\x06\x12\x1a\n\x16LED_TYPE_BOARD_LOCATOR\x10\x07\x12\x1e\n\x1aLED_TYPE_MASTER_FAN_STATUS\x10\x08\x12\x1e\n\x1aLED_TYPE_MASTER_PSU_STATUS\x10\t\x12\x1e\n\x1aLED_TYPE_MASTER_SFM_STATUS\x10\n*\xc2\x01\n\x10ReqSfpEepromType\x12\x16\n\x12SFP_EEPROM_INVALID\x10\x00\x12\x13\n\x0fSFP_EEPROM_CTRL\x10\x01\x12\x13\n\x0fSFP_EEPROM_DATA\x10\x02\x12\x17\n\x13SFP_EEPROM_EXT_CTRL\x10\x03\x12\x14\n\x10SFP_EEPROM_DEBUG\x10\x04\x12\x19\n\x15SFP_EEPROM_UPPER_PAGE\x10\x05\x12\"\n\x1eSFP_EEPROM_UPPER_BANK_AND_PAGE\x10\x06*\x83\x01\n\rReqSfpOpsType\x12\x13\n\x0fSFP_OPS_INVALID\x10\x00\x12\x18\n\x14SFP_OPS_REQ_PRESENCE\x10\x01\x12\x1c\n\x18SFP_OPS_GET_MPORT_STATUS\x10\x02\x12\x12\n\x0eSFP_OPS_NORMAL\x10\x03\x12\x11\n\rSFP_OPS_DEBUG\x10\x04*\xfd\x02\n\x11ReqEepromInfoType\x12\x16\n\x12\x45\x45PROM_OPS_INVALID\x10\x00\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_ALL_TLVS\x10\x01\x12 \n\x1c\x45\x45PROM_OPS_CARD_PRODUCT_NAME\x10\x02\x12\x1e\n\x1a\x45\x45PROM_OPS_CARD_SERIAL_NUM\x10\x03\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_PART_NUM\x10\x04\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_BASE_MAC\x10\x05\x12\x1d\n\x19\x45\x45PROM_OPS_CARD_MAC_COUNT\x10\x06\x12\x19\n\x15\x45\x45PROM_OPS_CARD_HWSKU\x10\x07\x12\x1f\n\x1b\x45\x45PROM_OPS_CARD_VENDOR_NAME\x10\x08\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_CLEI_NUM\x10\t\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_MFG_DATE\x10\n\x12\x1d\n\x19\x45\x45PROM_OPS_CHASSIS_EEPROM\x10\x0b*\x8f\x01\n\x14HwFirmwareDeviceType\x12\x1e\n\x1aHW_FIRMWARE_DEVICE_INVALID\x10\x00\x12\x1b\n\x17HW_FIRMWARE_DEVICE_BIOS\x10\x01\x12\x1c\n\x18HW_FIRMWARE_DEVICE_FPGA1\x10\x02\x12\x1c\n\x18HW_FIRMWARE_DEVICE_FPGA2\x10\x03*p\n\x14ReqHwFirmwareOpsType\x12\x18\n\x14REQ_HWFW_OPS_INVALID\x10\x00\x12\x1d\n\x19REQ_HWFW_OPS_SHOW_VERSION\x10\x01\x12\x1f\n\x1bREQ_HWFW_OPS_GET_COMPONENTS\x10\x02*Y\n\rReqSfmOpsType\x12\x13\n\x0fSFM_OPS_INVALID\x10\x00\x12\x18\n\x14SFM_OPS_SHOW_SUMMARY\x10\x01\x12\x19\n\x15SFM_OPS_SHOW_IMMLINKS\x10\x02*{\n\nReqLogType\x12\x13\n\x0fREQ_LOG_INVALID\x10\x00\x12\x13\n\x0fREQ_LOG_SET_ALL\x10\x01\x12\x15\n\x11REQ_LOG_RESET_ALL\x10\x02\x12\x16\n\x12REQ_LOG_SET_MODULE\x10\x03\x12\x14\n\x10REQ_LOG_SHOW_ALL\x10\x04\x32\xef\x07\n\x19\x43hassisPlatformNdkService\x12^\n\rGetModuleName\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12`\n\x0fGetModuleStatus\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12_\n\x0eGetChassisType\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x61\n\x10GetChassisStatus\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x62\n\x11GetModuleMaxPower\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12Z\n\tGetMySlot\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x65\n\x14GetChassisProperties\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12^\n\rGetMidplaneIP\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x64\n\x13IsMidplaneReachable\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12_\n\x0ePingMidplaneIP\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x32\xac\n\n\x15PsuPlatformNdkService\x12T\n\tGetPsuNum\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12Y\n\x0eGetPsuPresence\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12W\n\x0cGetPsuStatus\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12V\n\x0bShowPsuInfo\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12]\n\x12GetPsuMaximumPower\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12V\n\x0bGetPsuModel\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12W\n\x0cGetPsuSerial\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12^\n\x13GetPsuOutputCurrent\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12^\n\x13GetPsuOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\\\n\x11GetPsuOutputPower\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\\\n\x11GetPsuTemperature\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\x61\n\x16GetPsuMaxOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\x61\n\x16GetPsuMinOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12_\n\x14GetPsuMaxTemperature\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x32\xae\x07\n\x19ThermalPlatformNdkService\x12\x63\n\x12GetThermalCurrTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x62\n\x11GetThermalMinTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x62\n\x11GetThermalMaxTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12g\n\x16GetThermalLowThreshold\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12h\n\x17GetThermalHighThreshold\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x66\n\x15GetThermalDevicesInfo\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12`\n\x0fShowThermalInfo\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x64\n\x13UpdateThermalHwSlot\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x61\n\x10SetThermalOffset\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x32\xf3\n\n\x15\x46\x61nPlatformNdkService\x12Z\n\tGetFanNum\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12_\n\x0eGetFanPresence\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12]\n\x0cGetFanStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11GetFanTargetSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11GetFanActualSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanDirection\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanTolerance\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanLedStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11SetFanTargetSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x64\n\x13\x44isableFanAlgorithm\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fSetFanLedStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x63\n\x12GetFanTraySerialNo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x61\n\x10GetFanTrayPartNo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\\\n\x0bShowFanInfo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x32\x91\x02\n\x15LedPlatformNdkService\x12Q\n\x06GetLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x12Q\n\x06SetLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x12R\n\x07ShowLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x32\xbc\x06\n\x16XcvrPlatformNdkService\x12\x62\n\x10GetSfpEepromInfo\x12#.protos.platform_ndk.ReqSfpEepromPb\x1a\'.protos.platform_ndk.GetSfpEepromInfoPb\"\x00\x12W\n\x0eGetSfpPresence\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12U\n\x0cGetSfpStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12T\n\x0bReqSfpReset\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12Z\n\x11GetSfpResetStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12U\n\x0cReqSfpLPMode\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12W\n\x0eGetSfpLPStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12X\n\x0fReqSfpTxDisable\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12R\n\tGetSfpNum\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x32\xde\x08\n\x18\x45\x65promPlatformNdkService\x12]\n\x0cGetCardHwsku\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardVendorName\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x63\n\x12GetCardProductName\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x64\n\x13GetCardSerialNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardPartNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardCleiNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12_\n\x0eGetCardMfgDate\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12_\n\x0eGetCardBaseMac\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12`\n\x0fGetCardMacCount\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x65\n\x14GetCardEepromAllTlvs\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x61\n\x10GetChassisEeprom\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x32\xfd\x01\n\x1a\x46irmwarePlatformNdkService\x12m\n\x14ReqHwFirmwareVersion\x12(.protos.platform_ndk.ReqHwFirmwareInfoPb\x1a).protos.platform_ndk.RespHwFirmwareInfoPb\"\x00\x12p\n\x17HwFirmwareGetComponents\x12(.protos.platform_ndk.ReqHwFirmwareInfoPb\x1a).protos.platform_ndk.RespHwFirmwareInfoPb\"\x00\x32\xbd\x04\n\x16UtilPlatformNdkService\x12U\n\nReqSfmInfo\x12!.protos.platform_ndk.ReqSfmInfoPb\x1a\".protos.platform_ndk.RespSfmInfoPb\"\x00\x12M\n\x0cReqAdminTech\x12#.protos.platform_ndk.ReqAdminTechPb\x1a\x16.google.protobuf.Empty\"\x00\x12]\n\x0cReqLogSetAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12`\n\x0fReqLogSetModule\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12_\n\x0eReqLogResetAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12[\n\nShowLogAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x1fplatform_ndk/platform_ndk.proto\x12\x13protos.platform_ndk\x1a\x1bgoogle/protobuf/empty.proto\"[\n\x0eResponseStatus\x12\x36\n\x0bstatus_code\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.ResponseCode\x12\x11\n\terror_msg\x18\x02 \x01(\t\"O\n\x0f\x44\x65\x66\x61ultResponse\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\"G\n\x13GetHwDeviceStatusPb\x12\x10\n\x08slot_num\x18\x01 \x01(\r\x12\x0f\n\x07hw_name\x18\x02 \x01(\t\x12\r\n\x05state\x18\x03 \x01(\t\"P\n\rGetHwStatusPb\x12?\n\rdevice_status\x18\x01 \x03(\x0b\x32(.protos.platform_ndk.GetHwDeviceStatusPb\"c\n\x10GetModulePowerPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x17\n\x0fmodule_maxpower\x18\x02 \x01(\x02\"M\n\x0eGetPowerInfoPb\x12;\n\x0cmodule_power\x18\x01 \x03(\x0b\x32%.protos.platform_ndk.GetModulePowerPb\"Z\n\x0fReqModuleInfoPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x0f\n\x07hw_slot\x18\x02 \x01(\r\"h\n\x0fGetHwPropertyPb\x12\x36\n\x0bmodule_type\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.HwModuleType\x12\x0f\n\x07max_num\x18\x02 \x01(\r\x12\x0c\n\x04slot\x18\x03 \x03(\r\"Q\n\x14GetChassisPropertyPb\x12\x39\n\x0bhw_property\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetHwPropertyPb\"\x94\x04\n\x10RespModuleInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12:\n\x0c\x63hassis_type\x18\x02 \x01(\x0e\x32\".protos.platform_ndk.HwChassisTypeH\x00\x12\x0e\n\x04name\x18\x03 \x01(\tH\x00\x12\x10\n\x06status\x18\x04 \x01(\tH\x00\x12<\n\x0ehw_status_info\x18\x05 \x01(\x0b\x32\".protos.platform_ndk.GetHwStatusPbH\x00\x12\x39\n\npower_info\x18\x06 \x01(\x0b\x32#.protos.platform_ndk.GetPowerInfoPbH\x00\x12\x35\n\x08led_info\x18\x07 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x12\x11\n\x07my_slot\x18\x08 \x01(\rH\x00\x12\x45\n\x10\x63hassis_property\x18\t \x01(\x0b\x32).protos.platform_ndk.GetChassisPropertyPbH\x00\x12\x15\n\x0bmidplane_ip\x18\n \x01(\tH\x00\x12\x19\n\x0fmidplane_status\x18\x0b \x01(\x08H\x00\x12\x19\n\x0fping_status_str\x18\x0c \x01(\tH\x00\x42\r\n\x0bresp_module\"\x1f\n\x0cReqPsuInfoPb\x12\x0f\n\x07psu_idx\x18\x01 \x01(\r\":\n\x0eGetPsuDevicePb\x12\x14\n\x0cpsu_presence\x18\x01 \x01(\x08\x12\x12\n\npsu_status\x18\x02 \x01(\x08\"H\n\rShowPsuInfoPb\x12\x37\n\npsu_device\x18\x01 \x03(\x0b\x32#.protos.platform_ndk.GetPsuDevicePb\"P\n\x0cPsuFruInfoPb\x12\x14\n\x0cproduct_name\x18\x01 \x01(\t\x12\x13\n\x0bpart_number\x18\x02 \x01(\t\x12\x15\n\rserial_number\x18\x03 \x01(\t\"S\n\x0ePsuFaultInfoPb\x12\x13\n\x0bmin_voltage\x18\x01 \x01(\x02\x12\x13\n\x0bmax_voltage\x18\x02 \x01(\x02\x12\x17\n\x0fmax_temperature\x18\x03 \x01(\x02\"\xc2\x03\n\rRespPsuInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x12\n\x08num_psus\x18\x02 \x01(\rH\x00\x12\x16\n\x0cpsu_presence\x18\x03 \x01(\x08H\x00\x12\x14\n\npsu_status\x18\x04 \x01(\x08H\x00\x12\x36\n\x08psu_info\x18\x05 \x01(\x0b\x32\".protos.platform_ndk.ShowPsuInfoPbH\x00\x12\x18\n\x0esupplied_power\x18\x06 \x01(\x02H\x00\x12\x35\n\x08\x66ru_info\x18\x07 \x01(\x0b\x32!.protos.platform_ndk.PsuFruInfoPbH\x00\x12\x18\n\x0eoutput_current\x18\x08 \x01(\x02H\x00\x12\x18\n\x0eoutput_voltage\x18\t \x01(\x02H\x00\x12\x16\n\x0coutput_power\x18\n \x01(\x02H\x00\x12\x16\n\x0c\x61mbient_temp\x18\x0b \x01(\x02H\x00\x12\x39\n\nfault_info\x18\x0c \x01(\x0b\x32#.protos.platform_ndk.PsuFaultInfoPbH\x00\x42\t\n\x07get_psu\"n\n\x10UpdateTempInfoPb\x12\x10\n\x08slot_num\x18\x01 \x01(\r\x12\x14\n\x0c\x63urrent_temp\x18\x02 \x01(\x05\x12\x10\n\x08min_temp\x18\x03 \x01(\x05\x12\x10\n\x08max_temp\x18\x04 \x01(\x05\x12\x0e\n\x06margin\x18\x05 \x01(\x05\"\x86\x01\n\x0fGetTempDevicePb\x12\x13\n\x0bsensor_name\x18\x01 \x01(\t\x12\r\n\x05local\x18\x02 \x01(\x05\x12\x0e\n\x06remote\x18\x03 \x01(\x05\x12\x13\n\x0b\x64\x65vice_desc\x18\x04 \x01(\t\x12\x12\n\ndevice_idx\x18\x05 \x01(\x05\x12\x16\n\x0e\x66\x61nalgo_sensor\x18\x06 \x01(\x08\"L\n\x0f\x41llTempDevicePb\x12\x39\n\x0btemp_device\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetTempDevicePb\"\x88\x01\n\x0eShowTempInfoPb\x12\x39\n\x0btemp_device\x18\x01 \x03(\x0b\x32$.protos.platform_ndk.GetTempDevicePb\x12;\n\x0ctemp_summary\x18\x02 \x03(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPb\"\x8d\x01\n\x0fReqTempParamsPb\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03idx\x18\x02 \x01(\x05\x12\x15\n\x0btemp_offset\x18\x03 \x01(\x05H\x00\x12<\n\x0bhwslot_temp\x18\x04 \x01(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPbH\x00\x42\n\n\x08set_type\"\x95\x03\n\x10RespTempParamsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x13\n\tcurr_temp\x18\x02 \x01(\x05H\x00\x12\x12\n\x08min_temp\x18\x03 \x01(\x05H\x00\x12\x12\n\x08max_temp\x18\x04 \x01(\x05H\x00\x12\x10\n\x06margin\x18\x05 \x01(\x05H\x00\x12\x17\n\rlow_threshold\x18\x06 \x01(\x05H\x00\x12\x18\n\x0ehigh_threshold\x18\x07 \x01(\x05H\x00\x12=\n\x0ctemp_summary\x18\x08 \x01(\x0b\x32%.protos.platform_ndk.UpdateTempInfoPbH\x00\x12<\n\x0ctemp_devices\x18\t \x01(\x0b\x32$.protos.platform_ndk.AllTempDevicePbH\x00\x12\x38\n\ttemp_show\x18\n \x01(\x0b\x32#.protos.platform_ndk.ShowTempInfoPbH\x00\x42\n\n\x08get_type\"9\n\x11ReqFanTrayIndexPb\x12\x13\n\x0b\x66\x61ntray_idx\x18\x01 \x01(\r\x12\x0f\n\x07\x66\x61n_idx\x18\x02 \x01(\r\"+\n\x13GetNumFanTrayInfoPb\x12\x14\n\x0cnum_fantrays\x18\x01 \x01(\r\"4\n\x18GetFanTrayPresenceInfoPb\x12\x18\n\x10\x66\x61ntray_presence\x18\x01 \x01(\x08\"0\n\x16GetFanTrayStatusInfoPb\x12\x16\n\x0e\x66\x61ntray_status\x18\x01 \x01(\t\"1\n\x18GetFanTraySpeedPercentPb\x12\x15\n\rfantray_speed\x18\x01 \x01(\r\"#\n\x0eGetFanDevicePb\x12\x11\n\tfan_state\x18\x01 \x01(\t\"\xb5\x01\n\rShowFanInfoPb\x12\x37\n\nfan_device\x18\x01 \x03(\x0b\x32#.protos.platform_ndk.GetFanDevicePb\x12\x1d\n\x15\x66\x61n_algorithm_disable\x18\x02 \x01(\r\x12\x19\n\x11\x63urrent_fan_speed\x18\x03 \x01(\r\x12\x15\n\rmax_fan_speed\x18\x04 \x01(\r\x12\x1a\n\x12is_force_max_speed\x18\x05 \x01(\x08\"5\n\x15SetFanTrayAlgorithmPb\x12\x1c\n\x14\x66\x61ntray_algo_disable\x18\x01 \x01(\r\",\n\x13RespFanTrayEepromPb\x12\x15\n\rfantray_edata\x18\x01 \x01(\t\"\xe2\x01\n\x0fReqFanTrayOpsPb\x12\x33\n\x03idx\x18\x01 \x01(\x0b\x32&.protos.platform_ndk.ReqFanTrayIndexPb\x12\x17\n\rfantray_speed\x18\x02 \x01(\rH\x00\x12>\n\x08\x66\x61n_algo\x18\x03 \x01(\x0b\x32*.protos.platform_ndk.SetFanTrayAlgorithmPbH\x00\x12\x35\n\x08led_info\x18\x04 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x42\n\n\x08req_type\"\xc3\x05\n\x10RespFanTrayOpsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12<\n\x08\x66\x61n_nums\x18\x02 \x01(\x0b\x32(.protos.platform_ndk.GetNumFanTrayInfoPbH\x00\x12\x45\n\x0c\x66\x61n_presence\x18\x03 \x01(\x0b\x32-.protos.platform_ndk.GetFanTrayPresenceInfoPbH\x00\x12\x41\n\nfan_status\x18\x04 \x01(\x0b\x32+.protos.platform_ndk.GetFanTrayStatusInfoPbH\x00\x12I\n\x10\x66\x61n_speed_target\x18\x05 \x01(\x0b\x32-.protos.platform_ndk.GetFanTraySpeedPercentPbH\x00\x12I\n\x10\x66\x61n_speed_actual\x18\x06 \x01(\x0b\x32-.protos.platform_ndk.GetFanTraySpeedPercentPbH\x00\x12\x36\n\x08\x66\x61n_show\x18\x07 \x01(\x0b\x32\".protos.platform_ndk.ShowFanInfoPbH\x00\x12>\n\nfan_eeprom\x18\x08 \x01(\x0b\x32(.protos.platform_ndk.RespFanTrayEepromPbH\x00\x12\x35\n\x08led_info\x18\t \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPbH\x00\x12>\n\rfan_direction\x18\n \x01(\x0e\x32%.protos.platform_ndk.FanDirectionTypeH\x00\x12\x17\n\rfan_tolerance\x18\x0b \x01(\rH\x00\x42\x0b\n\tresp_type\"3\n\rReqLedIndexPb\x12\x11\n\tstart_idx\x18\x01 \x01(\r\x12\x0f\n\x07\x65nd_idx\x18\x02 \x01(\r\"z\n\x0cLedSetInfoPb\x12\x34\n\tled_color\x18\x01 \x01(\x0e\x32!.protos.platform_ndk.LedColorType\x12\x34\n\tled_state\x18\x02 \x01(\x0e\x32!.protos.platform_ndk.LedStateType\"C\n\x0cGetLedInfoPb\x12\x33\n\x08led_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.LedSetInfoPb\"E\n\x0cGetLedShowPb\x12\x0f\n\x07led_idx\x18\x01 \x01(\r\x12\x10\n\x08led_name\x18\x02 \x01(\t\x12\x12\n\nled_status\x18\x03 \x01(\t\"E\n\rShowLedInfoPb\x12\x34\n\tshow_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.GetLedShowPb\"\xab\x01\n\x0cReqLedInfoPb\x12\x31\n\x08led_type\x18\x01 \x01(\x0e\x32\x1f.protos.platform_ndk.ReqLedType\x12\x33\n\x07led_idx\x18\x02 \x01(\x0b\x32\".protos.platform_ndk.ReqLedIndexPb\x12\x33\n\x08led_info\x18\x03 \x01(\x0b\x32!.protos.platform_ndk.LedSetInfoPb\"\xc8\x01\n\rRespLedInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x34\n\x07led_get\x18\x02 \x01(\x0b\x32!.protos.platform_ndk.GetLedInfoPbH\x00\x12\x36\n\x08led_show\x18\x03 \x01(\x0b\x32\".protos.platform_ndk.ShowLedInfoPbH\x00\x42\x0b\n\tresp_type\"\x99\x01\n\x0eReqSfpEepromPb\x12\x34\n\x05\x65type\x18\x01 \x01(\x0e\x32%.protos.platform_ndk.ReqSfpEepromType\x12\x12\n\nhw_port_id\x18\x02 \x01(\r\x12\x0e\n\x06offset\x18\x03 \x01(\r\x12\x11\n\tnum_bytes\x18\x04 \x01(\r\x12\x0c\n\x04page\x18\x05 \x01(\r\x12\x0c\n\x04\x62\x61nk\x18\x06 \x01(\r\"`\n\x12GetSfpEepromInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"~\n\x0bReqSfpOpsPb\x12\x30\n\x04type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.ReqSfpOpsType\x12\x18\n\x10hw_port_id_begin\x18\x02 \x01(\r\x12\x16\n\x0ehw_port_id_end\x18\x03 \x01(\r\x12\x0b\n\x03val\x18\x04 \x01(\r\"!\n\x0fRespSfpStatusPb\x12\x0e\n\x06status\x18\x01 \x01(\x08\"5\n\x11RespSfpIdStatusPb\x12\x10\n\x08port_idx\x18\x01 \x01(\r\x12\x0e\n\x06status\x18\x02 \x01(\x08\"T\n\x15RespMultiPortStatusPb\x12;\n\x0bport_status\x18\x01 \x03(\x0b\x32&.protos.platform_ndk.RespSfpIdStatusPb\"\xeb\x01\n\x0cRespSfpOpsPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12:\n\nsfp_status\x18\x02 \x01(\x0b\x32$.protos.platform_ndk.RespSfpStatusPbH\x00\x12\x41\n\x0bsfp_mstatus\x18\x03 \x01(\x0b\x32*.protos.platform_ndk.RespMultiPortStatusPbH\x00\x12\x11\n\x07sfp_num\x18\x04 \x01(\rH\x00\x42\x0b\n\tresp_type\"G\n\x0fReqEepromInfoPb\x12\x34\n\x04type\x18\x01 \x01(\x0e\x32&.protos.platform_ndk.ReqEepromInfoType\"\xed\x01\n\x12GetChassisEepromPb\x12\x38\n\x0c\x63hassis_type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.HwChassisType\x12\x1a\n\x12\x63hassis_serial_num\x18\x02 \x01(\t\x12\x18\n\x10\x63hassis_part_num\x18\x03 \x01(\t\x12\x18\n\x10\x63hassis_base_mac\x18\x04 \x01(\t\x12\x19\n\x11\x63hassis_mac_count\x18\x05 \x01(\r\x12\x18\n\x10\x63hassis_clei_num\x18\x06 \x01(\t\x12\x18\n\x10\x63hassis_mfg_date\x18\x07 \x01(\t\"\x98\x03\n\x10RespEepromInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x0e\n\x04\x64\x61ta\x18\x02 \x01(\x0cH\x00\x12\x1b\n\x11\x63\x61rd_product_name\x18\x03 \x01(\tH\x00\x12\x19\n\x0f\x63\x61rd_serial_num\x18\x04 \x01(\tH\x00\x12\x17\n\rcard_part_num\x18\x05 \x01(\tH\x00\x12\x17\n\rcard_base_mac\x18\x06 \x01(\tH\x00\x12\x18\n\x0e\x63\x61rd_mac_count\x18\x07 \x01(\rH\x00\x12\x14\n\ncard_hwsku\x18\x08 \x01(\tH\x00\x12\x1a\n\x10\x63\x61rd_vendor_name\x18\t \x01(\tH\x00\x12\x17\n\rcard_clei_num\x18\n \x01(\tH\x00\x12\x17\n\rcard_mfg_date\x18\x0b \x01(\tH\x00\x12\x41\n\x0e\x63hassis_eeprom\x18\x0c \x01(\x0b\x32\'.protos.platform_ndk.GetChassisEepromPbH\x00\x42\x0b\n\tresp_type\"R\n\x13ReqHwFirmwareInfoPb\x12;\n\x08\x64\x65v_type\x18\x01 \x01(\x0e\x32).protos.platform_ndk.HwFirmwareDeviceType\"t\n\x11HwComponentInfoPb\x12;\n\x08\x64\x65v_type\x18\x01 \x01(\x0e\x32).protos.platform_ndk.HwFirmwareDeviceType\x12\x10\n\x08\x64\x65v_name\x18\x02 \x01(\t\x12\x10\n\x08\x64\x65v_desc\x18\x03 \x01(\t\"M\n\x10HwFirmwareInfoPb\x12\x39\n\tcomponent\x18\x01 \x03(\x0b\x32&.protos.platform_ndk.HwComponentInfoPb\"t\n\x14RespHwFirmwareInfoPb\x12\x11\n\x07version\x18\x01 \x01(\tH\x00\x12>\n\rfirmware_info\x18\x02 \x01(\x0b\x32%.protos.platform_ndk.HwFirmwareInfoPbH\x00\x42\t\n\x07resp_fw\"R\n\x0cReqSfmInfoPb\x12\x30\n\x04type\x18\x01 \x01(\x0e\x32\".protos.platform_ndk.ReqSfmOpsType\x12\x10\n\x08imm_slot\x18\x02 \x01(\r\"\xa3\x01\n\x0cGetSfmInfoPb\x12\x0f\n\x07sfm_num\x18\x01 \x01(\r\x12\x0f\n\x07hw_slot\x18\x02 \x01(\r\x12\x12\n\nadmin_down\x18\x03 \x01(\r\x12\x16\n\x0eis_initialized\x18\x04 \x01(\r\x12\x12\n\nnum_ramons\x18\x05 \x01(\r\x12\x10\n\x08presence\x18\x06 \x01(\r\x12\r\n\x05\x65rror\x18\x07 \x01(\r\x12\x10\n\x08instance\x18\x08 \x01(\r\"F\n\x0fGetSfmSummaryPb\x12\x33\n\x08sfm_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.GetSfmInfoPb\"\xa2\x01\n\x0fGetSfmImmLinkPb\x12\x10\n\x08imm_unit\x18\x01 \x01(\r\x12\x10\n\x08imm_link\x18\x02 \x01(\r\x12\x10\n\x08sfm_unit\x18\x03 \x01(\r\x12\x10\n\x08sfm_link\x18\x04 \x01(\r\x12\x16\n\x0elink_status_up\x18\x05 \x01(\x08\x12\x17\n\x0flink_is_isolate\x18\x06 \x01(\x08\x12\x16\n\x0elink_module_id\x18\x07 \x01(\r\"\x95\x01\n\x0fGetSfmImmInfoPb\x12\x10\n\x08imm_slot\x18\x01 \x01(\r\x12\x10\n\x08sfm_slot\x18\x02 \x01(\r\x12\x10\n\x08up_links\x18\x03 \x01(\r\x12\x13\n\x0btotal_links\x18\x04 \x01(\r\x12\x37\n\tlink_info\x18\x05 \x03(\x0b\x32$.protos.platform_ndk.GetSfmImmLinkPb\"\xd4\x01\n\rRespSfmInfoPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12;\n\x0bsfm_summary\x18\x02 \x01(\x0b\x32$.protos.platform_ndk.GetSfmSummaryPbH\x00\x12<\n\x0csfm_imm_info\x18\x03 \x01(\x0b\x32$.protos.platform_ndk.GetSfmImmInfoPbH\x00\x42\n\n\x08resp_sfm\"(\n\x0eReqAdminTechPb\x12\x16\n\x0e\x61\x64mintech_path\x18\x01 \x01(\t\"L\n\x0cReqLogInfoPb\x12\x15\n\rlevel_current\x18\x01 \x01(\t\x12\x15\n\rlevel_default\x18\x02 \x01(\t\x12\x0e\n\x06module\x18\x03 \x01(\t\"\x9f\x01\n\x0fReqLogSettingPb\x12\x31\n\x08log_type\x18\x01 \x01(\x0e\x32\x1f.protos.platform_ndk.ReqLogType\x12\x35\n\x08log_info\x18\x02 \x01(\x0b\x32!.protos.platform_ndk.ReqLogInfoPbH\x00\x12\x17\n\rreset_default\x18\x03 \x01(\x08H\x00\x42\t\n\x07req_log\"E\n\rRespLogShowPb\x12\x34\n\tshow_info\x18\x01 \x03(\x0b\x32!.protos.platform_ndk.ReqLogInfoPb\"\x94\x01\n\x10RespLogSettingPb\x12<\n\x0fresponse_status\x18\x01 \x01(\x0b\x32#.protos.platform_ndk.ResponseStatus\x12\x36\n\x08log_show\x18\x02 \x01(\x0b\x32\".protos.platform_ndk.RespLogShowPbH\x00\x42\n\n\x08resp_log*m\n\x0cResponseCode\x12\x0f\n\x0bNDK_SUCCESS\x10\x00\x12\x13\n\x0fNDK_ERR_FAILURE\x10\x01\x12\x17\n\x13NDK_ERR_INVALID_REQ\x10\x02\x12\x1e\n\x1aNDK_ERR_RESOURCE_NOT_FOUND\x10\x03*\xb5\x01\n\rHwChassisType\x12\x1b\n\x17HW_CHASSIS_TYPE_INVALID\x10\x00\x12\x18\n\x14HW_CHASSIS_TYPE_IXR6\x10\x01\x12\x19\n\x15HW_CHASSIS_TYPE_IXR10\x10\x02\x12\x1b\n\x17HW_CHASSIS_TYPE_7220_H3\x10\x03\x12\x19\n\x15HW_CHASSIS_TYPE_IXR6E\x10\x04\x12\x1a\n\x16HW_CHASSIS_TYPE_IXR10E\x10\x05*\xcd\x01\n\x0cHwModuleType\x12\x1a\n\x16HW_MODULE_TYPE_INVALID\x10\x00\x12\x1a\n\x16HW_MODULE_TYPE_CONTROL\x10\x01\x12\x17\n\x13HW_MODULE_TYPE_LINE\x10\x02\x12\x19\n\x15HW_MODULE_TYPE_FABRIC\x10\x03\x12\x16\n\x12HW_MODULE_TYPE_PSU\x10\x04\x12\x1a\n\x16HW_MODULE_TYPE_FANTRAY\x10\x05\x12\x1d\n\x19HW_MODULE_TYPE_MASTER_PSU\x10\x06*\xea\x02\n\x10ReqModuleOpsType\x12\x16\n\x12MODULE_OPS_INVALID\x10\x00\x12\x1f\n\x1bMODULE_OPS_GET_CHASSIS_TYPE\x10\x01\x12\x17\n\x13MODULE_OPS_GET_NAME\x10\x02\x12\x19\n\x15MODULE_OPS_GET_STATUS\x10\x03\x12!\n\x1dMODULE_OPS_GET_CHASSIS_STATUS\x10\x04\x12\x1c\n\x18MODULE_OPS_GET_MAX_POWER\x10\x05\x12\x1a\n\x16MODULE_OPS_GET_MY_SLOT\x10\x06\x12%\n!MODULE_OPS_GET_CHASSIS_PROPERTIES\x10\x07\x12\x1e\n\x1aMODULE_OPS_GET_MIDPLANE_IP\x10\x08\x12$\n MODULE_OPS_IS_MIDPLANE_REACHABLE\x10\t\x12\x1f\n\x1bMODULE_OPS_PING_MIDPLANE_IP\x10\n*\xd4\x02\n\rReqPsuOpsType\x12\x13\n\x0fPSU_OPS_INVALID\x10\x00\x12\x14\n\x10PSU_OPS_NUM_PSUS\x10\x01\x12\x18\n\x14PSU_OPS_GET_PRESENCE\x10\x02\x12\x16\n\x12PSU_OPS_GET_STATUS\x10\x03\x12\x14\n\x10PSU_OPS_SHOW_ALL\x10\x04\x12\x1e\n\x1aPSU_OPS_GET_OUTPUT_CURRENT\x10\x05\x12\x1e\n\x1aPSU_OPS_GET_OUTPUT_VOLTAGE\x10\x06\x12\x1b\n\x17PSU_OPS_GET_TEMPERATURE\x10\x07\x12\x1c\n\x18PSU_OPS_GET_OUTPUT_POWER\x10\x08\x12\x1e\n\x1aPSU_OPS_GET_SUPPLIED_POWER\x10\t\x12\x18\n\x14PSU_OPS_GET_FRU_INFO\x10\n\x12\x1b\n\x17PSU_OPS_GET_FAULT_LIMIT\x10\x0b*\xb7\x02\n\x0eReqTempOpsType\x12\x14\n\x10TEMP_OPS_INVALID\x10\x00\x12\x1c\n\x18TEMP_OPS_SET_TEMP_OFFSET\x10\x01\x12\x1a\n\x16TEMP_OPS_GET_CURR_TEMP\x10\x02\x12\x19\n\x15TEMP_OPS_GET_MIN_TEMP\x10\x03\x12\x19\n\x15TEMP_OPS_GET_MAX_TEMP\x10\x04\x12\x1e\n\x1aTEMP_OPS_GET_LOW_THRESHOLD\x10\x05\x12\x1f\n\x1bTEMP_OPS_GET_HIGH_THRESHOLD\x10\x06\x12!\n\x1dTEMP_OPS_GET_NAME_IDX_MAPPING\x10\x07\x12\x1a\n\x16TEMP_OPS_SHOW_READINGS\x10\x08\x12\x1f\n\x1bTEMP_OPS_UPDATE_HWSLOT_TEMP\x10\t*\xaa\x03\n\x11ReqFanTrayOpsType\x12\x13\n\x0f\x46\x41N_OPS_INVALID\x10\x00\x12\x19\n\x15\x46\x41N_OPS_GET_NUM_TRAYS\x10\x01\x12\x18\n\x14\x46\x41N_OPS_REQ_PRESENCE\x10\x02\x12\x16\n\x12\x46\x41N_OPS_REQ_STATUS\x10\x03\x12\x1c\n\x18\x46\x41N_OPS_GET_TARGET_SPEED\x10\x04\x12\x1c\n\x18\x46\x41N_OPS_GET_ACTUAL_SPEED\x10\x05\x12\x19\n\x15\x46\x41N_OPS_GET_DIRECTION\x10\x06\x12\x1c\n\x18\x46\x41N_OPS_SET_TARGET_SPEED\x10\x07\x12\x1d\n\x19\x46\x41N_OPS_DISABLE_ALGORITHM\x10\x08\x12\x14\n\x10\x46\x41N_OPS_SHOW_ALL\x10\t\x12\x1b\n\x17\x46\x41N_OPS_EEPROM_SERIALNO\x10\n\x12\x19\n\x15\x46\x41N_OPS_EEPROM_PARTNO\x10\x0b\x12\x19\n\x15\x46\x41N_OPS_GET_TOLERANCE\x10\x0c\x12\x1a\n\x16\x46\x41N_OPS_GET_LED_STATUS\x10\r\x12\x1a\n\x16\x46\x41N_OPS_SET_LED_STATUS\x10\x0e*i\n\x10\x46\x61nDirectionType\x12\x17\n\x13\x46\x41N_AIRFLOW_INVALID\x10\x00\x12\x1d\n\x19\x46\x41N_AIRFLOW_FRONT_TO_BACK\x10\x01\x12\x1d\n\x19\x46\x41N_AIRFLOW_BACK_TO_FRONT\x10\x02*y\n\x0cLedStateType\x12\x15\n\x11LED_STATE_INVALID\x10\x00\x12\x11\n\rLED_STATE_OFF\x10\x01\x12\x10\n\x0cLED_STATE_ON\x10\x02\x12\x13\n\x0fLED_STATE_BLINK\x10\x03\x12\x18\n\x14LED_STATE_FAST_BLINK\x10\x04*\x8c\x01\n\x0cLedColorType\x12\x15\n\x11LED_COLOR_INVALID\x10\x00\x12\x12\n\x0eLED_COLOR_NONE\x10\x01\x12\x13\n\x0fLED_COLOR_GREEN\x10\x02\x12\x13\n\x0fLED_COLOR_AMBER\x10\x03\x12\x14\n\x10LED_COLOR_YELLOW\x10\x04\x12\x11\n\rLED_COLOR_RED\x10\x05*X\n\rReqLedOpsType\x12\x13\n\x0fLED_OPS_INVALID\x10\x00\x12\x0f\n\x0bLED_OPS_SET\x10\x01\x12\x0f\n\x0bLED_OPS_GET\x10\x02\x12\x10\n\x0cLED_OPS_SHOW\x10\x03*\x98\x02\n\nReqLedType\x12\x14\n\x10LED_TYPE_INVALID\x10\x00\x12\x10\n\x0cLED_TYPE_ALL\x10\x01\x12\x11\n\rLED_TYPE_PORT\x10\x02\x12\x14\n\x10LED_TYPE_FANTRAY\x10\x03\x12\x10\n\x0cLED_TYPE_SFM\x10\x04\x12\x10\n\x0cLED_TYPE_PSU\x10\x05\x12\x19\n\x15LED_TYPE_BOARD_STATUS\x10\x06\x12\x1a\n\x16LED_TYPE_BOARD_LOCATOR\x10\x07\x12\x1e\n\x1aLED_TYPE_MASTER_FAN_STATUS\x10\x08\x12\x1e\n\x1aLED_TYPE_MASTER_PSU_STATUS\x10\t\x12\x1e\n\x1aLED_TYPE_MASTER_SFM_STATUS\x10\n*\xc2\x01\n\x10ReqSfpEepromType\x12\x16\n\x12SFP_EEPROM_INVALID\x10\x00\x12\x13\n\x0fSFP_EEPROM_CTRL\x10\x01\x12\x13\n\x0fSFP_EEPROM_DATA\x10\x02\x12\x17\n\x13SFP_EEPROM_EXT_CTRL\x10\x03\x12\x14\n\x10SFP_EEPROM_DEBUG\x10\x04\x12\x19\n\x15SFP_EEPROM_UPPER_PAGE\x10\x05\x12\"\n\x1eSFP_EEPROM_UPPER_BANK_AND_PAGE\x10\x06*\x83\x01\n\rReqSfpOpsType\x12\x13\n\x0fSFP_OPS_INVALID\x10\x00\x12\x18\n\x14SFP_OPS_REQ_PRESENCE\x10\x01\x12\x1c\n\x18SFP_OPS_GET_MPORT_STATUS\x10\x02\x12\x12\n\x0eSFP_OPS_NORMAL\x10\x03\x12\x11\n\rSFP_OPS_DEBUG\x10\x04*\xfd\x02\n\x11ReqEepromInfoType\x12\x16\n\x12\x45\x45PROM_OPS_INVALID\x10\x00\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_ALL_TLVS\x10\x01\x12 \n\x1c\x45\x45PROM_OPS_CARD_PRODUCT_NAME\x10\x02\x12\x1e\n\x1a\x45\x45PROM_OPS_CARD_SERIAL_NUM\x10\x03\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_PART_NUM\x10\x04\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_BASE_MAC\x10\x05\x12\x1d\n\x19\x45\x45PROM_OPS_CARD_MAC_COUNT\x10\x06\x12\x19\n\x15\x45\x45PROM_OPS_CARD_HWSKU\x10\x07\x12\x1f\n\x1b\x45\x45PROM_OPS_CARD_VENDOR_NAME\x10\x08\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_CLEI_NUM\x10\t\x12\x1c\n\x18\x45\x45PROM_OPS_CARD_MFG_DATE\x10\n\x12\x1d\n\x19\x45\x45PROM_OPS_CHASSIS_EEPROM\x10\x0b*\x8f\x01\n\x14HwFirmwareDeviceType\x12\x1e\n\x1aHW_FIRMWARE_DEVICE_INVALID\x10\x00\x12\x1b\n\x17HW_FIRMWARE_DEVICE_BIOS\x10\x01\x12\x1c\n\x18HW_FIRMWARE_DEVICE_FPGA1\x10\x02\x12\x1c\n\x18HW_FIRMWARE_DEVICE_FPGA2\x10\x03*p\n\x14ReqHwFirmwareOpsType\x12\x18\n\x14REQ_HWFW_OPS_INVALID\x10\x00\x12\x1d\n\x19REQ_HWFW_OPS_SHOW_VERSION\x10\x01\x12\x1f\n\x1bREQ_HWFW_OPS_GET_COMPONENTS\x10\x02*Y\n\rReqSfmOpsType\x12\x13\n\x0fSFM_OPS_INVALID\x10\x00\x12\x18\n\x14SFM_OPS_SHOW_SUMMARY\x10\x01\x12\x19\n\x15SFM_OPS_SHOW_IMMLINKS\x10\x02*{\n\nReqLogType\x12\x13\n\x0fREQ_LOG_INVALID\x10\x00\x12\x13\n\x0fREQ_LOG_SET_ALL\x10\x01\x12\x15\n\x11REQ_LOG_RESET_ALL\x10\x02\x12\x16\n\x12REQ_LOG_SET_MODULE\x10\x03\x12\x14\n\x10REQ_LOG_SHOW_ALL\x10\x04\x32\xef\x07\n\x19\x43hassisPlatformNdkService\x12^\n\rGetModuleName\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12`\n\x0fGetModuleStatus\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12_\n\x0eGetChassisType\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x61\n\x10GetChassisStatus\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x62\n\x11GetModuleMaxPower\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12Z\n\tGetMySlot\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x65\n\x14GetChassisProperties\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12^\n\rGetMidplaneIP\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12\x64\n\x13IsMidplaneReachable\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x12_\n\x0ePingMidplaneIP\x12$.protos.platform_ndk.ReqModuleInfoPb\x1a%.protos.platform_ndk.RespModuleInfoPb\"\x00\x32\xac\n\n\x15PsuPlatformNdkService\x12T\n\tGetPsuNum\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12Y\n\x0eGetPsuPresence\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12W\n\x0cGetPsuStatus\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12V\n\x0bShowPsuInfo\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12]\n\x12GetPsuMaximumPower\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12V\n\x0bGetPsuModel\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12W\n\x0cGetPsuSerial\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12^\n\x13GetPsuOutputCurrent\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12^\n\x13GetPsuOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\\\n\x11GetPsuOutputPower\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\\\n\x11GetPsuTemperature\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\x61\n\x16GetPsuMaxOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12\x61\n\x16GetPsuMinOutputVoltage\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x12_\n\x14GetPsuMaxTemperature\x12!.protos.platform_ndk.ReqPsuInfoPb\x1a\".protos.platform_ndk.RespPsuInfoPb\"\x00\x32\xae\x07\n\x19ThermalPlatformNdkService\x12\x63\n\x12GetThermalCurrTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x62\n\x11GetThermalMinTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x62\n\x11GetThermalMaxTemp\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12g\n\x16GetThermalLowThreshold\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12h\n\x17GetThermalHighThreshold\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x66\n\x15GetThermalDevicesInfo\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12`\n\x0fShowThermalInfo\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x64\n\x13UpdateThermalHwSlot\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x12\x61\n\x10SetThermalOffset\x12$.protos.platform_ndk.ReqTempParamsPb\x1a%.protos.platform_ndk.RespTempParamsPb\"\x00\x32\xf3\n\n\x15\x46\x61nPlatformNdkService\x12Z\n\tGetFanNum\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12_\n\x0eGetFanPresence\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12]\n\x0cGetFanStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11GetFanTargetSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11GetFanActualSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanDirection\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanTolerance\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fGetFanLedStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x62\n\x11SetFanTargetSpeed\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x64\n\x13\x44isableFanAlgorithm\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12`\n\x0fSetFanLedStatus\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x63\n\x12GetFanTraySerialNo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\x61\n\x10GetFanTrayPartNo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x12\\\n\x0bShowFanInfo\x12$.protos.platform_ndk.ReqFanTrayOpsPb\x1a%.protos.platform_ndk.RespFanTrayOpsPb\"\x00\x32\x91\x02\n\x15LedPlatformNdkService\x12Q\n\x06GetLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x12Q\n\x06SetLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x12R\n\x07ShowLed\x12!.protos.platform_ndk.ReqLedInfoPb\x1a\".protos.platform_ndk.RespLedInfoPb\"\x00\x32\xbc\x06\n\x16XcvrPlatformNdkService\x12\x62\n\x10GetSfpEepromInfo\x12#.protos.platform_ndk.ReqSfpEepromPb\x1a\'.protos.platform_ndk.GetSfpEepromInfoPb\"\x00\x12W\n\x0eGetSfpPresence\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12U\n\x0cGetSfpStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12T\n\x0bReqSfpReset\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12Z\n\x11GetSfpResetStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12U\n\x0cReqSfpLPMode\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12W\n\x0eGetSfpLPStatus\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12X\n\x0fReqSfpTxDisable\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x12R\n\tGetSfpNum\x12 .protos.platform_ndk.ReqSfpOpsPb\x1a!.protos.platform_ndk.RespSfpOpsPb\"\x00\x32\xde\x08\n\x18\x45\x65promPlatformNdkService\x12]\n\x0cGetCardHwsku\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardVendorName\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x63\n\x12GetCardProductName\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x64\n\x13GetCardSerialNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardPartNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x62\n\x11GetCardCleiNumber\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12_\n\x0eGetCardMfgDate\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12_\n\x0eGetCardBaseMac\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12`\n\x0fGetCardMacCount\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x65\n\x14GetCardEepromAllTlvs\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x12\x61\n\x10GetChassisEeprom\x12$.protos.platform_ndk.ReqEepromInfoPb\x1a%.protos.platform_ndk.RespEepromInfoPb\"\x00\x32\xfd\x01\n\x1a\x46irmwarePlatformNdkService\x12m\n\x14ReqHwFirmwareVersion\x12(.protos.platform_ndk.ReqHwFirmwareInfoPb\x1a).protos.platform_ndk.RespHwFirmwareInfoPb\"\x00\x12p\n\x17HwFirmwareGetComponents\x12(.protos.platform_ndk.ReqHwFirmwareInfoPb\x1a).protos.platform_ndk.RespHwFirmwareInfoPb\"\x00\x32\xbd\x04\n\x16UtilPlatformNdkService\x12U\n\nReqSfmInfo\x12!.protos.platform_ndk.ReqSfmInfoPb\x1a\".protos.platform_ndk.RespSfmInfoPb\"\x00\x12M\n\x0cReqAdminTech\x12#.protos.platform_ndk.ReqAdminTechPb\x1a\x16.google.protobuf.Empty\"\x00\x12]\n\x0cReqLogSetAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12`\n\x0fReqLogSetModule\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12_\n\x0eReqLogResetAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x12[\n\nShowLogAll\x12$.protos.platform_ndk.ReqLogSettingPb\x1a%.protos.platform_ndk.RespLogSettingPb\"\x00\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
 
@@ -51,8 +51,8 @@ _RESPONSECODE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=8752,
-  serialized_end=8861,
+  serialized_start=8777,
+  serialized_end=8886,
 )
 _sym_db.RegisterEnumDescriptor(_RESPONSECODE)
 
@@ -79,11 +79,19 @@ _HWCHASSISTYPE = _descriptor.EnumDescriptor(
       name='HW_CHASSIS_TYPE_7220_H3', index=3, number=3,
       serialized_options=None,
       type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HW_CHASSIS_TYPE_IXR6E', index=4, number=4,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='HW_CHASSIS_TYPE_IXR10E', index=5, number=5,
+      serialized_options=None,
+      type=None),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=8863,
-  serialized_end=8989,
+  serialized_start=8889,
+  serialized_end=9070,
 )
 _sym_db.RegisterEnumDescriptor(_HWCHASSISTYPE)
 
@@ -125,8 +133,8 @@ _HWMODULETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=8992,
-  serialized_end=9197,
+  serialized_start=9073,
+  serialized_end=9278,
 )
 _sym_db.RegisterEnumDescriptor(_HWMODULETYPE)
 
@@ -184,8 +192,8 @@ _REQMODULEOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=9200,
-  serialized_end=9562,
+  serialized_start=9281,
+  serialized_end=9643,
 )
 _sym_db.RegisterEnumDescriptor(_REQMODULEOPSTYPE)
 
@@ -247,8 +255,8 @@ _REQPSUOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=9565,
-  serialized_end=9905,
+  serialized_start=9646,
+  serialized_end=9986,
 )
 _sym_db.RegisterEnumDescriptor(_REQPSUOPSTYPE)
 
@@ -302,8 +310,8 @@ _REQTEMPOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=9908,
-  serialized_end=10219,
+  serialized_start=9989,
+  serialized_end=10300,
 )
 _sym_db.RegisterEnumDescriptor(_REQTEMPOPSTYPE)
 
@@ -377,8 +385,8 @@ _REQFANTRAYOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=10222,
-  serialized_end=10648,
+  serialized_start=10303,
+  serialized_end=10729,
 )
 _sym_db.RegisterEnumDescriptor(_REQFANTRAYOPSTYPE)
 
@@ -404,8 +412,8 @@ _FANDIRECTIONTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=10650,
-  serialized_end=10755,
+  serialized_start=10731,
+  serialized_end=10836,
 )
 _sym_db.RegisterEnumDescriptor(_FANDIRECTIONTYPE)
 
@@ -439,8 +447,8 @@ _LEDSTATETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=10757,
-  serialized_end=10878,
+  serialized_start=10838,
+  serialized_end=10959,
 )
 _sym_db.RegisterEnumDescriptor(_LEDSTATETYPE)
 
@@ -478,8 +486,8 @@ _LEDCOLORTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=10881,
-  serialized_end=11021,
+  serialized_start=10962,
+  serialized_end=11102,
 )
 _sym_db.RegisterEnumDescriptor(_LEDCOLORTYPE)
 
@@ -509,8 +517,8 @@ _REQLEDOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=11023,
-  serialized_end=11111,
+  serialized_start=11104,
+  serialized_end=11192,
 )
 _sym_db.RegisterEnumDescriptor(_REQLEDOPSTYPE)
 
@@ -568,8 +576,8 @@ _REQLEDTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=11114,
-  serialized_end=11394,
+  serialized_start=11195,
+  serialized_end=11475,
 )
 _sym_db.RegisterEnumDescriptor(_REQLEDTYPE)
 
@@ -611,8 +619,8 @@ _REQSFPEEPROMTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=11397,
-  serialized_end=11591,
+  serialized_start=11478,
+  serialized_end=11672,
 )
 _sym_db.RegisterEnumDescriptor(_REQSFPEEPROMTYPE)
 
@@ -646,8 +654,8 @@ _REQSFPOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=11594,
-  serialized_end=11725,
+  serialized_start=11675,
+  serialized_end=11806,
 )
 _sym_db.RegisterEnumDescriptor(_REQSFPOPSTYPE)
 
@@ -709,8 +717,8 @@ _REQEEPROMINFOTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=11728,
-  serialized_end=12109,
+  serialized_start=11809,
+  serialized_end=12190,
 )
 _sym_db.RegisterEnumDescriptor(_REQEEPROMINFOTYPE)
 
@@ -740,8 +748,8 @@ _HWFIRMWAREDEVICETYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=12112,
-  serialized_end=12255,
+  serialized_start=12193,
+  serialized_end=12336,
 )
 _sym_db.RegisterEnumDescriptor(_HWFIRMWAREDEVICETYPE)
 
@@ -767,8 +775,8 @@ _REQHWFIRMWAREOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=12257,
-  serialized_end=12369,
+  serialized_start=12338,
+  serialized_end=12450,
 )
 _sym_db.RegisterEnumDescriptor(_REQHWFIRMWAREOPSTYPE)
 
@@ -794,8 +802,8 @@ _REQSFMOPSTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=12371,
-  serialized_end=12460,
+  serialized_start=12452,
+  serialized_end=12541,
 )
 _sym_db.RegisterEnumDescriptor(_REQSFMOPSTYPE)
 
@@ -829,8 +837,8 @@ _REQLOGTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=12462,
-  serialized_end=12585,
+  serialized_start=12543,
+  serialized_end=12666,
 )
 _sym_db.RegisterEnumDescriptor(_REQLOGTYPE)
 
@@ -843,6 +851,8 @@ HW_CHASSIS_TYPE_INVALID = 0
 HW_CHASSIS_TYPE_IXR6 = 1
 HW_CHASSIS_TYPE_IXR10 = 2
 HW_CHASSIS_TYPE_7220_H3 = 3
+HW_CHASSIS_TYPE_IXR6E = 4
+HW_CHASSIS_TYPE_IXR10E = 5
 HW_MODULE_TYPE_INVALID = 0
 HW_MODULE_TYPE_CONTROL = 1
 HW_MODULE_TYPE_LINE = 2
@@ -1810,6 +1820,13 @@ _GETTEMPDEVICEPB = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='fanalgo_sensor', full_name='protos.platform_ndk.GetTempDevicePb.fanalgo_sensor', index=5,
+      number=6, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -1822,8 +1839,8 @@ _GETTEMPDEVICEPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2309,
-  serialized_end=2419,
+  serialized_start=2310,
+  serialized_end=2444,
 )
 
 
@@ -1853,8 +1870,8 @@ _ALLTEMPDEVICEPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2421,
-  serialized_end=2497,
+  serialized_start=2446,
+  serialized_end=2522,
 )
 
 
@@ -1891,8 +1908,8 @@ _SHOWTEMPINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=2500,
-  serialized_end=2636,
+  serialized_start=2525,
+  serialized_end=2661,
 )
 
 
@@ -1946,8 +1963,8 @@ _REQTEMPPARAMSPB = _descriptor.Descriptor(
       name='set_type', full_name='protos.platform_ndk.ReqTempParamsPb.set_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=2639,
-  serialized_end=2780,
+  serialized_start=2664,
+  serialized_end=2805,
 )
 
 
@@ -2043,8 +2060,8 @@ _RESPTEMPPARAMSPB = _descriptor.Descriptor(
       name='get_type', full_name='protos.platform_ndk.RespTempParamsPb.get_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=2783,
-  serialized_end=3188,
+  serialized_start=2808,
+  serialized_end=3213,
 )
 
 
@@ -2081,8 +2098,8 @@ _REQFANTRAYINDEXPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3190,
-  serialized_end=3247,
+  serialized_start=3215,
+  serialized_end=3272,
 )
 
 
@@ -2112,8 +2129,8 @@ _GETNUMFANTRAYINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3249,
-  serialized_end=3292,
+  serialized_start=3274,
+  serialized_end=3317,
 )
 
 
@@ -2143,8 +2160,8 @@ _GETFANTRAYPRESENCEINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3294,
-  serialized_end=3346,
+  serialized_start=3319,
+  serialized_end=3371,
 )
 
 
@@ -2174,8 +2191,8 @@ _GETFANTRAYSTATUSINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3348,
-  serialized_end=3396,
+  serialized_start=3373,
+  serialized_end=3421,
 )
 
 
@@ -2205,8 +2222,8 @@ _GETFANTRAYSPEEDPERCENTPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3398,
-  serialized_end=3447,
+  serialized_start=3423,
+  serialized_end=3472,
 )
 
 
@@ -2236,8 +2253,8 @@ _GETFANDEVICEPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3449,
-  serialized_end=3484,
+  serialized_start=3474,
+  serialized_end=3509,
 )
 
 
@@ -2295,8 +2312,8 @@ _SHOWFANINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3487,
-  serialized_end=3668,
+  serialized_start=3512,
+  serialized_end=3693,
 )
 
 
@@ -2326,8 +2343,8 @@ _SETFANTRAYALGORITHMPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3670,
-  serialized_end=3723,
+  serialized_start=3695,
+  serialized_end=3748,
 )
 
 
@@ -2357,8 +2374,8 @@ _RESPFANTRAYEEPROMPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=3725,
-  serialized_end=3769,
+  serialized_start=3750,
+  serialized_end=3794,
 )
 
 
@@ -2412,8 +2429,8 @@ _REQFANTRAYOPSPB = _descriptor.Descriptor(
       name='req_type', full_name='protos.platform_ndk.ReqFanTrayOpsPb.req_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=3772,
-  serialized_end=3998,
+  serialized_start=3797,
+  serialized_end=4023,
 )
 
 
@@ -2516,8 +2533,8 @@ _RESPFANTRAYOPSPB = _descriptor.Descriptor(
       name='resp_type', full_name='protos.platform_ndk.RespFanTrayOpsPb.resp_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=4001,
-  serialized_end=4708,
+  serialized_start=4026,
+  serialized_end=4733,
 )
 
 
@@ -2554,8 +2571,8 @@ _REQLEDINDEXPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4710,
-  serialized_end=4761,
+  serialized_start=4735,
+  serialized_end=4786,
 )
 
 
@@ -2592,8 +2609,8 @@ _LEDSETINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4763,
-  serialized_end=4885,
+  serialized_start=4788,
+  serialized_end=4910,
 )
 
 
@@ -2623,8 +2640,8 @@ _GETLEDINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4887,
-  serialized_end=4954,
+  serialized_start=4912,
+  serialized_end=4979,
 )
 
 
@@ -2668,8 +2685,8 @@ _GETLEDSHOWPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=4956,
-  serialized_end=5025,
+  serialized_start=4981,
+  serialized_end=5050,
 )
 
 
@@ -2699,8 +2716,8 @@ _SHOWLEDINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5027,
-  serialized_end=5096,
+  serialized_start=5052,
+  serialized_end=5121,
 )
 
 
@@ -2744,8 +2761,8 @@ _REQLEDINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5099,
-  serialized_end=5270,
+  serialized_start=5124,
+  serialized_end=5295,
 )
 
 
@@ -2792,8 +2809,8 @@ _RESPLEDINFOPB = _descriptor.Descriptor(
       name='resp_type', full_name='protos.platform_ndk.RespLedInfoPb.resp_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=5273,
-  serialized_end=5473,
+  serialized_start=5298,
+  serialized_end=5498,
 )
 
 
@@ -2858,8 +2875,8 @@ _REQSFPEEPROMPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5476,
-  serialized_end=5629,
+  serialized_start=5501,
+  serialized_end=5654,
 )
 
 
@@ -2896,8 +2913,8 @@ _GETSFPEEPROMINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5631,
-  serialized_end=5727,
+  serialized_start=5656,
+  serialized_end=5752,
 )
 
 
@@ -2948,8 +2965,8 @@ _REQSFPOPSPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5729,
-  serialized_end=5855,
+  serialized_start=5754,
+  serialized_end=5880,
 )
 
 
@@ -2979,8 +2996,8 @@ _RESPSFPSTATUSPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5857,
-  serialized_end=5890,
+  serialized_start=5882,
+  serialized_end=5915,
 )
 
 
@@ -3017,8 +3034,8 @@ _RESPSFPIDSTATUSPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5892,
-  serialized_end=5945,
+  serialized_start=5917,
+  serialized_end=5970,
 )
 
 
@@ -3048,8 +3065,8 @@ _RESPMULTIPORTSTATUSPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=5947,
-  serialized_end=6031,
+  serialized_start=5972,
+  serialized_end=6056,
 )
 
 
@@ -3103,8 +3120,8 @@ _RESPSFPOPSPB = _descriptor.Descriptor(
       name='resp_type', full_name='protos.platform_ndk.RespSfpOpsPb.resp_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=6034,
-  serialized_end=6269,
+  serialized_start=6059,
+  serialized_end=6294,
 )
 
 
@@ -3134,8 +3151,8 @@ _REQEEPROMINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6271,
-  serialized_end=6342,
+  serialized_start=6296,
+  serialized_end=6367,
 )
 
 
@@ -3207,8 +3224,8 @@ _GETCHASSISEEPROMPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6345,
-  serialized_end=6582,
+  serialized_start=6370,
+  serialized_end=6607,
 )
 
 
@@ -3318,8 +3335,8 @@ _RESPEEPROMINFOPB = _descriptor.Descriptor(
       name='resp_type', full_name='protos.platform_ndk.RespEepromInfoPb.resp_type',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=6585,
-  serialized_end=6993,
+  serialized_start=6610,
+  serialized_end=7018,
 )
 
 
@@ -3349,8 +3366,8 @@ _REQHWFIRMWAREINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=6995,
-  serialized_end=7077,
+  serialized_start=7020,
+  serialized_end=7102,
 )
 
 
@@ -3394,8 +3411,8 @@ _HWCOMPONENTINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7079,
-  serialized_end=7195,
+  serialized_start=7104,
+  serialized_end=7220,
 )
 
 
@@ -3425,8 +3442,8 @@ _HWFIRMWAREINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7197,
-  serialized_end=7274,
+  serialized_start=7222,
+  serialized_end=7299,
 )
 
 
@@ -3466,8 +3483,8 @@ _RESPHWFIRMWAREINFOPB = _descriptor.Descriptor(
       name='resp_fw', full_name='protos.platform_ndk.RespHwFirmwareInfoPb.resp_fw',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=7276,
-  serialized_end=7392,
+  serialized_start=7301,
+  serialized_end=7417,
 )
 
 
@@ -3504,8 +3521,8 @@ _REQSFMINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7394,
-  serialized_end=7476,
+  serialized_start=7419,
+  serialized_end=7501,
 )
 
 
@@ -3584,8 +3601,8 @@ _GETSFMINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7479,
-  serialized_end=7642,
+  serialized_start=7504,
+  serialized_end=7667,
 )
 
 
@@ -3615,8 +3632,8 @@ _GETSFMSUMMARYPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7644,
-  serialized_end=7714,
+  serialized_start=7669,
+  serialized_end=7739,
 )
 
 
@@ -3688,8 +3705,8 @@ _GETSFMIMMLINKPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7717,
-  serialized_end=7879,
+  serialized_start=7742,
+  serialized_end=7904,
 )
 
 
@@ -3747,8 +3764,8 @@ _GETSFMIMMINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=7882,
-  serialized_end=8031,
+  serialized_start=7907,
+  serialized_end=8056,
 )
 
 
@@ -3795,8 +3812,8 @@ _RESPSFMINFOPB = _descriptor.Descriptor(
       name='resp_sfm', full_name='protos.platform_ndk.RespSfmInfoPb.resp_sfm',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=8034,
-  serialized_end=8246,
+  serialized_start=8059,
+  serialized_end=8271,
 )
 
 
@@ -3826,8 +3843,8 @@ _REQADMINTECHPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=8248,
-  serialized_end=8288,
+  serialized_start=8273,
+  serialized_end=8313,
 )
 
 
@@ -3871,8 +3888,8 @@ _REQLOGINFOPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=8290,
-  serialized_end=8366,
+  serialized_start=8315,
+  serialized_end=8391,
 )
 
 
@@ -3919,8 +3936,8 @@ _REQLOGSETTINGPB = _descriptor.Descriptor(
       name='req_log', full_name='protos.platform_ndk.ReqLogSettingPb.req_log',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=8369,
-  serialized_end=8528,
+  serialized_start=8394,
+  serialized_end=8553,
 )
 
 
@@ -3950,8 +3967,8 @@ _RESPLOGSHOWPB = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=8530,
-  serialized_end=8599,
+  serialized_start=8555,
+  serialized_end=8624,
 )
 
 
@@ -3991,8 +4008,8 @@ _RESPLOGSETTINGPB = _descriptor.Descriptor(
       name='resp_log', full_name='protos.platform_ndk.RespLogSettingPb.resp_log',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=8602,
-  serialized_end=8750,
+  serialized_start=8627,
+  serialized_end=8775,
 )
 
 _RESPONSESTATUS.fields_by_name['status_code'].enum_type = _RESPONSECODE
@@ -4828,8 +4845,8 @@ _CHASSISPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=12588,
-  serialized_end=13595,
+  serialized_start=12669,
+  serialized_end=13676,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetModuleName',
@@ -4933,8 +4950,8 @@ _PSUPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=1,
   serialized_options=None,
-  serialized_start=13598,
-  serialized_end=14922,
+  serialized_start=13679,
+  serialized_end=15003,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetPsuNum',
@@ -5074,8 +5091,8 @@ _THERMALPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=2,
   serialized_options=None,
-  serialized_start=14925,
-  serialized_end=15867,
+  serialized_start=15006,
+  serialized_end=15948,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetThermalCurrTemp',
@@ -5170,8 +5187,8 @@ _FANPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=3,
   serialized_options=None,
-  serialized_start=15870,
-  serialized_end=17265,
+  serialized_start=15951,
+  serialized_end=17346,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetFanNum',
@@ -5311,8 +5328,8 @@ _LEDPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=4,
   serialized_options=None,
-  serialized_start=17268,
-  serialized_end=17541,
+  serialized_start=17349,
+  serialized_end=17622,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetLed',
@@ -5353,8 +5370,8 @@ _XCVRPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=5,
   serialized_options=None,
-  serialized_start=17544,
-  serialized_end=18372,
+  serialized_start=17625,
+  serialized_end=18453,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetSfpEepromInfo',
@@ -5449,8 +5466,8 @@ _EEPROMPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=6,
   serialized_options=None,
-  serialized_start=18375,
-  serialized_end=19493,
+  serialized_start=18456,
+  serialized_end=19574,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetCardHwsku',
@@ -5563,8 +5580,8 @@ _FIRMWAREPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=7,
   serialized_options=None,
-  serialized_start=19496,
-  serialized_end=19749,
+  serialized_start=19577,
+  serialized_end=19830,
   methods=[
   _descriptor.MethodDescriptor(
     name='ReqHwFirmwareVersion',
@@ -5596,8 +5613,8 @@ _UTILPLATFORMNDKSERVICE = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=8,
   serialized_options=None,
-  serialized_start=19752,
-  serialized_end=20325,
+  serialized_start=19833,
+  serialized_end=20406,
   methods=[
   _descriptor.MethodDescriptor(
     name='ReqSfmInfo',

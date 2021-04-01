@@ -380,7 +380,8 @@ class Chassis(ChassisBase):
 
             for i in range(self.num_thermals):
                 temp_device_ = all_temp_devices.temp_device[i]
-                thermal = Thermal(i, temp_device_.device_idx, temp_device_.sensor_name, self.thermal_stub)
+                thermal = Thermal(i, temp_device_.device_idx, temp_device_.sensor_name,
+                        temp_device_.fanalgo_sensor, self.thermal_stub)
                 self._thermal_list.append(thermal)
 
     def get_all_thermals(self):

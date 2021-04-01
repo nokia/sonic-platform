@@ -4,6 +4,7 @@ from sonic_py_common import daemon_base
 from sonic_py_common.logger import Logger
 from swsscommon import swsscommon
 from sonic_platform_base.module_base import ModuleBase
+from platform_ndk import nokia_common
 
 logger = Logger('thermal_infos')
 
@@ -99,23 +100,26 @@ class ThermalInfo(ThermalPolicyInfoBase):
                 continue
 
             for key in keys:
+                # Skip temperature sensors not required for FAN reading.
+                if not key.endswith('(fan)'):
+                    continue;
+
                 status, fvs = lc_thermal_tbl.get(key)
                 fv_dict = dict(fvs)
 
-                # Skip temperature sensors not valid for FAN reading.
-                # Can convert this check into a RPC API
-                if (float(fv_dict['minimum_temperature']) == self.NOKIA_INVALID_TEMP) and (
-                        float(fv_dict['maximum_temperature']) == self.NOKIA_INVALID_TEMP):
-                    continue
-
                 # For J2 temperatures, there is remote normalization
                 normalize = 0.0
-                if (float(fv_dict['high_threshold']) == self.NOKIA_J2_TEMP_THRESHOLD):
+                if (float(fv_dict['high_threshold']) ==
+                        nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD):
                     normalize = self.NOKIA_J2_TEMP_THRESHOLD - self.NOKIA_IMM_TEMP_THRESHOLD
 
                 self.curr_temp = max(float(self.curr_temp), float(fv_dict['temperature']) - normalize)
                 self.updateminmax(float(fv_dict['minimum_temperature']) - normalize)
                 self.updateminmax(float(fv_dict['maximum_temperature']) - normalize)
+                logger.log_error('{} passed {} {} calc {} {}'.format(key,
+                    float(fv_dict['minimum_temperature']) - normalize,
+                    float(fv_dict['maximum_temperature']) - normalize,
+                    self.min_temp, self.max_temp))
                 margin = float(fv_dict['high_threshold']) - float(fv_dict['temperature'])
                 self.margin_temp = min(float(self.margin_temp), margin)
 

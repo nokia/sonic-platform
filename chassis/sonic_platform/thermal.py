@@ -18,10 +18,15 @@ except ImportError as e:
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
-    def __init__(self, thermal_index, map_index, thermal_name, stub):
+    def __init__(self, thermal_index, map_index, thermal_name, fan_sensor, stub):
         self.index = thermal_index
         self.map_index = map_index
-        self.thermal_name = 'Thermal {}'.format(map_index)
+        # self.thermal_name = 'Thermal {}'.format(map_index)
+        # Has (fan) suffix for fan-algo sensors
+        if fan_sensor:
+            self.thermal_name = thermal_name + '(fan)'
+        else:
+            self.thermal_name = thermal_name
         self.is_psu_thermal = False
         self.dependency = None
         self.stub = stub
@@ -127,7 +132,9 @@ class Thermal(ThermalBase):
         if ret is False:
             return self.thermal_high_threshold
 
-        self.thermal_high_threshold = float(response.high_threshold)
+        self.thermal_high_threshold = min(float(response.high_threshold),
+            nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD)
+
         return float("{:.3f}".format(self.thermal_high_threshold))
 
     def get_low_threshold(self):
@@ -190,8 +197,10 @@ class Thermal(ThermalBase):
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
         self.get_high_threshold()
-        self.thermal_high_critical_threshold = (self.thermal_high_threshold *
-                                                nokia_common.NOKIA_TEMP_HIGH_CRITICAL_THRESHOLD_MULTIPLIER)
+        self.thermal_high_critical_threshold = min((self.thermal_high_threshold *
+            nokia_common.NOKIA_TEMP_HIGH_CRITICAL_THRESHOLD_MULTIPLIER),
+            nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD)
+
         return float("{:.3f}".format(self.thermal_high_critical_threshold))
 
     def get_low_critical_threshold(self):
@@ -227,6 +236,8 @@ class Thermal(ThermalBase):
             return self.thermal_min_temp
 
         self.thermal_min_temp = float(response.min_temp)
+        if self.thermal_min_temp == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_min_temp = self.thermal_low_threshold
 
         return float("{:.3f}".format(self.thermal_min_temp))
 
@@ -250,6 +261,8 @@ class Thermal(ThermalBase):
             return self.thermal_max_temp
 
         self.thermal_max_temp = float(response.max_temp)
+        if self.thermal_max_temp == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_max_temp = self.thermal_high_threshold
 
         return float("{:.3f}".format(self.thermal_max_temp))
 
