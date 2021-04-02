@@ -34,8 +34,10 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
             try:
                 os.makedirs(CACHE_ROOT)
             except Exception as e:
+                # if there is a permission issue to create directory,
+                # use /tmp to instead
+                cache_file=os.path.join("/tmp",CACHE_FILE) 
                 pass
-        cache_file = os.path.join(CACHE_ROOT, CACHE_FILE)
         if not os.path.exists(cache_file):
             channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_EEPROM_SERVICE)
             if not channel or not stub:
