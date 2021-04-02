@@ -116,10 +116,6 @@ class ThermalInfo(ThermalPolicyInfoBase):
                 self.curr_temp = max(float(self.curr_temp), float(fv_dict['temperature']) - normalize)
                 self.updateminmax(float(fv_dict['minimum_temperature']) - normalize)
                 self.updateminmax(float(fv_dict['maximum_temperature']) - normalize)
-                logger.log_error('{} passed {} {} calc {} {}'.format(key,
-                    float(fv_dict['minimum_temperature']) - normalize,
-                    float(fv_dict['maximum_temperature']) - normalize,
-                    self.min_temp, self.max_temp))
                 margin = float(fv_dict['high_threshold']) - float(fv_dict['temperature'])
                 self.margin_temp = min(float(self.margin_temp), margin)
 
