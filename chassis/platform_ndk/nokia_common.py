@@ -30,7 +30,7 @@ NOKIA_DEVMGR_UNIX_SOCKET_PATH = NOKIA_UNIX_SOCKET_PREFIX+\
 NOKIA_FP_START_PORTID = 0
 NOKIA_FP_END_PORTID = 35
 NOKIA_MAX_PORTS_PER_ASIC = 12
-NOKIA_CPM_SLOT_NUMBER = 16
+NOKIA_CPM_SLOT_NUMBER = 0
 NOKIA_INVALID_SLOT_NUMBER = -1
 NOKIA_INVALID_IP = '0.0.0.0'
 NOKIA_INVALID_FIRMWARE_VERSION = '0.0'
@@ -52,7 +52,7 @@ NOKIA_GRPC_FIRMWARE_SERVICE = 'Firmware-Service'
 NOKIA_GRPC_UTIL_SERVICE = 'Util-Service'
 NOKIA_GRPC_EEPROM_SERVICE = 'Eeprom-Service'
 
-
+my_chassis_type = platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
 def channel_setup(service):
     server_path = NOKIA_DEVMGR_UNIX_SOCKET_PATH
     if os.path.exists(NOKIA_CHANNEL_FILE_PATH):
@@ -122,9 +122,13 @@ def try_grpc(callback, *args, **kwargs):
 def is_cpm():
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
     if not channel or not stub:
-        return NOKIA_INVALID_SLOT_NUMBER
-    response = stub.GetMySlot(platform_ndk_pb2.ReqModuleInfoPb())
+        return False
+    ret, response = try_grpc(stub.GetMySlot, platform_ndk_pb2.ReqModuleInfoPb())
     channel_shutdown(channel)
+
+    if ret is False:
+        return False
+
     return (response.my_slot == NOKIA_CPM_SLOT_NUMBER)
 
 
@@ -136,22 +140,35 @@ def _get_my_slot():
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
     if not channel or not stub:
         return NOKIA_INVALID_SLOT_NUMBER
-    response = stub.GetMySlot(platform_ndk_pb2.ReqModuleInfoPb())
+    ret, response = try_grpc(stub.GetMySlot, platform_ndk_pb2.ReqModuleInfoPb())
     channel_shutdown(channel)
+
+    if ret is False:
+        return NOKIA_INVALID_SLOT_NUMBER
+
     return response.my_slot
 
 
 def get_chassis_type():
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
-    response = stub.GetChassisType(platform_ndk_pb2.ReqModuleInfoPb())
+    if not channel or not stub:
+        return my_chassis_type
+    ret, response = try_grpc(stub.GetChassisType, platform_ndk_pb2.ReqModuleInfoPb())
     channel_shutdown(channel)
-    return response.chassis_type
+
+    if ret is False:
+        return my_chassis_type
+
+    my_chassis_type = response.chassis_type
+    return my_chassis_type
 
 
 def is_chassis_modular():
     chassis_type = get_chassis_type()
     if ((chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6) or
-        (chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR10)):
+        (chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR10) or
+        (chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6E) or
+        (chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR10E)):
         return True
     return False
 
