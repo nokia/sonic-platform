@@ -31,12 +31,12 @@ class Thermal(ThermalBase):
         self.dependency = None
         self.stub = stub
 
-        self.thermal_temperature = 0.0
+        self.thermal_temperature = nokia_common.NOKIA_SONIC_PMON_INIT_TEMP
         self.thermal_high_threshold = 0.0
         self.thermal_low_threshold = 0.0
         self.thermal_high_critical_threshold = 0.0
         self.thermal_low_critical_threshold = 0.0
-        self.thermal_min_temp = 0.0
+        self.thermal_min_temp = nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD
         self.thermal_max_temp = 0.0
 
     def get_name(self):
@@ -235,9 +235,11 @@ class Thermal(ThermalBase):
         if ret is False:
             return self.thermal_min_temp
 
-        self.thermal_min_temp = float(response.min_temp)
-        if self.thermal_min_temp == nokia_common.NOKIA_INVALID_TEMP:
-            self.thermal_min_temp = self.thermal_low_threshold
+        if float(response.min_temp) == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_min_temp = min(self.thermal_min_temp,
+                    self.thermal_temperature)
+        else:
+            self.thermal_min_temp = float(response.min_temp)
 
         return float("{:.3f}".format(self.thermal_min_temp))
 
@@ -260,9 +262,11 @@ class Thermal(ThermalBase):
         if ret is False:
             return self.thermal_max_temp
 
-        self.thermal_max_temp = float(response.max_temp)
-        if self.thermal_max_temp == nokia_common.NOKIA_INVALID_TEMP:
-            self.thermal_max_temp = self.thermal_high_threshold
+        if float(response.max_temp) == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_max_temp = max(self.thermal_max_temp,
+                    self.thermal_temperature)
+        else:
+            self.thermal_max_temp = float(response.max_temp)
 
         return float("{:.3f}".format(self.thermal_max_temp))
 
