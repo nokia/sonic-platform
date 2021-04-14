@@ -19,6 +19,7 @@ class Psu(PsuBase):
     """Nokia IXR-7250 Platform-specific PSU class"""
 
     def __init__(self, psu_index, stub):
+        PsuBase.__init__(self)
         self.index = psu_index + 1
         self.stub = stub
         self.is_cpm = 1
@@ -34,9 +35,6 @@ class Psu(PsuBase):
         self.output_current = 0.0
         self.output_voltage = 0.0
         self.output_power = 0.0
-        # Overriding _fan_list class variable defined in PsuBase, to
-        # make it unique per Psu object
-        # self._fan_list = []
 
     def get_name(self):
         """

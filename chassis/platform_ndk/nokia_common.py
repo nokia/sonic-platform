@@ -10,6 +10,7 @@
 import os
 
 from sonic_platform_base.device_base import DeviceBase
+from sonic_platform_base.module_base import ModuleBase
 import grpc
 from platform_ndk import platform_ndk_pb2
 from platform_ndk import platform_ndk_pb2_grpc
@@ -206,3 +207,21 @@ def led_info_to_color(led_info):
         _color = DeviceBase.STATUS_LED_COLOR_RED
 
     return _color
+
+def hw_module_status_name(status_type):
+    status_ = ModuleBase.MODULE_STATUS_EMPTY
+
+    if status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_EMPTY:
+        status_ = ModuleBase.MODULE_STATUS_EMPTY
+    elif status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_OFFLINE:
+        status_ = ModuleBase.MODULE_STATUS_OFFLINE
+    elif status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_POWERED_DOWN:
+        status_ = ModuleBase.MODULE_STATUS_POWERED_DOWN
+    elif status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_PRESENT:
+        status_ = ModuleBase.MODULE_STATUS_PRESENT
+    elif status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_FAULT:
+        status_ = ModuleBase.MODULE_STATUS_FAULT
+    elif status_type == platform_ndk_pb2.HwModuleStatus.HW_MODULE_STATUS_ONLINE:
+        status_ = ModuleBase.MODULE_STATUS_ONLINE
+
+    return status_

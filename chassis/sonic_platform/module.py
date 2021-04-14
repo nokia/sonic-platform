@@ -123,8 +123,8 @@ class Module(ModuleBase):
         if ret is False:
             return self.oper_status
 
-        self.oper_status = response.status
-        return response.status
+        self.oper_status = nokia_common.hw_module_status_name(response.status)
+        return self.oper_status
 
     def get_position_in_parent(self):
         """

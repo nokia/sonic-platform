@@ -462,6 +462,7 @@ def show_sfm_summary(stub):
     field.append('Presence')
     field.append('Error')
     field.append('Instance')
+    field.append('Failed')
 
     i = 0
     item_list = []
@@ -476,6 +477,7 @@ def show_sfm_summary(stub):
         item.append(str(sfm_info.presence))
         item.append(str(sfm_info.error))
         item.append(str(sfm_info.instance))
+        item.append(str(sfm_info.failed))
         item_list.append(item)
         i += 1
 
