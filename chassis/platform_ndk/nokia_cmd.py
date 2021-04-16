@@ -396,7 +396,7 @@ def show_platform(stub):
         item = []
         item.append(str(hw_device.slot_num))
         item.append(hw_device.hw_name)
-        item.append(hw_device.state)
+        item.append(nokia_common.hw_module_status_name(hw_device.status))
         m_response = stub.GetMidplaneIP(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_device.slot_num))
         item.append(m_response.midplane_ip)
         item_list.append(item)
