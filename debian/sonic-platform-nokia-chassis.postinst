@@ -1,0 +1,11 @@
+systemctl enable nokia-watchdog.service
+systemctl start nokia-watchdog.service
+
+systemctl enable nokia-sr-device-mgr.service
+systemctl enable nokia-ndk-qfpga-mgr.service
+systemctl enable nokia-eth-mgr.service
+
+systemctl daemon-reload
+systemctl start nokia-sr-device-mgr.service &
+systemctl start nokia-ndk-qfpga-mgr.service &
+systemctl start nokia-eth-mgr.service &

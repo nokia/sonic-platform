@@ -1,0 +1,12 @@
+Source: sonic-nokia-platform-modules
+Section: main
+Priority: extra
+Maintainer: SR Sonic <sr-sonic@nokia.com>
+Build-Depends: debhelper (>= 9), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-nokia-chassis
+Architecture: amd64
+Description: placeholder for hypothetical kernel modules for platform devices
+
+

@@ -1,0 +1,6 @@
+sonic-nokia-platform-modules (1.0) unstable; urgency=low
+
+  * Initial release: Add support for Nokia IXR7250.
+
+ -- SR Sonic <sr-sonic@nokia.com>  Tue, 15 Oct 2019 17:54:33 -0400
+
