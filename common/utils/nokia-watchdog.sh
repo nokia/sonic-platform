@@ -7,6 +7,24 @@
 
 # trap 'err_func' ERR
 
+#Function to check for health of NDK platform processes
+app_count=0
+min_app_count_failures=3
+function platform_ndk_health_monitor()
+{
+    if [ -f /opt/srlinux/bin/platform_ndk_health_check.py ]; then
+        python3 /opt/srlinux/bin/platform_ndk_health_check.py
+        if [[ $? = 0 ]]; then
+            app_count=0
+        else
+            (( app_count++ ))
+        fi
+    else
+        app_count=0
+    fi
+}
+
+watchdog_sleep_time=30
 start_date=`date -u`
 
 set -x
@@ -64,9 +82,18 @@ dmesg | grep nokia >> /var/log/nokia-watchdog-init-$suf.log
 sync
 echo "sync done " `date -u` >> /var/log/nokia-watchdog-init-$suf.log
 while [ 1 ] ; do
-#  echo "w"  >&5
-   echo "w" >&${desc}
-   echo $start_date > /var/log/nokia-watchdog-$suf.log
-   echo `date -u`  >> /var/log/nokia-watchdog-$suf.log
-   sleep 30
+    #Process health monitor
+    platform_ndk_health_monitor
+    echo "NDK Platform process health monitor check at " `date -u` >> /var/log/nokia-watchdog-$suf.log
+    if [[ $app_count -ge $min_app_count_failures ]]; then
+        echo "NDK Platform process health monitor failed at " `date -u` >> /var/log/nokia-watchdog-$suf.log
+        sleep $watchdog_sleep_time
+        continue
+    fi
+
+    #Kick watchdog
+    echo "w" >&${desc}
+    echo $start_date > /var/log/nokia-watchdog-$suf.log
+    echo `date -u`  >> /var/log/nokia-watchdog-$suf.log
+    sleep $watchdog_sleep_time
 done
