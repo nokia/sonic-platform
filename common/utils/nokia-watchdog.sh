@@ -8,6 +8,7 @@
 # trap 'err_func' ERR
 
 #Function to check for health of NDK platform processes
+#Allow a min_app_count_failures for process restarts
 app_count=0
 min_app_count_failures=3
 function platform_ndk_health_monitor()
@@ -31,19 +32,19 @@ set -x
 
 suf=`date -u "+%Y%m%d%H%M%S"`
 
-echo "Started at $start_date" > /var/log/nokia-watchdog-init-$suf.log
-
-ls -las /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
-stat /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
+wd_init_log_file=/var/log/nokia-watchdog-init-$suf.log
+echo "Started at $start_date" > $wd_init_log_file
+ls -las /dev/watch* >> $wd_init_log_file
+stat /dev/watch* >> $wd_init_log_file
 
 # remove sp5100 driver
-lsmod | grep 5100 >> /var/log/nokia-watchdog-init-$suf.log
-modprobe -v -r sp5100_tco >> /var/log/nokia-watchdog-init-$suf.log
+lsmod | grep 5100 >> $wd_init_log_file
+modprobe -v -r sp5100_tco >> $wd_init_log_file
 
-# ls -las /lib/modules/4.19.0-9-2-amd64/nokia* >> /var/log/nokia-watchdog-init-$suf.log
-# find /host -name nokia_gpio_wdt.ko >> /var/log/nokia-watchdog-init-$suf.log
-# find /host -name blacklist.conf >> /var/log/nokia-watchdog-init-$suf.log
-echo "check for /dev/watchdog at " `date -u` >> /var/log/nokia-watchdog-init-$suf.log
+# ls -las /lib/modules/4.19.0-9-2-amd64/nokia* >> $wd_init_log_file
+# find /host -name nokia_gpio_wdt.ko >> $wd_init_log_file
+# find /host -name blacklist.conf >> $wd_init_log_file
+echo "check for /dev/watchdog at " `date -u` >> $wd_init_log_file
 
 i=0
 while [ ! -e /dev/watchdog ] && [ $i -le 10 ] ; do 
@@ -51,18 +52,18 @@ while [ ! -e /dev/watchdog ] && [ $i -le 10 ] ; do
    sleep 1
 done	
 
-echo "done check $i for /dev/watchdog at " `date -u` >> /var/log/nokia-watchdog-init-$suf.log
+echo "done check $i for /dev/watchdog at " `date -u` >> $wd_init_log_file
 
-ls -las /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
-stat /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
+ls -las /dev/watch* >> $wd_init_log_file
+stat /dev/watch* >> $wd_init_log_file
 
 depmod -A
-modprobe -v nokia_gpio_wdt >> /var/log/nokia-watchdog-init-$suf.log
-echo "after modprobe" >> /var/log/nokia-watchdog-init-$suf.log
+modprobe -v nokia_gpio_wdt >> $wd_init_log_file
+echo "after modprobe" >> $wd_init_log_file
 sleep 2
 
-ls -las /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
-stat /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
+ls -las /dev/watch* >> $wd_init_log_file
+stat /dev/watch* >> $wd_init_log_file
 
 # keep it open while we write "w" to it in loop
 
@@ -71,29 +72,40 @@ stat /dev/watch* >> /var/log/nokia-watchdog-init-$suf.log
 exec {desc}>/dev/watchdog
 echo "w" >&${desc}
 
-echo "first kick done using desc $desc at " `date -u` >> /var/log/nokia-watchdog-init-$suf.log
+echo "first kick done using desc $desc at " `date -u` >> $wd_init_log_file
 
-# find /host -name nokia_gpio_wdt.ko >> /var/log/nokia-watchdog-init-$suf.log
-# find /host -name blacklist.conf >> /var/log/nokia-watchdog-init-$suf.log
+# find /host -name nokia_gpio_wdt.ko >> $wd_init_log_file
+# find /host -name blacklist.conf >> $wd_init_log_file
 
-lsmod | grep nokia >> /var/log/nokia-watchdog-init-$suf.log
-lsmod | grep 5100 >> /var/log/nokia-watchdog-init-$suf.log
-dmesg | grep nokia >> /var/log/nokia-watchdog-init-$suf.log
+lsmod | grep nokia >> $wd_init_log_file
+lsmod | grep 5100 >> $wd_init_log_file
+dmesg | grep nokia >> $wd_init_log_file
 sync
-echo "sync done " `date -u` >> /var/log/nokia-watchdog-init-$suf.log
+echo "sync done " `date -u` >> $wd_init_log_file
+
+
+watchdog_fail=1
+wd_log_file=/var/log/nokia-watchdog-$suf.log
+echo "start watchdog monitoring" > $wd_log_file
 while [ 1 ] ; do
     #Process health monitor
     platform_ndk_health_monitor
-    echo "NDK Platform process health monitor check at " `date -u` >> /var/log/nokia-watchdog-$suf.log
     if [[ $app_count -ge $min_app_count_failures ]]; then
-        echo "NDK Platform process health monitor failed at " `date -u` >> /var/log/nokia-watchdog-$suf.log
+        echo "platform process health monitor failed at " `date -u` >> $wd_log_file
         sleep $watchdog_sleep_time
+        echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_log_file
+        watchdog_fail=1
         continue
+    fi
+
+    if [[ $watchdog_fail -eq 1 ]]; then
+        echo "enable watchdog kick" `date -u` >> $wd_log_file
+        watchdog_fail=0
     fi
 
     #Kick watchdog
     echo "w" >&${desc}
-    echo $start_date > /var/log/nokia-watchdog-$suf.log
-    echo `date -u`  >> /var/log/nokia-watchdog-$suf.log
+    echo $start_date > $wd_log_file
+    echo `date -u`  >> $wd_log_file
     sleep $watchdog_sleep_time
 done
