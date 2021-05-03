@@ -418,11 +418,48 @@ class Chassis(ChassisBase):
                 logger.log_error("SFPs are already initialized! stub {}".format(self.sfp_stub))
                 return
 
+            op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
+            channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+            if not channel or not stub:
+               logger.log_error("Failure retrieving channel, stub in initialize_sfp")  
+               return False
+
+            ret, response = nokia_common.try_grpc(stub.GetSfpNumAndType,
+                                              platform_ndk_pb2.ReqSfpOpsPb(type=op_type))
+            nokia_common.channel_shutdown(channel)
+            if ret is False:
+                logger.log_error("Failure on GetSfpNumAndType in initialize_sfp")            
+                return False
+
+            msg = response.sfp_num_type
+            logger.log_info("GetSfpNumAndType: {}".format(msg))
+            num_sfp = msg.num_ports
+
+            # index 0 is placeholder with no valid entry
+
             self.sfp_stub = None
-            for index in range(1, NUM_SFP+1):
-                logger.log_info("Creating SFP '%d'" % index)
+            for index in range(1, num_sfp+1):
+                """
                 # default to QSFP-DD type for the moment. Type gets set dynamically when module is read
                 sfp = Sfp(index, 'QSFP-DD', self.sfp_stub)
+                """
+                if index <= msg.type1_hw_port_id_end:
+                    sfp_type = msg.type1_port
+                elif index <= msg.type2_hw_port_id_end:
+                    sfp_type = msg.type2_port
+                elif index <= msg.type3_hw_port_id_end:
+                    sfp_type = msg.type3_port
+                else:
+                    sfp_type = platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_INVALID
+
+                if sfp_type == platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_INVALID:
+                    logger.log_error("GetSfpNumAndType sfp_type is INVALID at index {}".format(index))
+                    # trust msg.num_ports for now and just initialize with QSFPDD type
+                    sfp_type = platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFPDD
+
+                logger.log_debug("Creating SFP {} with type {}".format(index, sfp_type))
+                sfp = Sfp(index, sfp_type, self.sfp_stub)
+                
                 self._sfp_list.append(sfp)
                 # force 1st read to dynamically set type and detect dom capability
                 sfp.get_transceiver_info()
@@ -487,6 +524,11 @@ class Chassis(ChassisBase):
         sfp = None
         if not self.sfp_module_initialized:
             self.initialize_sfp()
+
+        if index == 0:
+            logger.log_error("SFP index 0 is a placeholder. Valid indexes are (1-{})\n".format(
+                             len(self._sfp_list)))
+            return None
 
         try:
             # The index will start from 1

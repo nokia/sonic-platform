@@ -212,8 +212,19 @@ QSFPDD_VENDOR_SN_OFFSET = 166
 QSFPDD_VENDOR_DATE_OFFSET = 182
 QSFPDD_MIT_OFFSET = 212
 QSFPDD_MEDIA_TYPE_ENCODING_OFFSET = 85  # lower page 0
-"""
 
+
+SFP_MODULE_TYPE_INVALID                     = 0;
+SFP_MODULE_TYPE_SFP                         = 1;
+SFP_MODULE_TYPE_SFP_PLUS                    = 2;
+SFP_MODULE_TYPE_SFP28                       = 3;
+SFP_MODULE_TYPE_SFP56                       = 4;
+SFP_MODULE_TYPE_QSFP                        = 5;
+SFP_MODULE_TYPE_QSFP_PLUS                   = 6;
+SFP_MODULE_TYPE_QSFP28                      = 7;
+SFP_MODULE_TYPE_QSFP56                      = 8;  
+SFP_MODULE_TYPE_QSFPDD                      = 9;
+"""
 
 class Sfp(SfpBase):
     """
@@ -235,9 +246,25 @@ class Sfp(SfpBase):
                 return
         logger.log_error("SfpHasBeenTransitioned: no match for port index{}".format(port))
 
+    @staticmethod
+    def SfpTypeToString(type):
+        converter = {
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_INVALID:   "INVALID",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_SFP:       "SFP",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_SFP_PLUS:  "SFP+",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_SFP28:     "SFP28",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_SFP56:     "SFP56",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP:      "QSFP",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP_PLUS: "QSFP+",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP28:    "QSFP28",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP56:    "QSFP56",
+            platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFPDD:    "QSFPDD"
+        }
+        return converter.get(type, "INVALID")
+
     def __init__(self, index, sfp_type, stub):
         SfpBase.__init__(self)
-        self.sfp_type = sfp_type
+        self.sfp_type = sfp_type      
         self.index = index
         self.sfpi_obj = None
         self.sfpd_obj = None
@@ -262,6 +289,10 @@ class Sfp(SfpBase):
         self.EXT_CTRL_TYPE_page_cached = False
         self.page1_page_cached = False
         self.stub = stub
+
+        # set name
+        self.name = self.SfpTypeToString(sfp_type) + '_' + str(index)
+        logger.log_debug("Sfp __init__ index {} setting name to {}".format(index, self.name))
         Sfp.instances.append(self)
 
     def invalidate_page_cache(self, page_type):
@@ -1374,6 +1405,7 @@ class Sfp(SfpBase):
         Retrieves the name of the sfp
         Returns : QSFP or QSFP+ or QSFP28
         """
+        """
         identifier = None
         iface_data = self._get_eeprom_data('type')
         if (iface_data is not None):
@@ -1383,6 +1415,8 @@ class Sfp(SfpBase):
         identifier += str(self.index)
 
         return identifier
+        """
+        return self.name
 
     def get_presence(self):
         """
