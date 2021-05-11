@@ -1,9 +1,3 @@
-/*
-Copyright 2021 Nokia
-Licensed under the GNU General Public License v2.0 only
-SPDX-License-Identifier: GPL-2.0-only 
-*/
-
 #include <linux/module.h>    // included for all kernel modules
 #include <linux/kernel.h>    // included for KERN_INFO
 #include <linux/init.h>      // included for __init and __exit macros
@@ -26,6 +20,7 @@ MODULE_LICENSE("GPL");
 static void nokia_dump(struct seq_file *m);
 static int nokia_ioctl(unsigned int cmd, unsigned long arg);
 
+static int use_count = 0;
 
 static int _proc_show(struct seq_file *m, void *v)
 {
@@ -69,6 +64,8 @@ static long _ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static int _open(struct inode *inode, struct file *filp)
 {
+    use_count++;
+
     printk(KINFO ": _open %p %p\n", inode, filp);
 
     return 0;
@@ -77,6 +74,8 @@ static int _open(struct inode *inode, struct file *filp)
 static int _release(struct inode *inode, struct file *filp)
 {
     printk(KINFO ": _release %p %p\n", inode, filp);
+
+    use_count--;
 
     return 0;
 }
@@ -88,6 +87,7 @@ static int _release(struct inode *inode, struct file *filp)
 
 struct file_operations _fops = 
 {
+    owner:      THIS_MODULE,
     unlocked_ioctl: _ioctl,
     open:           _open,
     release:        _release,
@@ -207,13 +207,11 @@ MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
 
 #define VALID_DEVICE(_n)                    (_n < MAX_NOKIA_RAMONS)
 #define IS_NOKIA_DEV(d)                     (VALID_DEVICE(d) && nokia_dev[d].is_valid)
-#define MAX_NOKIA_RAMONS                    12                              // may not all be present. Must not exceed LINUX_BDE_MAX_DEVICES
+#define MAX_NOKIA_RAMONS                    18                              // may not all be present. Must not exceed LINUX_BDE_MAX_DEVICES
 #define POSTED_READ                         1
 #define DEV_TO_RAMON_HWSLOT(d)              (nokia_dev[d].hw_slot)           // starts at zero
-#define RAMON_BASE_HW_SLOT                  17
+#define DEFAULT_RAMON_BASE_HW_SLOT          17
 #define SFM_NUM_TO_SFM_INDEX(_s)            ((_s)-1)
-#define SFM_NUM_TO_HW_SLOT(_s)              (SFM_NUM_TO_SFM_INDEX(_s)+RAMON_BASE_HW_SLOT)
-#define HW_SLOT_TO_SFM_NUM(_s)              ((_s)-RAMON_BASE_HW_SLOT+1)
 #define IOCTL_BASE                          _cpuctl_base_addr
 #define A32_CPUCTL_BASE                     0x4000000000
 #define CPUCTL_SIZE                         (384*1024*1024)     // 256MB plus 128MB BDB window
@@ -300,6 +298,7 @@ struct
     uint32      device_id;
     uint32      device_rev;
     uint32      dma_offset;
+    uint32      sfm_num;
     uint32      hw_slot;
     uint32      hw_main_baseaddr;
     uint32      hw_iproc_baseaddr;
@@ -316,12 +315,12 @@ static void nokia_dump(struct seq_file *m)
 {
     int idx;
 
-    seq_printf(m, "Nokia-bdb units (bdb base %p):\n", _cpuctl_base_addr);
+    seq_printf(m, "Nokia-bdb v3 units (bdb base %p, use_count %d):\n", _cpuctl_base_addr, use_count);
 
     for (idx = 0; idx < MAX_NOKIA_RAMONS; idx++) 
     {
         if (IS_NOKIA_DEV(idx))
-            seq_printf(m, "\t%d (swi) : PCI device %s:%d:%d on Nokia SFM module slot %d\n", idx, NOKIA_DEV_NAME, HW_SLOT_TO_SFM_NUM(nokia_dev[idx].hw_slot), nokia_dev[idx].unit, HW_SLOT_TO_SFM_NUM(nokia_dev[idx].hw_slot));
+            seq_printf(m, "\t%d (swi) : PCI device %s:%d:%d on Nokia SFM module hwslot %d\n", idx, NOKIA_DEV_NAME, nokia_dev[idx].sfm_num, nokia_dev[idx].unit, nokia_dev[idx].hw_slot);
     }
 
     msgCount = 0;       // output BDB again
@@ -410,7 +409,7 @@ int bdbWriteWord(uint32 hwSlot, uint32 addr, int wsize, void * data)
     uint32 val;
 
     // if slot not present, fail cycle. 
-    if (!HW_BDB_CARD_PRESENT(hwSlot))
+    if (!HW_BDB_CARD_PRESENT(hwSlot) || wsize > 32)
         return LUBDE_FAIL;
 
 //    printf("bdbWrite32(%d, %x, %x) \n", d, addr, val);
@@ -423,7 +422,7 @@ int bdbWriteWord(uint32 hwSlot, uint32 addr, int wsize, void * data)
         read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
     
     // check for write overrun (busy-wait!)
-    while ((bdbSignalReg() >> S_BDB_SIGNAL_WFIFO_DEPTH) >= BDB_MIN_FIFO_DEPTH);
+    while ((bdbSignalReg() >> S_BDB_SIGNAL_WFIFO_DEPTH) >= (BDB_MIN_FIFO_DEPTH+8-wsize));
 
     val = BDB_BITS_DEFAULT | B_GEN_CONFIG_P_READ | (hwSlot << S_GEN_CONFIG_BDB_SLOT) | ((addr >> 27) << S_GEN_CONFIG_BDB_3127);
     write32(bdb_regs + BDB_CTRL_REG_OFF, SWAP32(val));
@@ -433,7 +432,7 @@ int bdbWriteWord(uint32 hwSlot, uint32 addr, int wsize, void * data)
     if (wsize == 1)         *(volatile uint8_t *)ptr  = *(uint8_t *)data;
     else if (wsize == 2)    *(volatile uint16_t *)ptr = *(uint16_t *)data;
     else if (wsize == 4)    *(volatile uint32_t *)ptr = *(uint32_t *)data;
-    else                    *(volatile uint64_t *)ptr = *(uint64_t *)data;
+    else while (wsize)    { *(volatile uint64_t *)ptr = *(uint64_t *)data; ptr += 8; data += 8; wsize -= 8; }
     mutex_unlock(&bdb_lock);
 
     return LUBDE_SUCCESS;           // no write acks so never failz
@@ -565,13 +564,14 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         if (!VALID_DEVICE(io.dev))
             return -EINVAL;
         nokia_dev[io.dev].is_valid = 1;         // can't be changed
-        nokia_dev[io.dev].hw_slot = io.d0 ? SFM_NUM_TO_HW_SLOT(io.d0) : 0;      // we know hw_slot 0 is illegal
+        nokia_dev[io.dev].sfm_num = io.d0;
         nokia_dev[io.dev].unit = io.d1;
         nokia_dev[io.dev].device_id = io.d2;
         nokia_dev[io.dev].device_rev = io.d3;
         nokia_dev[io.dev].hw_main_baseaddr = io.dx.dw[0];
         nokia_dev[io.dev].hw_iproc_baseaddr = io.dx.dw[1];
-        printk(KINFO "Create Nokia dev %d rev=%x slot=%d base1=%x base2=%x\n", io.dev, nokia_dev[io.dev].device_rev, nokia_dev[io.dev].hw_slot, nokia_dev[io.dev].hw_main_baseaddr, nokia_dev[io.dev].hw_iproc_baseaddr);
+        nokia_dev[io.dev].hw_slot = io.dx.dw[2] ? io.dx.dw[2] : (  nokia_dev[io.dev].sfm_num ? DEFAULT_RAMON_BASE_HW_SLOT+SFM_NUM_TO_SFM_INDEX(nokia_dev[io.dev].sfm_num) : 0);
+        printk(KINFO "Create Nokia dev %d rev=%x sfmnum=%d hwslot=%d base1=%x base2=%x\n", io.dev, nokia_dev[io.dev].device_rev, nokia_dev[io.dev].sfm_num, nokia_dev[io.dev].hw_slot, nokia_dev[io.dev].hw_main_baseaddr, nokia_dev[io.dev].hw_iproc_baseaddr);
         //if (_dma_resource_alloc(1, &nokia_dev[io.dev].dma_offset) < 0)
         //    return -EFAULT;
         //printk(KINFO "nokia dev %d allocated dma @ offset %d\n", io.dev, nokia_dev[io.dev].dma_offset);
