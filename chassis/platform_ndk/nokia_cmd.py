@@ -8,7 +8,7 @@
 #
 
 import sys
-import getopt
+import argparse
 import logging
 import json
 from google.protobuf.json_format import MessageToJson
@@ -45,6 +45,20 @@ DEBUG = False
 args = []
 format_type = ''
 
+def pretty_time_delta(seconds):
+    sign_string = '-' if seconds < 0 else ''
+    seconds = abs(int(seconds))
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if days > 0:
+        return '%s %dd %dh %dm %ds' % (sign_string, days, hours, minutes, seconds)
+    elif hours > 0:
+        return '%s %dh %dm %ds' % (sign_string, hours, minutes, seconds)
+    elif minutes > 0:
+        return '%s %dm %ds' % (sign_string, minutes, seconds)
+    else:
+        return '%s %ds' % (sign_string, seconds)
 
 def print_table(field, item_list):
     i = 0
@@ -72,22 +86,12 @@ def print_table(field, item_list):
     print('\n')
 
 
-def generate_grpc_channel():
-    channel = None
-
-    server_path = nokia_common.NOKIA_DEVMGR_UNIX_SOCKET_PATH
-    channel = grpc.insecure_channel(server_path)
-    channel_ready = grpc.channel_ready_future(channel)
-    try:
-        channel_ready.result(timeout=1)
-    except grpc.FutureTimeoutError:
-        print('GRPC channel could not be established')
-        return None
-
-    return channel
-
-
-def show_led(stub, port_start, port_end):
+def show_led():
+    port_start = 0
+    port_end = 35
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_LED_SERVICE)
+    if not channel or not stub:
+       return
     led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_PORT
     port_idx = platform_ndk_pb2.ReqLedIndexPb(start_idx=port_start,
                                               end_idx=port_end)
@@ -118,7 +122,11 @@ def show_led(stub, port_start, port_end):
     return
 
 
-def show_psu(stub):
+def show_psu():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
+    if not channel or not stub:
+       return
+
     arg1 = platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0)
     ret, response = nokia_common.try_grpc(stub.ShowPsuInfo, arg1)
 
@@ -160,16 +168,14 @@ def show_psu(stub):
     return
 
 
-def show_psu_detail(stub):
-    response = stub.ShowPsuInfo(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0))
+def show_psu_detail():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
+    if not channel or not stub:
+       return
 
+    response = stub.ShowPsuInfo(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0))
     if len(response.psu_info.psu_device) == 0:
         print('PSU Output not available on this card')
-        return
-
-    if format_type == 'json-format':
-        json_response = MessageToJson(response)
-        print(json_response)
         return
 
     field = []
@@ -187,9 +193,9 @@ def show_psu_detail(stub):
             item = []
             item.append(str(i + 1))
             p_response = stub.GetPsuOutputCurrent(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=i+1))
-            item.append(str(p_response.output_current))
+            item.append(str(round(p_response.output_current, 2)))
             p_response = stub.GetPsuOutputVoltage(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=i+1))
-            item.append(str(p_response.output_voltage))
+            item.append(str(round(p_response.output_voltage, 2)))
             p_response = stub.GetPsuOutputPower(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=i+1))
             item.append(str(p_response.output_power))
             p_response = stub.GetPsuTemperature(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=i+1))
@@ -197,12 +203,25 @@ def show_psu_detail(stub):
             item_list.append(item)
         i += 1
 
+    if format_type == 'json-format':
+        json_list = []
+        for item in item_list:
+            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            json_list.append(dict_item)
+
+        print(json.dumps(json_list, indent=4))
+        return
+
     print('PSU TABLE DETAILS')
     print_table(field, item_list)
     return
 
 
-def show_fan(stub):
+def show_fan():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+    if not channel or not stub:
+       return
+
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=0)
     response = stub.ShowFanInfo(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
     if len(response.fan_show.fan_device) == 0:
@@ -216,7 +235,7 @@ def show_fan(stub):
 
     field = []
     field.append('        Type         ')
-    field.append('        Value                    ')
+    field.append('        Value                        ')
 
     i = 0
     item_list = []
@@ -238,15 +257,14 @@ def show_fan(stub):
     return
 
 
-def show_fan_detail(stub):
+def show_fan_detail():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+    if not channel or not stub:
+       return
+
     # Get Num-fans
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=0)
     response = stub.GetFanNum(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
-
-    if format_type == 'json-format':
-        json_response = MessageToJson(response)
-        print(json_response)
-        return
 
     fan_msg = response.fan_nums
     num_fans = fan_msg.num_fantrays
@@ -316,12 +334,24 @@ def show_fan_detail(stub):
         item.append(color)
         item_list.append(item)
 
+    if format_type == 'json-format':
+        json_list = []
+        for item in item_list:
+            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            json_list.append(dict_item)
+
+        print(json.dumps(json_list, indent=4))
+        return
     print('FAN DETAIL TABLE')
     print_table(field, item_list)
     return
 
 
-def show_temp(stub):
+def show_temp():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
+    if not channel or not stub:
+       return
+
     response = stub.ShowThermalInfo(platform_ndk_pb2.ReqTempParamsPb())
 
     if format_type == 'json-format':
@@ -376,8 +406,13 @@ def show_temp(stub):
     return
 
 
-def show_platform(stub):
+def show_platform():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.GetChassisStatus(platform_ndk_pb2.ReqModuleInfoPb())
+
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
@@ -407,7 +442,11 @@ def show_platform(stub):
     return
 
 
-def show_firmware(stub):
+def show_firmware():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FIRMWARE_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.HwFirmwareGetComponents(platform_ndk_pb2.ReqHwFirmwareInfoPb())
 
     if len(response.firmware_info.component) == 0:
@@ -440,7 +479,11 @@ def show_firmware(stub):
     return
 
 
-def show_sfm_summary(stub):
+def show_sfm_summary():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_SUMMARY
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
 
@@ -486,7 +529,11 @@ def show_sfm_summary(stub):
     return
 
 
-def show_sfm_imm_links(stub, imm_slot):
+def show_sfm_imm_links(imm_slot):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_IMMLINKS
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype, imm_slot=imm_slot))
 
@@ -531,7 +578,11 @@ def show_sfm_imm_links(stub, imm_slot):
     return
 
 
-def show_system_led(stub):
+def show_system_led():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_LED_SERVICE)
+    if not channel or not stub:
+        return
+
     led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_ALL
     response = stub.ShowLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type))
     if len(response.led_show.show_info) == 0:
@@ -560,7 +611,9 @@ def show_system_led(stub):
     return
 
 
-def show_syseeprom(chassis):
+def show_syseeprom():
+    import sonic_platform.platform
+    chassis = sonic_platform.platform.Platform().get_chassis()
     eeprom = chassis.get_system_eeprom_info()
     if format_type == 'json-format':
         ret = json.dumps(eeprom, indent=True)
@@ -585,7 +638,11 @@ def show_syseeprom(chassis):
     return
 
 
-def show_chassis(stub):
+def show_chassis():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.GetChassisProperties(platform_ndk_pb2.ReqModuleInfoPb())
     if format_type == 'json-format':
         json_response = MessageToJson(response)
@@ -617,7 +674,11 @@ def show_chassis(stub):
     return
 
 
-def show_power(stub):
+def show_power():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.GetModuleMaxPower(platform_ndk_pb2.ReqModuleInfoPb())
 
     if format_type == 'json-format':
@@ -643,7 +704,11 @@ def show_power(stub):
     print_table(field, item_list)
 
 
-def show_midplane_status(stub, hw_slot):
+def show_midplane_status(hw_slot):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.IsMidplaneReachable(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot))
 
     if format_type == 'json-format':
@@ -655,7 +720,11 @@ def show_midplane_status(stub, hw_slot):
     return
 
 
-def show_logging(stub):
+def show_logging():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     response = stub.ShowLogAll(platform_ndk_pb2.ReqLogSettingPb())
 
     if format_type == 'json-format':
@@ -684,16 +753,16 @@ def show_logging(stub):
     return
 
 
-def show_ndk_eeprom(stub):
+def show_ndk_eeprom():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_EEPROM_SERVICE)
+    if not channel or not stub:
+        return
+
     response1 = stub.GetCardProductName(platform_ndk_pb2.ReqEepromInfoPb())
     response2 = stub.GetCardSerialNumber(platform_ndk_pb2.ReqEepromInfoPb())
     response3 = stub.GetCardPartNumber(platform_ndk_pb2.ReqEepromInfoPb())
     response4 = stub.GetCardBaseMac(platform_ndk_pb2.ReqEepromInfoPb())
     response5 = stub.GetCardMacCount(platform_ndk_pb2.ReqEepromInfoPb())
-
-    if format_type == 'json-format':
-        print('Json output not supported')
-        return
 
     field = []
     field.append('Field                     ')
@@ -719,45 +788,120 @@ def show_ndk_eeprom(stub):
     item_list.append(['Chassis BaseMac        ', str(chassis_eeprom.chassis_base_mac)])
     item_list.append(['Chassis MacCount       ', str(chassis_eeprom.chassis_mac_count)])
 
+    if format_type == 'json-format':
+        json_list = []
+        for item in item_list:
+            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            json_list.append(dict_item)
+
+        print(json.dumps(json_list, indent=4))
+        return
+
     print('CHASSIS-EEPROM INFORMATION')
     print_table(field, item_list)
     return
 
+def show_ndk_status():
+    import subprocess
+    import datetime
+    proc_list = [ 'nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-ndk-qfpga-mgr' ]
+    item_list = []
+    for proc_item in proc_list:
+        item = []
+        item.append(proc_item)
 
-def request_admintech(stub, filepath):
+        # Process state
+        process = subprocess.Popen(['systemctl', 'show', proc_item],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+        test=dict(item.split("=",1) for item in outstr.splitlines())
+        item.append(test['ActiveState'])
+        item.append(test['MainPID'])
+
+        # Timestamp
+        if test['ActiveState'] == 'active':
+            process = subprocess.Popen(['systemctl', 'show', proc_item, '--property=ActiveEnterTimestamp'],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            process = subprocess.Popen(['systemctl', 'show', proc_item, '--property=InactiveEnterTimestamp'],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+        f,v = outstr.rstrip("UTC \n").split(' ',1)
+        start_time_utc = datetime.datetime.strptime(v, '%Y-%m-%d %H:%M:%S')
+        current_time_utc = datetime.datetime.utcnow()
+        uptime = (current_time_utc - start_time_utc)
+        item.append(pretty_time_delta(uptime.seconds))
+
+        # Add it to the item list
+        item_list.append(item)
+
+    field = []
+    field.append('Process                 ')
+    field.append('State         ')
+    field.append('PID       ')
+    field.append('Uptime/Exittime   ')
+
+    if format_type == 'json-format':
+        json_list = []
+        for item in item_list:
+            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            json_list.append(dict_item)
+
+        print(json.dumps(json_list, indent=4))
+        return
+
+    print('PLATFORM NDK STATUS INFORMATION')
+    print_table(field, item_list)
+
+def request_admintech(filepath):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     stub.ReqAdminTech(platform_ndk_pb2.ReqAdminTechPb(admintech_path=filepath))
 
 
-def set_temp_offset(stub, offset):
+def set_temp_offset(offset):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
+    if not channel or not stub:
+       return
+
     stub.SetThermalOffset(platform_ndk_pb2.ReqTempParamsPb(temp_offset=offset))
 
 
-def set_fan_algo_disable(stub, disable):
+def set_fan_algo_disable(disable):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+    if not channel or not stub:
+       return
+
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     req_fan_algo = platform_ndk_pb2.SetFanTrayAlgorithmPb(fantray_algo_disable=disable)
     stub.DisableFanAlgorithm(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx, fan_algo=req_fan_algo))
 
 
-def set_fan_speed(stub, speed):
+def set_fan_speed(speed):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+    if not channel or not stub:
+       return
+
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     stub.SetFanTargetSpeed(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx,
         fantray_speed=speed))
 
 
-def set_fantray_led(stub, index, color):
+def set_fantray_led(index, color):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+    if not channel or not stub:
+       return
+
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=index)
     _led_info = nokia_common.led_color_to_info(color)
     stub.SetFanLedStatus(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx, led_info=_led_info))
 
 
-def set_fp_port_led(led_stub, port_id, port_up):
-    led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_PORT
-    _intf_info = platform_ndk_pb2.UpdateIntfInfoPb(port_name='FPport'+str(port_id), port_up=port_up)
-    response = led_stub.SetLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type,
-        intf_info=_intf_info))
-
-
-def set_led(stub, type_str, color):
+def set_led(type_str, color):
     if type_str == 'port':
         led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_PORT
     elif type_str == 'fantray':
@@ -776,11 +920,19 @@ def set_led(stub, type_str, color):
         print('Unsupported led-type')
         return
 
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_LED_SERVICE)
+    if not channel or not stub:
+       return
+
     _led_info = nokia_common.led_color_to_info(color)
     stub.SetLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type, led_info=_led_info))
 
 
-def set_log_level_module(stub, level, module):
+def set_log_level_module(level, module):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     if (module == 'all'):
         _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_SET_ALL
         _log_info = platform_ndk_pb2.ReqLogInfoPb(level_current=level, module=module)
@@ -791,356 +943,223 @@ def set_log_level_module(stub, level, module):
         stub.ReqLogSetModule(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type, log_info=_log_info))
 
 
-def set_log_restore_default(stub):
+def set_log_restore_default():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
     _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_RESET_ALL
     stub.ReqLogResetAll(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type))
 
 
 def main():
-    global DEBUG
-    global args
     global format_type
 
-    if len(sys.argv) < 2:
-        show_all_help()
+    base_parser = argparse.ArgumentParser()
+    subparsers = base_parser.add_subparsers(help='sub-commands', dest="cmd")
 
-    options, args = getopt.getopt(sys.argv[1:], 'hd', ['help', 'debug'])
-    for opt, arg in options:
-        if opt in ('-h', '--help'):
-            show_all_help()
-        elif opt in ('-d', '--debug'):
-            DEBUG = True
-            logging.basicConfig(level=logging.INFO)
-        else:
-            logging.info('no option')
+    # Show Commands
+    show_parser = subparsers.add_parser('show', help='show help')
+    showsubparsers = show_parser.add_subparsers(help='show cmd options', dest="showcmd")
 
-    num_args = 1
-    arg = args[0]
-    if arg == 'show':
-        num_args += 1
-        if not validate(arg, num_args, len(args)):
-            return
+    # show platform
+    show_platform_parser = showsubparsers.add_parser('platform', help='show platform')
+    show_platform_parser.add_argument('json-format', nargs='?', help='show platform <json-format>')
 
-        show_arg = args[1]
-        num_args += 1
-        if num_args == len(args):
-            format_type = args[2]
+    # show psu
+    show_psu_parser = showsubparsers.add_parser('psus', help='show psus info')
+    show_psu_parser.add_argument('json-format', nargs='?', help='show psus <json-format>')
 
-        channel = generate_grpc_channel()
-        if not channel:
-            return
-        if show_arg == 'sensors':
-            thermal_stub = platform_ndk_pb2_grpc.ThermalPlatformNdkServiceStub(channel)
-            show_temp(thermal_stub)
-            fan_stub = platform_ndk_pb2_grpc.FanPlatformNdkServiceStub(channel)
-            show_fan(fan_stub)
-            show_fan_detail(fan_stub)
-        elif show_arg == 'platform':
-            chassis_stub = platform_ndk_pb2_grpc.ChassisPlatformNdkServiceStub(channel)
-            show_platform(chassis_stub)
-        elif show_arg == 'psus':
-            psu_stub = platform_ndk_pb2_grpc.PsuPlatformNdkServiceStub(channel)
-            show_psu(psu_stub)
-            show_psu_detail(psu_stub)
-        elif show_arg == 'fp-status':
-            led_stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(channel)
-            show_led(led_stub, 0, 35)
-        elif show_arg == 'firmware':
-            firmware_stub = platform_ndk_pb2_grpc.FirmwarePlatformNdkServiceStub(channel)
-            show_firmware(firmware_stub)
-        elif show_arg == 'sfm-summary':
-            stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            if stub is None:
-                return
-            show_sfm_summary(stub)
-        elif show_arg == 'sfm-imm-links':
-            if not validate(arg, num_args, len(args)):
-                return
+    # show led
+    show_led_parser = showsubparsers.add_parser('fp-status', help='show front-panel-leds')
+    show_led_parser.add_argument('json-format', nargs='?', help='show front-panel-leds <json-format>')
 
-            imm_slot = int(args[2])
-            num_args += 1
-            if num_args == len(args):
-                format_type = args[3]
+    # show sensors
+    show_sensor_parser = showsubparsers.add_parser('sensors', help='show sensors info')
+    show_sensor_parser.add_argument('json-format', nargs='?', help='show sensors <json-format>')
 
-            stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            if stub is None:
-                return
-            show_sfm_imm_links(stub, imm_slot)
-        elif show_arg == 'system-leds':
-            led_stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(channel)
-            show_system_led(led_stub)
-        elif show_arg == "syseeprom":
-            import sonic_platform.platform
-            platform_chassis = sonic_platform.platform.Platform().get_chassis()
-            show_syseeprom(platform_chassis)
-        elif show_arg == "chassis":
-            chassis_stub = platform_ndk_pb2_grpc.ChassisPlatformNdkServiceStub(channel)
-            show_chassis(chassis_stub)
-        elif show_arg == "power":
-            chassis_stub = platform_ndk_pb2_grpc.ChassisPlatformNdkServiceStub(channel)
-            show_power(chassis_stub)
-        elif show_arg == 'midplane':
-            if not validate(arg, num_args, len(args)):
-                return
+    # show firmware
+    show_firmware_parser = showsubparsers.add_parser('firmware', help='show firmware info')
+    show_firmware_parser.add_argument('json-format', nargs='?', help='show firmware <json-format>')
 
-            hw_slot = int(args[2])
-            num_args += 1
-            chassis_stub = platform_ndk_pb2_grpc.ChassisPlatformNdkServiceStub(channel)
-            show_midplane_status(chassis_stub, hw_slot)
-        elif show_arg == "logging":
-            util_stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            show_logging(util_stub)
-        elif show_arg == "ndk-eeprom":
-            eeprom_stub = platform_ndk_pb2_grpc.EepromPlatformNdkServiceStub(channel)
-            show_ndk_eeprom(eeprom_stub)
-        return
+    # show firmware
+    show_sysleds_parser = showsubparsers.add_parser('system-leds', help='show system-leds info')
+    show_sysleds_parser.add_argument('json-format', nargs='?', help='show system-leds <json-format>')
 
-    elif arg == 'set':
-        num_args += 1
-        if not validate(arg, num_args, len(args)):
-            return
+    # show syseeprom
+    show_syseeprom_parser = showsubparsers.add_parser('syseeprom', help='show syseeprom info')
+    show_syseeprom_parser.add_argument('json-format', nargs='?', help='show syseeprom <json-format>')
 
-        channel = generate_grpc_channel()
-        if not channel:
-            return
-        set_arg = args[1]
-        if set_arg == 'temp-offset':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
+    # show chassis
+    show_chassis_parser = showsubparsers.add_parser('chassis', help='show chassis info')
+    show_chassis_parser.add_argument('json-format', nargs='?', help='show chassis <json-format>')
 
-            set_val = int(args[2])
-            thermal_stub = platform_ndk_pb2_grpc.ThermalPlatformNdkServiceStub(channel)
-            set_temp_offset(thermal_stub, set_val)
-        elif set_arg == 'fan-algo-disable':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
+    # show power
+    show_power_parser = showsubparsers.add_parser('power', help='show power info')
+    show_power_parser.add_argument('json-format', nargs='?', help='show power <json-format>')
 
-            set_val = int(args[2])
-            fan_stub = platform_ndk_pb2_grpc.FanPlatformNdkServiceStub(channel)
-            set_fan_algo_disable(fan_stub, set_val)
-        elif set_arg == 'fan-speed-percent':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
+    # show midplane
+    show_midplane_parser = showsubparsers.add_parser('midplane', help='show midplane')
+    show_midplane_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
+    show_midplane_parser.add_argument('json-format', nargs='?', help='json-format')
 
-            set_val = int(args[2])
-            fan_stub = platform_ndk_pb2_grpc.FanPlatformNdkServiceStub(channel)
-            set_fan_speed(fan_stub, set_val)
-        elif set_arg == 'fantray-led':
+    # show logging
+    show_logging_parser = showsubparsers.add_parser('logging', help='show logging info')
+    show_logging_parser.add_argument('json-format', nargs='?', help='show logging <json-format>')
+
+    # show ndk-eeprom
+    show_ndkeeprom_parser = showsubparsers.add_parser('ndk-eeprom', help='show ndk-eeprom info')
+    show_ndkeeprom_parser.add_argument('json-format', nargs='?', help='show ndk-eeprom <json-format>')
+
+    # show ndk-status
+    show_ndkstatus_parser = showsubparsers.add_parser('ndk-status', help='show ndk-status info')
+    show_ndkstatus_parser.add_argument('json-format', nargs='?', help='show ndk-status <json-format>')
+
+    # show sfm-summary
+    show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
+    show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
+
+    # show sfm-imm-links
+    show_sfmimm_parser = showsubparsers.add_parser('sfm-imm-links', help='show sfm-imm-links info')
+    show_sfmimm_parser.add_argument('imm-slot', nargs='?', help='slot number integer')
+    show_sfmimm_parser.add_argument('json-format', nargs='?', help='show sfm-imm-links <imm-slot> <json-format>')
+
+    # Set Commands
+    set_parser = subparsers.add_parser('set', help='set help')
+    setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
+
+    #Set temp-offset
+    set_tempoff_parser = setsubparsers.add_parser('temp-offset', help='set tempoffset value')
+    set_tempoff_parser.add_argument('offset', nargs='?', help='int from 0-100')
+
+    #Set fan-algorithm
+    set_fanalgo_parser = setsubparsers.add_parser('fan-algorithm', help='set fan-algo value')
+    set_fanalgo_parser.add_argument('disable', nargs='?', help='1(disable) or 0(enable)')
+
+    #Set fan-speed
+    set_fanspeed_parser = setsubparsers.add_parser('fan-speed', help='set fan-speed value')
+    set_fanspeed_parser.add_argument('speed', nargs='?', help='int from 0-100')
+
+    #Set fanled
+    set_fanled_parser = setsubparsers.add_parser('fantray-led', help='set fan-led')
+    set_fanled_parser.add_argument('index', nargs='?', help='0-MAX')
+    set_fanled_parser.add_argument('color', nargs='?', help='off, red, amber, green')
+
+    #Set led
+    set_deviceled_parser = setsubparsers.add_parser('led', help='set device led')
+    set_deviceled_parser.add_argument('device', nargs='?', help='port/fantray/sfm/board/master-psu/master-fan/master-sfm')
+    set_deviceled_parser.add_argument('color', nargs='?', help='off, red, amber, green')
+
+    #Set loglvl
+    set_loglvl_parser = setsubparsers.add_parser('log-level', help='set logging level')
+    set_loglvl_parser.add_argument('level', nargs='?', help='Levels - \n' +
+                      '\t0 or EMERG\n' +
+                      '\t1 or ALERT\n' +
+                      '\t2 or CRIT\n' +
+                      '\t3 or ERR\n' +
+                      '\t4 or WARNING\n' +
+                      '\t5 or NOTICE\n' +
+                      '\t6 or INFO\n' +
+                      '\t7 or DEBUG\n' +
+                      '\t8 or TRACE\n')
+    set_loglvl_parser.add_argument('module', nargs='?', help='Modules - \n' +
+                      '\tall\n' +
+                      '\tcommon\n')
+
+    #Set log-restore
+    set_logreset_parser = setsubparsers.add_parser('log-level-restore', help='reset logging level')
+
+    # Request Commands
+    req_parser = subparsers.add_parser('request', help='Req help')
+    reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
+
+    req_admintech_parser = reqsubparsers.add_parser('admintech', help='collect admintech')
+    req_admintech_parser.add_argument('filepath', nargs='?', help='<filepath>')
+
+    # An illustration of how access the arguments.
+    args = base_parser.parse_args()
+    d=vars(args)
+    if args.cmd == 'show':
+        if args.showcmd == 'platform':
+            format_type = d['json-format']
+            show_platform()
+        elif args.showcmd == 'psus':
+            format_type = d['json-format']
+            show_psu()
+            show_psu_detail()
+        elif args.showcmd == 'sensors':
+            format_type = d['json-format']
+            show_temp()
+            show_fan()
+            show_fan_detail()
+        elif args.showcmd == 'firmware':
+            format_type = d['json-format']
+            show_firmware()
+        elif args.showcmd == 'system-leds':
+            format_type = d['json-format']
+            show_system_led()
+        elif args.showcmd == 'syseeprom':
+            format_type = d['json-format']
+            show_syseeprom()
+        elif args.showcmd == 'chassis':
+            format_type = d['json-format']
+            show_chassis()
+        elif args.showcmd == 'power':
+            format_type = d['json-format']
+            show_power()
+        elif args.showcmd == 'logging':
+            format_type = d['json-format']
+            show_logging()
+        elif args.showcmd == 'syseeprom':
+            format_type = d['json-format']
+            show_syseeprom()
+        elif args.showcmd == 'midplane':
+            format_type = d['json-format']
+            show_midplane_status(int(d['hw-slot']))
+        elif args.showcmd == 'ndk-eeprom':
+            format_type = d['json-format']
+            show_ndk_eeprom()
+        elif args.showcmd == 'ndk-status':
+            format_type = d['json-format']
+            show_ndk_status()
+        elif args.showcmd == 'sfm-summary':
+            format_type = d['json-format']
+            show_sfm_summary()
+        elif args.showcmd == 'sfm-imm-links':
+            format_type = d['json-format']
+            show_sfm_imm_links(int(d['imm-slot']))
+    elif args.cmd == 'set':
+        if args.setcmd == 'temp-offset':
+            set_temp_offset(int(d['offset']))
+        elif args.setcmd == 'fan-algorithm':
+            set_fan_algo_disable(int(d['disable']))
+        elif args.setcmd == 'fan-speed':
+            set_fan_speed(int(d['speed']))
+        elif args.setcmd == 'fantray-led':
             led_list = ['off', 'red', 'amber', 'green']
-            num_args += 2
-            if not validate(arg, num_args, len(args)):
-                return
-
-            index = int(args[2])
-            if args[3] not in led_list:
+            if d['color'] not in led_list:
                 print('Unsupported color for fan-tray-led. Choose from {}'.format(led_list))
                 return
-
-            fan_stub = platform_ndk_pb2_grpc.FanPlatformNdkServiceStub(channel)
-            set_fantray_led(fan_stub, index, args[3])
-        elif set_arg == 'fp-portup':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
+            set_fantray_led(int(d['speed']), d['color'])
+        elif args.setcmd == 'led':
+            dev_list = ['port', 'fantray', 'sfm', 'board', 'master-psu', 'master-fan', 'master-sfm']
+            if d['device'] not in dev_list:
+                print('Unsupported device for led. Choose from {}'.format(led_list))
                 return
 
-            set_val = int(args[2])
-            led_stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(channel)
-            set_fp_port_led(led_stub, set_val, True)
-        elif set_arg == 'fp-portdown':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
+            led_list = ['off', 'red', 'amber', 'green']
+            if d['color'] not in led_list:
+                print('Unsupported color for led. Choose from {}'.format(led_list))
                 return
 
-            set_val = int(args[2])
-            led_stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(channel)
-            set_fp_port_led(led_stub, set_val, False)
-        elif set_arg == 'led':
-            num_args += 2
-            if not validate(arg, num_args, len(args)):
-                return
-
-            type_str = args[2]
-            color_str = args[3]
-            chassis_stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(channel)
-            set_led(chassis_stub, type_str, color_str)
-        elif set_arg == 'log-level':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
-
-            if args[2] == 'help':
-                print("Levels - \n" +
-                      "\t0 or EMERG\n" +
-                      "\t1 or ALERT\n" +
-                      "\t2 or CRIT\n" +
-                      "\t3 or ERR\n" +
-                      "\t4 or WARNING\n" +
-                      "\t5 or NOTICE\n" +
-                      "\t6 or INFO\n" +
-                      "\t7 or DEBUG\n" +
-                      "\t8 or TRACE\n")
-                print("Modules - \n" +
-                      "\tall\n" +
-                      "\tcommon\n")
-                return
-
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
-
-            level_str = args[2]
-            module_str = args[3]
-            util_stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            set_log_level_module(util_stub, level_str, module_str)
-        elif set_arg == 'log-level-restore':
-            util_stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            set_log_restore_default(util_stub)
-        return
-    elif arg == 'ut':
-        num_args += 1
-        if not validate(arg, num_args, len(args)):
-            return
-
-        ut_arg = args[1]
-        if ut_arg == 'fan':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        elif ut_arg == 'sfp':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        elif ut_arg == 'chassis':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-                platform_chassis.test_suite_chassis()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        elif ut_arg == 'psu':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-                platform_chassis.test_suite_psu()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        elif ut_arg == 'card':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        elif ut_arg == 'firmware':
-            # Load new platform api class
-            try:
-                import sonic_platform.platform
-                platform_chassis = sonic_platform.platform.Platform().get_chassis()
-            except Exception as e:
-                print('Failed to load chassis due to '+str(e))
-        return
-    elif arg == 'request':
-        num_args += 1
-        if not validate(arg, num_args, len(args)):
-            return
-
-        debug_arg = args[1]
-        channel = generate_grpc_channel()
-        if not channel:
-            return
-        if debug_arg == 'admintech':
-            num_args += 1
-            if not validate(arg, num_args, len(args)):
-                return
-
-            filepath_val = args[2]
-            stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(channel)
-            if stub is None:
-                return
-            request_admintech(stub, filepath_val)
-    else:
-        show_all_help()
-
-    return True
-
-
-def validate(cmd, num_args, passed_args):
-    if passed_args < num_args:
-        if (cmd == 'show'):
-            show_help()
-        elif (cmd == 'set'):
-            show_set_help()
-        elif (cmd == 'ut'):
-            show_ut_help()
-        elif (cmd == 'request'):
-            show_request_help()
-        else:
-            print('Unsupported command')
-        return 0
-    return 1
-
-
-def show_help():
-    print("show platform            [json-format]      - Show Platform Information")
-    print("show sensors             [json-format]      - Show Temperature/Fan Information")
-    print("show psus                [json-format]      - Show PSUs Information")
-    print("show fp-status           [json-format]      - Show FrontPanel LEDs")
-    print("show firmware            [json-format]      - Show Firmware")
-    print("show system-leds         [json-format]      - Show System LEDs")
-    print("show sfm-summary         [json-format]      - Show SFM summary")
-    print("show sfm-imm-links   [imm-slot] [json-format]    - Show SFM summary")
-    print("show syseeprom           [json-format]      - Show system eeprom")
-    print("show chassis             [json-format]      - Show chassis info")
-    print("show psu-master-led      [json-format]      - Show PSU master-led status")
-    print("show power               [json-format]      - Show power consumed")
-    print("show midplane  [hw-slot] [json-format]      - Show midplane reachability")
-    print("show logging             [json-format]      - Show logging information")
-    print("show ndk-eeprom          [json-format]      - Show eeprom information")
-
-
-def show_set_help():
-    print("set temp-offset <0-100>          - Set temperature offset")
-    print("set fan-algo-disable <1/0>       - Set 1 to disable")
-    print("set fan-speed-percent <0-100>    - Set fan speed manually")
-    print("set fantray-led <index> <color>  - Set fantry led color")
-    print("set fp-portup <1-36>             - Set FP port up")
-    print("set fp-portdown <1-36>           - Set FP port down")
-    print("set led <type> <color>           - Set <port/fantray/sfm/board/master-psu/master-fan/master-sfm> <off/red/amber/green>")
-    print("set log-level <level> <module>   - Set <level> <module> or <help>")
-    print("set log-level-restore            - Reset log to default")
-
-
-def show_ut_help():
-    print("ut chassis                       - To run chassis unit-tests")
-    print("ut psu                           - To run psu unit-tests")
-    print("ut fan                           - To run fan unit-tests")
-    print("ut sfp                           - To run sfp unit-tests")
-    print("ut card                          - To run card unit-tests")
-    print("ut firmware                      - To run firmware unit-tests")
-
-
-def show_request_help():
-    print("request admintech <full-file-path>  - Request admin-tech dump")
-
-
-def show_all_help():
-    show_help()
-    show_set_help()
-    show_ut_help()
-    show_request_help()
-    sys.exit(0)
-
+            set_led(d['device'], d['color'])
+        elif args.setcmd == 'log-level':
+            set_log_level_module(d['level'], d['module'])
+        elif args.setcmd == 'log-level-restore':
+            set_log_restore_default()
+    elif args.cmd == 'request':
+        if args.reqcmd == 'admintech':
+            request_admintech(d['filepath'])
 
 if __name__ == "__main__":
     main()
