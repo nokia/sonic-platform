@@ -1,0 +1,14 @@
+[Unit]
+Description=Openbdb service running on SONiC
+Before=nokia-sr-device-mgr.service
+Before=epic-sonic.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/bash -c 'exec /usr/local/bin/openbdb.sh start'
+ExecStop=/bin/bash -c 'exec /usr/local/bin/openbdb.sh stop'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

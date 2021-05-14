@@ -1,6 +1,9 @@
 systemctl enable nokia-watchdog.service
 systemctl start nokia-watchdog.service
 
+systemctl enable openbdb.service
+systemctl start openbdb.service
+
 systemctl enable nokia-sr-device-mgr.service
 systemctl enable nokia-ndk-qfpga-mgr.service
 systemctl enable nokia-eth-mgr.service
