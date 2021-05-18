@@ -804,7 +804,25 @@ def show_ndk_eeprom():
 def show_ndk_status():
     import subprocess
     import datetime
-    proc_list = [ 'nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-ndk-qfpga-mgr' ]
+
+    # Get platform from machine.conf
+    is_cpm = False
+    platform = 'unknown'
+    with open('/host/machine.conf') as f:
+        for line in f.readlines():
+            k, v = line.rstrip("\n").split("=")
+            if (k == 'onie_platform'):
+                platform = v
+                break
+
+    if ((platform == 'x86_64-nokia_ixr7250_cpm-r0') or
+        (platform == 'x86_64-nokia_ixr7250e_sup-r0')):
+        is_cpm = True
+
+    if is_cpm:
+        proc_list = [ 'nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-watchdog' ]
+    else:
+        proc_list = [ 'nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog' ]
     item_list = []
     for proc_item in proc_list:
         item = []
@@ -818,6 +836,7 @@ def show_ndk_status():
         test=dict(item.split("=",1) for item in outstr.splitlines())
         item.append(test['ActiveState'])
         item.append(test['MainPID'])
+        item.append(test['NRestarts'])
 
         # Timestamp
         if test['ActiveState'] == 'active':
@@ -838,9 +857,10 @@ def show_ndk_status():
         item_list.append(item)
 
     field = []
-    field.append('Process                 ')
-    field.append('State         ')
-    field.append('PID       ')
+    field.append('Service                 ')
+    field.append('State       ')
+    field.append('PID     ')
+    field.append('RestartCount')
     field.append('Uptime/Exittime   ')
 
     if format_type == 'json-format':
