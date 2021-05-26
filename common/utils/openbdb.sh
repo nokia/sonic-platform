@@ -5,7 +5,7 @@ prog=$(basename $0)
 function create_devices()
 {
     rm -f /dev/nokia-kernel-bdb
-    mknod /dev/nokia-kernel-bdb    c 120 0
+    mknod /dev/nokia-kernel-bdb    c 119 0
 }
 
 function load_kernel_modules()

@@ -12,7 +12,7 @@ MODULE_LICENSE("GPL");
 
 #define KERNEL_MOD_NAME "nokia-kernel-bdb"
 #define USER_MOD_NAME   "nokia-user-bdb"
-#define KERNEL_MAJOR    120
+#define KERNEL_MAJOR    119
 
 #define KINFO KERN_INFO KERNEL_MOD_NAME ": "
 #define KWARN KERN_WARNING KERNEL_MOD_NAME ": "
