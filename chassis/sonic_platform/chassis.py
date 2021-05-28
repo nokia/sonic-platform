@@ -436,13 +436,10 @@ class Chassis(ChassisBase):
             num_sfp = msg.num_ports
 
             # index 0 is placeholder with no valid entry
+            self._sfp_list.append(None)
 
             self.sfp_stub = None
             for index in range(1, num_sfp+1):
-                """
-                # default to QSFP-DD type for the moment. Type gets set dynamically when module is read
-                sfp = Sfp(index, 'QSFP-DD', self.sfp_stub)
-                """
                 if index <= msg.type1_hw_port_id_end:
                     sfp_type = msg.type1_port
                 elif index <= msg.type2_hw_port_id_end:
@@ -496,7 +493,7 @@ class Chassis(ChassisBase):
         if not self.sfp_module_initialized:
             self.initialize_sfp()
 
-        return len(self._sfp_list)
+        return (len(self._sfp_list) - 1)
 
     def get_all_sfps(self):
         """
@@ -512,12 +509,12 @@ class Chassis(ChassisBase):
 
     def get_sfp(self, index):
         """
-        Retrieves sfp represented by (1-based) index <index>
+        Retrieves sfp represented by (0-based) index <index>
         Args:
-            index: An integer, the index (1-based) of the sfp to retrieve.
+            index: An integer, the index (0-based) of the sfp to retrieve.
             The index should be the sequence of a physical port in a chassis,
-            starting from 1.
-            For example, 1 for Ethernet0, 2 for Ethernet4 and so on.
+            starting from 0.
+            For example, 0 for Ethernet0, 1 for Ethernet4 and so on.
         Returns:
             An object dervied from SfpBase representing the specified sfp
         """
@@ -525,17 +522,17 @@ class Chassis(ChassisBase):
         if not self.sfp_module_initialized:
             self.initialize_sfp()
 
-        if index == 0:
-            logger.log_error("SFP index 0 is a placeholder. Valid indexes are (1-{})\n".format(
-                             len(self._sfp_list)))
-            return None
-
         try:
-            # The index will start from 1
-            sfp = self._sfp_list[index-1]
+            # The index will start from 0 (though 0 is a placeholder with value None)
+            sfp = self._sfp_list[index]
         except IndexError:
             logger.log_error("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list)))
+                             index, len(self._sfp_list) - 1))
+
+        """
+        logger.log_error("get_sfp retrieving index {} is {} and length of _sfp_list {}".format(index,
+                          sfp, len(self._sfp_list) - 1))
+        """
 
         return sfp
 
