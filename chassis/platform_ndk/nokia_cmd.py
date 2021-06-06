@@ -890,7 +890,6 @@ def set_temp_offset(offset):
 
     stub.SetThermalOffset(platform_ndk_pb2.ReqTempParamsPb(temp_offset=offset))
 
-
 def set_fan_algo_disable(disable):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
@@ -970,6 +969,18 @@ def set_log_restore_default():
 
     _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_RESET_ALL
     stub.ReqLogResetAll(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type))
+
+def set_asic_temp(name, temp, threshold):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
+    if not channel or not stub:
+       return
+
+    asic_temp_entry = platform_ndk_pb2.AsicTempPb.AsicTempDevicePb(name=name, current_temp=temp,
+            threshold=threshold)
+    asic_devices = []
+    asic_devices.append(asic_temp_entry)
+    asic_temp_all = platform_ndk_pb2.AsicTempPb(temp_device=asic_devices)
+    stub.SetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb(asic_temp=asic_temp_all))
 
 
 def main():
@@ -1089,6 +1100,12 @@ def main():
     #Set log-restore
     set_logreset_parser = setsubparsers.add_parser('log-level-restore', help='reset logging level')
 
+    #Set asic temp
+    set_asictemp_parser = setsubparsers.add_parser('asic-temp', help='set asic temp-device')
+    set_asictemp_parser.add_argument('name', nargs='?', help='sensor name')
+    set_asictemp_parser.add_argument('temp', nargs='?', help='current temp')
+    set_asictemp_parser.add_argument('threshold', nargs='?', help='threshold')
+
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
@@ -1177,6 +1194,8 @@ def main():
             set_log_level_module(d['level'], d['module'])
         elif args.setcmd == 'log-level-restore':
             set_log_restore_default()
+        elif args.setcmd == 'set-asic-temp':
+            set_asic_temp(d['name'], int(d['temp']), int(d['threshold']))
     elif args.cmd == 'request':
         if args.reqcmd == 'admintech':
             request_admintech(d['filepath'])
