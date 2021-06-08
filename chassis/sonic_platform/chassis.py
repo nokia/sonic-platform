@@ -48,6 +48,7 @@ class Chassis(ChassisBase):
     def __init__(self):
         ChassisBase.__init__(self)
 
+        self.revision = 'Unknown'
         # logger.set_min_log_priority_info()
 
         # Chassis specific slot numbering
@@ -621,6 +622,15 @@ class Chassis(ChassisBase):
             bool: True if it is replaceable.
         """
         return False
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self.revision
 
     # Test suitest
     def test_suite_chassis(self):

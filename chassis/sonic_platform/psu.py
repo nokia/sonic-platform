@@ -27,6 +27,7 @@ class Psu(PsuBase):
             self.is_cpm = 0
         self.model = 'Unknown'
         self.serial = 'Unknown'
+        self.revision = 'Unknown'
         self.min_voltage = 0.0
         self.max_voltage = 0.0
         self.ambient_temperature = 0.0
@@ -381,3 +382,13 @@ class Psu(PsuBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self.revision
+ 
