@@ -18,7 +18,7 @@ DESCRIPTION_MAPPING = {
     "imm32-100g-qsfp28+4-400g-qsfpdd": "Nokia-IXR7250-32x100G-4x400G",
     "cpm-ixr": "Nokia-IXR7250-SUP",
     "cpm2-ixr": "Nokia-IXR7250-SUP",
-    "imm36-400g-qsfpdd": "Nokia-IXR7250-32x100G"
+    "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G"
 }
 
 
