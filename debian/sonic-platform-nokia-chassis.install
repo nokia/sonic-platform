@@ -14,3 +14,4 @@ chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_6
 chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250e_36x400g-r0
 chassis/utils/nokia_cmd usr/local/bin
 chassis/utils/nokia_ndk_techsupport usr/local/bin
+chassis/utils/nokia_install_ndk_service usr/local/bin

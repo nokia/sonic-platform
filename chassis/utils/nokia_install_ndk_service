@@ -1,0 +1,31 @@
+#!/bin/bash
+
+devicemgr=0
+qfpgamgr=0
+ethmgr=0
+if [ -e /lib/systemd/system/nokia-sr-device-mgr.service ]; then
+    systemctl enable nokia-sr-device-mgr.service
+    devicemgr=1
+fi
+if [ -e /lib/systemd/system/nokia-ndk-qfpga-mgr.service ]; then
+    systemctl enable nokia-ndk-qfpga-mgr.service
+    qfpgamgr=1
+fi
+if [ -e /lib/systemd/system/nokia-eth-mgr.service ]; then
+    systemctl enable nokia-eth-mgr.service
+    ethmgr=1
+fi
+
+if [[ devicemgr -eq 1 ]] || [[ qfpgamgr -eq 1 ]] || [[ ethmgr -eq 1 ]]; then 
+    systemctl daemon-reload
+fi
+
+if [[ devicemgr -eq 1 ]]; then 
+    systemctl start nokia-sr-device-mgr.service &
+fi
+if [[ qfpgamgr -eq 1 ]]; then
+    systemctl start nokia-ndk-qfpga-mgr.service &
+fi
+if [[ ethmgr -eq 1 ]]; then
+    systemctl start nokia-eth-mgr.service &
+fi

@@ -37,8 +37,10 @@ clean:
 	dh_clean
 
 build:
-	dpkg -x /sonic/target/debs/buster/ndk_1.0-1_amd64.deb debian/sonic-platform-nokia-chassis
-	cp debian/sonic-platform-nokia-chassis/opt/srlinux/bin/platform_ndk_pb2* chassis/platform_ndk/
+	if [ -e /sonic/target/debs/buster/ndk_1.0-1_amd64.deb ]; then \
+		dpkg -x /sonic/target/debs/buster/ndk_1.0-1_amd64.deb debian/sonic-platform-nokia-chassis; \
+		cp debian/sonic-platform-nokia-chassis/opt/srlinux/bin/platform_ndk_pb2* chassis/platform_ndk/; \
+	fi
 	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
 	(for mod in $(MODULE_DIRS); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
