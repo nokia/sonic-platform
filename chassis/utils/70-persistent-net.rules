@@ -1,0 +1,1 @@
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="igb", ATTRS{device}=="0x157b", ATTRS{vendor}=="0x8086", NAME="ethMgmt"
