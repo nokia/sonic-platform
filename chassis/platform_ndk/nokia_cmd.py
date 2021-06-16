@@ -778,6 +778,10 @@ def show_ndk_eeprom():
     print_table(field, item_list)
 
     response = stub.GetChassisEeprom(platform_ndk_pb2.ReqEepromInfoPb())
+    if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_INVALID_REQ:
+        print('{}'.format(response.response_status.error_msg))
+        return
+
     item_list = []
     chassis_eeprom = response.chassis_eeprom
     item_list.append(['Chassis Type           ', str(platform_ndk_pb2.HwChassisType.Name(chassis_eeprom.chassis_type))])
