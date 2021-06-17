@@ -164,16 +164,6 @@ class Chassis(ChassisBase):
         return self.my_instance
 
     def get_module_list(self):
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-        if not channel or not stub:
-            return
-        ret, response = nokia_common.try_grpc(stub.GetChassisProperties,
-                                              platform_ndk_pb2.ReqModuleInfoPb())
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return
-
         if self.is_modular_chassis() and not self.is_cpm:
             index = 0
             supervisor = Module(index,
@@ -192,6 +182,17 @@ class Chassis(ChassisBase):
             self._module_list.append(supervisor)
             self._module_list.append(module)
             logger.log_info('Not control card. Adding self into module list')
+            return
+
+        # Only on CPM
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+        if not channel or not stub:
+            return
+        ret, response = nokia_common.try_grpc(stub.GetChassisProperties,
+                                              platform_ndk_pb2.ReqModuleInfoPb())
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
             return
 
         if self.is_modular_chassis() and self.is_cpm:
@@ -222,7 +223,7 @@ class Chassis(ChassisBase):
 
                 elif hw_property.module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_FABRIC:
                     for j in range(hw_property.max_num):
-                        module = Module(property_index,
+                        module = Module(j,
                                         ModuleBase.MODULE_TYPE_FABRIC+str(j),
                                         ModuleBase.MODULE_TYPE_FABRIC,
                                         hw_property.slot[j],

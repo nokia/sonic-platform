@@ -644,6 +644,10 @@ def show_chassis():
         return
 
     response = stub.GetChassisProperties(platform_ndk_pb2.ReqModuleInfoPb())
+    if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_INVALID_REQ:
+        print('{}'.format(response.response_status.error_msg))
+        return
+
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
