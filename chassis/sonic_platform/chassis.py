@@ -465,6 +465,9 @@ class Chassis(ChassisBase):
                 sfp._dom_capability_detect()
             self.sfp_module_initialized = True
             logger.log_info("SFPs are now initialized... stub {}".format(self.sfp_stub))
+        else:
+            self.sfp_module_initialized = True
+            logger.log_info("CPM has no SFPs... skipping initialization")
 
     def get_change_event(self, timeout=0):
         # logger.log_error("Get-change-event with thread-{} start ".format(
@@ -492,6 +495,9 @@ class Chassis(ChassisBase):
         Returns:
             An integer, the number of sfps available on this chassis
         """
+        if nokia_common.is_cpm():
+            return 0
+
         if not self.sfp_module_initialized:
             self.initialize_sfp()
 

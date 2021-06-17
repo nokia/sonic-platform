@@ -1853,9 +1853,14 @@ class Sfp(SfpBase):
         nokia_common.channel_shutdown(channel)
         if ret is False:
             return False
-        status_msg = response.sfp_status
+        status = response.sfp_status.status
         self.invalidate_page_cache(ALL_PAGES_TYPE)
-        return status_msg.status
+        
+        if status == 0:
+            return True
+        else:
+            logger.log_error("reset Ethernet{} failed with status {}".format(self.index, status))
+            return False
 
     def set_lpmode(self, lpmode):
         """
