@@ -123,6 +123,10 @@ class Chassis(ChassisBase):
         module = self.get_module(index)
         return module
 
+    # API used by system-health monitoring
+    def initizalize_system_led(self):
+        return
+
     def get_status_led(self):
         color = Chassis.STATUS_LED_COLOR_OFF
         led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_BOARD_STATUS
