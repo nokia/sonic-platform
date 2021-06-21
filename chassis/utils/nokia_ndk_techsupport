@@ -38,6 +38,7 @@ SKIP_BCMCMD=0
 IS_SUP=1
 NOKIA_NDK_CLI=/opt/srlinux/bin/sr_platform_ndk_cli
 NOKIA_DEVMGR=devmgr
+NOKIA_QFPGA_GRPC_PORT=50067
 
 handle_signal()
 {
@@ -209,14 +210,13 @@ save_ndk_devicemgr_info() {
     NDK_ADMINTECH=devmgr.admintech
     $NOKIA_NDK_CLI -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
     save_file /tmp/$NDK_ADMINTECH* dump false true
-    save_file /etc/sonic/platform_ndk.json dump false true
 }
 
 save_ndk_qfpgamgr_info() {
     echo "Capture ndk qfpgamgr info"
     # Admintech
     NDK_ADMINTECH=qfpgamgr.admintech
-    $NOKIA_NDK_CLI -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
+    $NOKIA_NDK_CLI --port $NOKIA_QFPGA_GRPC_PORT -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
     save_file /tmp/$NDK_ADMINTECH* dump false true
 }
 
@@ -257,6 +257,7 @@ main() {
     fi
 
     save_platform_info
+    save_file /usr/share/sonic/device/${onie_platform}/platform_ndk.json dump false true
     save_ndk_devicemgr_info
     save_ndk_qfpgamgr_info
     save_ndk_ethmgr_info
