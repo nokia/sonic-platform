@@ -825,13 +825,13 @@ class Sfp(SfpBase):
             transceiver_info_dict['vendor_oui'] = vendor_oui
             transceiver_info_dict['vendor_date'] = vendor_date
             transceiver_info_dict['connector'] = connector
-            transceiver_info_dict['encoding'] = "N/A"
+            transceiver_info_dict['encoding'] = "Not supported for CMIS cables"
             transceiver_info_dict['ext_identifier'] = ext_id
-            transceiver_info_dict['ext_rateselect_compliance'] = "N/A"
-            transceiver_info_dict['specification_compliance'] = "N/A"
+            transceiver_info_dict['ext_rateselect_compliance'] = "Not supported for CMIS cables"
+            transceiver_info_dict['specification_compliance'] = "Not supported for CMIS cables"
             transceiver_info_dict['cable_type'] = "Length Cable Assembly(m)"
             transceiver_info_dict['cable_length'] = cable_length
-            transceiver_info_dict['nominal_bit_rate'] = "N/A"
+            transceiver_info_dict['nominal_bit_rate'] = "Not supported for CMIS cables"
             transceiver_info_dict['application_advertisement'] = host_media_list
 
             """
