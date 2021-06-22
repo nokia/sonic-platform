@@ -3,6 +3,7 @@
 devicemgr=0
 qfpgamgr=0
 ethmgr=0
+phymgr=0
 if [ -e /lib/systemd/system/nokia-sr-device-mgr.service ]; then
     systemctl enable nokia-sr-device-mgr.service
     devicemgr=1
@@ -16,7 +17,11 @@ if [ -e /lib/systemd/system/nokia-eth-mgr.service ]; then
     ethmgr=1
 fi
 
-if [[ devicemgr -eq 1 ]] || [[ qfpgamgr -eq 1 ]] || [[ ethmgr -eq 1 ]]; then 
+if [ -e /lib/systemd/system/nokia-phy-mgr.service ]; then
+    systemctl enable nokia-phy-mgr.service
+    phymgr=1
+fi
+if [[ devicemgr -eq 1 ]] || [[ qfpgamgr -eq 1 ]] || [[ ethmgr -eq 1 ]] || [[ phymgr -eq 1 ]]; then 
     systemctl daemon-reload
 fi
 
@@ -28,4 +33,7 @@ if [[ qfpgamgr -eq 1 ]]; then
 fi
 if [[ ethmgr -eq 1 ]]; then
     systemctl start nokia-eth-mgr.service &
+fi
+if [[ phymgr -eq 1 ]]; then
+    systemctl start nokia-phy-mgr.service &
 fi

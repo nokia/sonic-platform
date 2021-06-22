@@ -830,7 +830,7 @@ def show_ndk_status():
     if is_cpm:
         proc_list = [ 'nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-watchdog' ]
     else:
-        proc_list = [ 'nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog' ]
+        proc_list = [ 'nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog', 'nokia-phy-mgr' ]
     item_list = []
     for proc_item in proc_list:
         item = []
