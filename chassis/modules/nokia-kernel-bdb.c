@@ -184,7 +184,8 @@ typedef struct  {
 
 #define BDE_SWITCH_DEV_TYPE       0x00100           // SAL_SWITCH_DEV_TYPE
 #define BDE_PCI_DEV_TYPE          0x00001           // SAL_PCI_DEV_TYPE
-#define BDE_DEV_BUS_ALT           0x04000           // AL_DEV_BUS_ALT
+#define BDE_DEV_BUS_ALT           0x04000           // SAL_DEV_BUS_ALT - legacy
+#define BDE_USER_DEV_TYPE         0x40000           // SAL_USER_DEV_TYPE - added by BCM to support BDB
 
 
 // NOKIA STUFFS
@@ -499,7 +500,7 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         io.d3 = 0;
         break;
     case LUBDE_GET_DEVICE_TYPE:
-        io.d0 = BDE_PCI_DEV_TYPE | BDE_DEV_BUS_ALT | BDE_SWITCH_DEV_TYPE;
+        io.d0 = BDE_PCI_DEV_TYPE | BDE_DEV_BUS_ALT | BDE_USER_DEV_TYPE | BDE_SWITCH_DEV_TYPE;
         break;
     case LUBDE_GET_BUS_FEATURES:
         io.d0 = io.d1 = io.d2 = 0;      // no big endian anywhere
