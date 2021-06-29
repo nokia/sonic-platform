@@ -12,6 +12,7 @@ import argparse
 import logging
 import json
 from google.protobuf.json_format import MessageToJson
+import subprocess
 
 import grpc
 from platform_ndk import nokia_common
@@ -810,7 +811,6 @@ def show_ndk_eeprom():
     return
 
 def show_ndk_status():
-    import subprocess
     import datetime
 
     # Get platform from machine.conf
@@ -883,13 +883,15 @@ def show_ndk_status():
     print('PLATFORM NDK STATUS INFORMATION')
     print_table(field, item_list)
 
-def request_admintech(filepath):
+def request_devmgr_admintech(filepath):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
     if not channel or not stub:
         return
 
     stub.ReqAdminTech(platform_ndk_pb2.ReqAdminTechPb(admintech_path=filepath))
 
+def request_ndk_admintech():
+    process = subprocess.call(['/usr/local/bin/nokia_ndk_techsupport'])
 
 def set_temp_offset(offset):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
@@ -1058,11 +1060,6 @@ def main():
     show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
     show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
 
-    # show sfm-imm-links
-    show_sfmimm_parser = showsubparsers.add_parser('sfm-imm-links', help='show sfm-imm-links info')
-    show_sfmimm_parser.add_argument('imm-slot', nargs='?', help='slot number integer')
-    show_sfmimm_parser.add_argument('json-format', nargs='?', help='show sfm-imm-links <imm-slot> <json-format>')
-
     # Set Commands
     set_parser = subparsers.add_parser('set', help='set help')
     setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
@@ -1118,8 +1115,14 @@ def main():
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
 
-    req_admintech_parser = reqsubparsers.add_parser('admintech', help='collect admintech')
-    req_admintech_parser.add_argument('filepath', nargs='?', help='<filepath>')
+    # Devmgr admintech
+    req_devmgr_admintech_parser = reqsubparsers.add_parser('devmgr-admintech',
+            help='collect devmgr admintech')
+    req_devmgr_admintech_parser.add_argument('filepath', nargs='?', help='<filepath>')
+
+    # NDK admintech
+    req_ndk_admintech_parser = reqsubparsers.add_parser('ndk-admintech',
+            help='collect NDK admintech')
 
     # An illustration of how access the arguments.
     args = base_parser.parse_args()
@@ -1170,9 +1173,9 @@ def main():
         elif args.showcmd == 'sfm-summary':
             format_type = d['json-format']
             show_sfm_summary()
-        elif args.showcmd == 'sfm-imm-links':
+        elif args.showcmd == 'fabric-pcie':
             format_type = d['json-format']
-            show_sfm_imm_links(int(d['imm-slot']))
+            show_fabric_pcieinfo()
     elif args.cmd == 'set':
         if args.setcmd == 'temp-offset':
             set_temp_offset(int(d['offset']))
@@ -1205,8 +1208,10 @@ def main():
         elif args.setcmd == 'set-asic-temp':
             set_asic_temp(d['name'], int(d['temp']), int(d['threshold']))
     elif args.cmd == 'request':
-        if args.reqcmd == 'admintech':
-            request_admintech(d['filepath'])
+        if args.reqcmd == 'devmgr-admintech':
+            request_devmgr_admintech(d['filepath'])
+        elif args.reqcmd == 'ndk-admintech':
+            request_ndk_admintech()
 
 if __name__ == "__main__":
     main()

@@ -213,21 +213,26 @@ save_ndk_devicemgr_info() {
 }
 
 save_ndk_qfpgamgr_info() {
-    echo "Capture ndk qfpgamgr info"
-    # Admintech
-    NDK_ADMINTECH=qfpgamgr.admintech
-    $NOKIA_NDK_CLI --port $NOKIA_QFPGA_GRPC_PORT -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
-    save_file /tmp/$NDK_ADMINTECH* dump false true
+    if [ $IS_SUP -eq 0 ]; then
+        echo "Capture ndk qfpgamgr info"
+        # Admintech
+        NDK_ADMINTECH=qfpgamgr.admintech
+        $NOKIA_NDK_CLI --port $NOKIA_QFPGA_GRPC_PORT -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
+        save_file /tmp/$NDK_ADMINTECH* dump false true
+    fi
 }
 
 save_ndk_ethmgr_info() {
-    echo "Capture ndk ethmgr info"
+    if [ $IS_SUP -eq 1 ]; then
+        echo "Capture ndk ethmgr info"
+    fi
 }
 
 save_ndk_cores() {
     echo "Copy ndk coredump files"
     core_dir=core
     for core_file in /var/core/sr_device_mgr*.gz; do
+        [ -f "$core_file" ] || continue
         save_file $core_file  $core_dir false true
     done
 }
@@ -251,8 +256,10 @@ main() {
     start_t=$(date +%s%3N)
 
     source /host/machine.conf
-    if [ "${onie_platform}" != "x86_64-nokia_ixr7250_cpm-r0" ] && \
-       [ "${onie_platform}" != "x86_64-nokia_ixr7250e_sup-r0" ] ; then
+    if [ "${onie_platform}" == "x86_64-nokia_ixr7250_cpm-r0" ] || \
+       [ "${onie_platform}" == "x86_64-nokia_ixr7250e_sup-r0" ] ; then
+        IS_SUP=1
+    else
         IS_SUP=0
     fi
 
