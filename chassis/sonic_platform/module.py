@@ -20,7 +20,7 @@ DESCRIPTION_MAPPING = {
     "cpm2-ixr": "Nokia-IXR7250-SUP",
     "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G"
 }
-
+NUM_ASICS_PER_FABRIC = 2
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
@@ -226,3 +226,11 @@ class Module(ModuleBase):
         if ret is False:
             return False
         return response.midplane_status
+
+    def get_all_asics(self):
+        asic_list = []
+        if self.get_name().startswith(ModuleBase.MODULE_TYPE_FABRIC):
+            for i in range(NUM_ASICS_PER_FABRIC):
+                asic_list.append((str((self.module_index * NUM_ASICS_PER_FABRIC) + i), 'n/a'))
+        return asic_list
+            
