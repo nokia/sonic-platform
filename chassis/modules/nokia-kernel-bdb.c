@@ -500,7 +500,7 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         io.d3 = 0;
         break;
     case LUBDE_GET_DEVICE_TYPE:
-        io.d0 = BDE_PCI_DEV_TYPE | BDE_DEV_BUS_ALT | BDE_USER_DEV_TYPE | BDE_SWITCH_DEV_TYPE;
+        io.d0 = BDE_DEV_BUS_ALT | BDE_USER_DEV_TYPE | BDE_SWITCH_DEV_TYPE;
         break;
     case LUBDE_GET_BUS_FEATURES:
         io.d0 = io.d1 = io.d2 = 0;      // no big endian anywhere
