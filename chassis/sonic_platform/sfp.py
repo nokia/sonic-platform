@@ -13,6 +13,7 @@ try:
     from sonic_platform_base.sonic_sfp.sff8436 import sff8436Dom
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_InterfaceId
     from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_Dom
+    from sonic_platform_base.sonic_sfp.sff8024 import type_of_media_interface
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
     from sonic_py_common.logger import Logger
@@ -152,6 +153,7 @@ qsfpdd_parser = {
     'voltage':            [CTRL_TYPE,  16,  2, 'parse_voltage', DD_DOM_STRUCT],
     'reset_status':       [CTRL_TYPE,  26,  1, 'parse_dom_channel_status', DD_DOM_STRUCT],
     'media_type':         [CTRL_TYPE,  85,  1, 'parse_media_type', DD_INFO_STRUCT],
+    'specification_compliance':  [CTRL_TYPE,  85,  1, FUNC_ABSENT, DD_INFO_STRUCT],
 
     'first_app_list':     [CTRL_TYPE,  86, 32, FUNC_ABSENT, DD_INFO_STRUCT],
 
@@ -159,6 +161,7 @@ qsfpdd_parser = {
     'App advertising':    [CTRL_TYPE,  85, 33, 'parse_app_advertising', DD_INFO_STRUCT],
 
     'type':               [INFO_TYPE,  0, 1, 'parse_sfp_type', DD_INFO_STRUCT],
+    'type_abbrv_name':    [INFO_TYPE,  0, 1, 'parse_sfp_type_abbrv_name', DD_INFO_STRUCT],
     'ext_iden':           [INFO_TYPE,  72, 2, 'parse_ext_iden', DD_INFO_STRUCT],
     'cable_length':       [INFO_TYPE,  74, 1, 'parse_cable_len', DD_INFO_STRUCT],
     'Connector':          [INFO_TYPE,  75, 1, 'parse_connector', DD_INFO_STRUCT],
@@ -621,6 +624,15 @@ class Sfp(SfpBase):
                     data_type, self.index))
                 return None
 
+            # type_abbrv_name
+            data_type = 'type_abbrv_name'
+            type_abbrv_data_raw = self._get_eeprom_data(data_type)
+            if (type_abbrv_data_raw is not None):
+                type_abbrv_data = type_abbrv_data_raw['data']['type_abbrv_name']['value']
+            else:
+                logger.log_error("Failed to get {} for get_transceiver_info for Ethernet{}".format(
+                    data_type, self.index))
+                return None
             # connector
             data_type = 'Connector'
             connector_data = self._get_eeprom_data(data_type)
@@ -711,6 +723,16 @@ class Sfp(SfpBase):
                     data_type, self.index))
                 return None
 
+            # Specification Compliance
+            data_type = 'specification_compliance'
+            media_type_code = []
+            media_type_code = self._get_eeprom_data(data_type)
+            if (media_type_code is None):
+                logger.log_error("Failed to get {} for get_transceiver_info for Ethernet{}".format(
+                    data_type, self.index))
+                return None
+            specification_compliance = type_of_media_interface[media_type_code[0]]
+
             # Media type
             data_type = 'media_type'
             media_type_dict = self._get_eeprom_data(data_type)
@@ -731,11 +753,14 @@ class Sfp(SfpBase):
                 return None
 
             if not self.flatmem:
+                dom_capability = 'True'
                 data_type = 'second_app_list'
                 application_list_second = self._get_eeprom_data(data_type)
                 if application_list_second is not None:
                     max_application_count = 15
                     application_list += application_list_second
+            else:
+                dom_capability = 'False'
 
             # logger.log_error("appl list for Ethernet{} type {} : {} {} {}".format(
             #    self.index, self.sfp_type, max_application_count, application_list_first, application_list_second))
@@ -818,6 +843,7 @@ class Sfp(SfpBase):
 
             # Fill The Dictionary and return
             transceiver_info_dict['type'] = type_data
+            transceiver_info_dict['type_abbrv_name'] = type_abbrv_data
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
             transceiver_info_dict['hardware_rev'] = vendor_rev
@@ -828,12 +854,14 @@ class Sfp(SfpBase):
             transceiver_info_dict['encoding'] = "Not supported for CMIS cables"
             transceiver_info_dict['ext_identifier'] = ext_id
             transceiver_info_dict['ext_rateselect_compliance'] = "Not supported for CMIS cables"
-            transceiver_info_dict['specification_compliance'] = "Not supported for CMIS cables"
+            # transceiver_info_dict['specification_compliance'] = "Not supported for CMIS cables"
+            transceiver_info_dict['specification_compliance'] = specification_compliance
             transceiver_info_dict['cable_type'] = "Length Cable Assembly(m)"
             transceiver_info_dict['cable_length'] = cable_length
             transceiver_info_dict['nominal_bit_rate'] = "Not supported for CMIS cables"
             transceiver_info_dict['application_advertisement'] = host_media_list
-
+            transceiver_info_dict['dom_capability'] = dom_capability
+            transceiver_info_dict['is_replaceable'] = str(self.is_replaceable())
             """
             transceiver_info_dict['revision_compliance'] = str(rev_compliance)
             transceiver_info_dict['power'] = power

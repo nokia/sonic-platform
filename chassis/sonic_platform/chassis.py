@@ -442,7 +442,7 @@ class Chassis(ChassisBase):
             num_sfp = msg.num_ports
 
             # index 0 is placeholder with no valid entry
-            self._sfp_list.append(None)
+            # self._sfp_list.append(None)
 
             self.sfp_stub = None
             for index in range(1, num_sfp+1):
@@ -505,7 +505,7 @@ class Chassis(ChassisBase):
         if not self.sfp_module_initialized:
             self.initialize_sfp()
 
-        return (len(self._sfp_list) - 1)
+        return (len(self._sfp_list))
 
     def get_all_sfps(self):
         """
@@ -536,10 +536,10 @@ class Chassis(ChassisBase):
 
         try:
             # The index will start from 0 (though 0 is a placeholder with value None)
-            sfp = self._sfp_list[index]
+            sfp = self._sfp_list[index-1]
         except IndexError:
             logger.log_error("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list) - 1))
+                             index, len(self._sfp_list)))
 
         """
         logger.log_error("get_sfp retrieving index {} is {} and length of _sfp_list {}".format(index,
