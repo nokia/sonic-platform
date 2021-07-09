@@ -883,6 +883,39 @@ def show_ndk_status():
     print('PLATFORM NDK STATUS INFORMATION')
     print_table(field, item_list)
 
+def show_fabric_pcieinfo(hw_slot):
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.GetFabricPcieInfo(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot))
+
+    if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_RESOURCE_NOT_FOUND:
+        print('{}'.format(response.response_status.error_msg))
+        return
+
+    if format_type == 'json-format':
+        json_response = MessageToJson(response)
+        print(json_response)
+        return
+
+    field = []
+    field.append('ASIC IDX    ')
+    field.append('ASIC PCIE ID  ')
+    item_list = []
+    i = 0
+    while i < len(response.pcie_info.asic_entry):
+        asic_info = response.pcie_info.asic_entry[i]
+        item = []
+        item.append(str(asic_info.asic_idx))
+        item.append(str(asic_info.asic_pcie_id))
+        item_list.append(item)
+        i += 1
+
+    print('FABRIC PCIE INFORMATION')
+    print_table(field, item_list)
+    return
+
 def request_devmgr_admintech(filepath):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
     if not channel or not stub:
@@ -1060,6 +1093,11 @@ def main():
     show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
     show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
 
+    # show fabric-pcieinfo
+    show_fpcie_parser = showsubparsers.add_parser('fabric-pcie', help='show fabric-pcie')
+    show_fpcie_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
+    show_fpcie_parser.add_argument('json-format', nargs='?', help='show fabric-pcie <json-format>')
+
     # Set Commands
     set_parser = subparsers.add_parser('set', help='set help')
     setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
@@ -1163,7 +1201,6 @@ def main():
             show_syseeprom()
         elif args.showcmd == 'midplane':
             format_type = d['json-format']
-            show_midplane_status(int(d['hw-slot']))
         elif args.showcmd == 'ndk-eeprom':
             format_type = d['json-format']
             show_ndk_eeprom()
@@ -1175,7 +1212,7 @@ def main():
             show_sfm_summary()
         elif args.showcmd == 'fabric-pcie':
             format_type = d['json-format']
-            show_fabric_pcieinfo()
+            show_fabric_pcieinfo(int(d['hw-slot']))
     elif args.cmd == 'set':
         if args.setcmd == 'temp-offset':
             set_temp_offset(int(d['offset']))

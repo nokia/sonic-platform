@@ -20,7 +20,6 @@ DESCRIPTION_MAPPING = {
     "cpm2-ixr": "Nokia-IXR7250-SUP",
     "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G"
 }
-NUM_ASICS_PER_FABRIC = 2
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
@@ -230,7 +229,23 @@ class Module(ModuleBase):
     def get_all_asics(self):
         asic_list = []
         if self.get_name().startswith(ModuleBase.MODULE_TYPE_FABRIC):
-            for i in range(NUM_ASICS_PER_FABRIC):
-                asic_list.append((str((self.module_index * NUM_ASICS_PER_FABRIC) + i), 'n/a'))
+            channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+            if not channel or not stub:
+                return asic_list
+            ret, response = nokia_common.try_grpc(stub.GetFabricPcieInfo,
+                                                  platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self.get_slot()))
+            nokia_common.channel_shutdown(channel)
+
+            if ret is False:
+                return asic_list
+
+            if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_RESOURCE_NOT_FOUND:
+                return asic_list
+
+            i = 0
+            while i < len(response.pcie_info.asic_entry):
+                asic_info = response.pcie_info.asic_entry[i]
+                asic_list.append((str(asic_info.asic_idx), str(asic_info.asic_pcie_id)))
+                i += 1
+
         return asic_list
-            
