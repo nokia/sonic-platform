@@ -1,4 +1,4 @@
-common/utils/nokia-watchdog.sh usr/local/bin
+common/utils/nokia-watchdog.sh opt/srlinux/bin
 common/service/nokia-watchdog.service etc/systemd/system
 common/utils/openbdb.sh usr/local/bin
 common/service/openbdb.service etc/systemd/system

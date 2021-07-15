@@ -4,7 +4,7 @@ After=sysinit.target
 
 [Service]
 Type=simple
-ExecStart=nice -n -10 /bin/bash /usr/local/bin/nokia-watchdog.sh start
+ExecStart=nice -n -10 /bin/bash /opt/srlinux/bin/nokia-watchdog.sh start
 
 [Install]
 WantedBy=multi-user.target
