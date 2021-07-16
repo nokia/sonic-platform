@@ -460,9 +460,8 @@ class Chassis(ChassisBase):
                     # trust msg.num_ports for now and just initialize with QSFPDD type
                     sfp_type = platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFPDD
 
-                logger.log_debug("Creating SFP {} with type {}".format(index, sfp_type))
                 sfp = Sfp(index, sfp_type, self.sfp_stub)
-                
+                logger.log_debug("Created SFP {} index {} with type {}".format(sfp, index, sfp_type))
                 self._sfp_list.append(sfp)
                 # force 1st read to dynamically set type and detect dom capability
                 sfp.get_transceiver_info()
