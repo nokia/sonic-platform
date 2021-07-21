@@ -834,7 +834,6 @@ def show_ndk_status():
     item_list = []
     for proc_item in proc_list:
         item = []
-        item.append(proc_item)
 
         # Process state
         process = subprocess.Popen(['systemctl', 'show', proc_item],
@@ -842,6 +841,9 @@ def show_ndk_status():
         stdout, stderr = process.communicate()
         outstr = stdout.decode('ascii')
         test=dict(item.split("=",1) for item in outstr.splitlines())
+        if test['LoadState'] == 'not-found':
+            continue
+        item.append(proc_item)
         item.append(test['ActiveState'])
         item.append(test['MainPID'])
         item.append(test['NRestarts'])
