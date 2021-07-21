@@ -87,15 +87,28 @@ echo "sync done " `date -u` >> $wd_init_log_file
 watchdog_fail=1
 wd_log_file=/var/log/nokia-watchdog-$suf.log
 echo "start watchdog monitoring" > $wd_log_file
+
+#Option to disable watchdog
+source /host/machine.conf
+PLATFORM_NDK_JSON="/usr/share/sonic/device/${onie_platform}/platform_ndk.json"
+disable_watchdog_hm=$(jq -r '.options' ${PLATFORM_NDK_JSON} | jq '.[] | select(.key=="disable_watchdog_hm")' | jq -r '.intval')
+if [ "$disable_watchdog_hm" != "1" ]; then
+    echo "Watchdog platform-ndk health-monitoring is enabled" >> $wd_init_log_file
+else
+    echo "Watchdog platform-ndk health-monitoring is disabled" >> $wd_init_log_file
+fi
+
 while [ 1 ] ; do
     #Process health monitor
-    platform_ndk_health_monitor
-    if [[ $app_count -ge $min_app_count_failures ]]; then
-        echo "platform process health monitor failed at " `date -u` >> $wd_log_file
-        sleep $watchdog_sleep_time
-        echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_log_file
-        watchdog_fail=1
-        continue
+    if [ "$disable_watchdog_hm" != "1" ]; then
+        platform_ndk_health_monitor
+        if [[ $app_count -ge $min_app_count_failures ]]; then
+            echo "platform process health monitor failed at " `date -u` >> $wd_log_file
+            sleep $watchdog_sleep_time
+            echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_log_file
+            watchdog_fail=1
+            continue
+        fi
     fi
 
     if [[ $watchdog_fail -eq 1 ]]; then
