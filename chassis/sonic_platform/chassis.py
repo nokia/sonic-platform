@@ -64,23 +64,28 @@ class Chassis(ChassisBase):
         self.psu_stub = None
         self.firmware_stub = None
 
-        # Get maximum power consumed by each module like cards, fan-trays etc
-        self._get_modules_consumed_power()
-
         # Module list
-        self.get_module_list()
+        #self._get_module_list()
+        self._module_list = []
+        self.module_module_initialized = False
 
         # PSU list
-        self._get_psu_list()
+        #self._get_psu_list()
+        self._psu_list = []
+        self.psu_module_initialized = False
 
         # FAN list
-        self._get_fantray_list()
+        #self._get_fantray_list()
+        self._fan_drawer_list = []
+        self.fan_drawer_module_initialized = False
 
         # Thermal list
-        self.get_thermal_list()
+        #self._get_thermal_list()
 
         # Component List
-        self._get_component_list()
+        #self._get_component_list()
+        self._component_list = []
+        self.component_module_initialized = False
 
         # SFP
         self.sfp_module_initialized = False
@@ -92,7 +97,15 @@ class Chassis(ChassisBase):
             logger.log_info('HW Watchdog initialized')
 
         # system eeprom
-        self._eeprom = Eeprom()
+        self._eeprom = None
+
+    def init_all(self):
+        self._get_module_list()
+        self._get_psu_list()
+        self._get_fantray_list()
+        self._get_thermal_list()
+        self._get_component_list()
+        self.get_eeprom()
 
     def get_presence(self):
         module = self._get_my_module()
@@ -167,7 +180,13 @@ class Chassis(ChassisBase):
     def get_my_slot(self):
         return self.my_instance
 
-    def get_module_list(self):
+    def _get_module_list(self):
+        if self.module_module_initialized:
+            return self._module_list
+
+        # Get maximum power consumed by each module like cards, fan-trays etc
+        self._get_modules_consumed_power()
+
         if self.is_modular_chassis() and not self.is_cpm:
             index = 0
             supervisor = Module(index,
@@ -186,18 +205,18 @@ class Chassis(ChassisBase):
             self._module_list.append(supervisor)
             self._module_list.append(module)
             logger.log_info('Not control card. Adding self into module list')
-            return
+            return self._module_list
 
         # Only on CPM
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
         if not channel or not stub:
-            return
+            return []
         ret, response = nokia_common.try_grpc(stub.GetChassisProperties,
                                               platform_ndk_pb2.ReqModuleInfoPb())
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
-            return
+            return []
 
         if self.is_modular_chassis() and self.is_cpm:
             for property_index in range(len(response.chassis_property.hw_property)):
@@ -234,6 +253,9 @@ class Chassis(ChassisBase):
                                         self.chassis_stub)
                         module.set_maximum_consumed_power(self.fabric_card_power)
                         self._module_list.append(module)
+
+        self.module_module_initialized = True
+        return self._module_list
 
     def get_module_index(self, module_name):
         if not self.is_modular_chassis():
@@ -284,25 +306,46 @@ class Chassis(ChassisBase):
 
         return module_index
 
+    def get_num_modules(self):
+        """
+        Retrieves the number of modules available on this chassis
+        Returns:
+            An integer, the number of modules available on this chassis
+        """
+        return (len(self._get_module_list()))
+
+    def get_all_modules(self):
+        """
+        Retrieves all modules available on this chassis
+        Returns:
+            A list of objects representing all modules available on this chassis
+        """
+        return (self._get_module_list())
+
     # PSU and power related
     def _get_psu_list(self):
         if not self.is_cpm:
             return []
 
+        if self.psu_module_initialized:
+            return self._psu_list
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
         if not channel or not stub:
-            return
+            return []
         ret, response = nokia_common.try_grpc(stub.GetPsuNum,
                                               platform_ndk_pb2.ReqPsuInfoPb())
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
-            return
+            return []
 
         self.num_psus = response.num_psus
         for i in range(self.num_psus):
             psu = Psu(i, self.psu_stub)
             self._psu_list.append(psu)
+
+        self.psu_module_initialized = True
         return self._psu_list
 
     def _get_modules_consumed_power(self):
@@ -330,20 +373,42 @@ class Chassis(ChassisBase):
             elif type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_FANTRAY:
                 self.fantray_power = module_info.module_maxpower
 
+    def get_num_psus(self):
+        """
+        Retrieves the number of psus available on this chassis
+        Returns:
+            An integer, the number of psus available on this chassis
+        """
+        return (len(self._get_psu_list()))
+
+    def get_all_psus(self):
+        """
+        Retrieves all psus available on this chassis
+        Returns:
+            A list of objects representing all psus available on this chassis
+        """
+        return (self._get_psu_list())
+
     # Fan related
     def _get_fantray_list(self):
         if not self.is_cpm:
             return []
 
+        if self.fan_drawer_module_initialized:
+            return self._fan_drawer_list
+
+        # Get maximum power consumed by each module like cards, fan-trays etc
+        self._get_modules_consumed_power()
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
         if not channel or not stub:
-            return
+            return []
         ret, response = nokia_common.try_grpc(stub.GetFanNum,
                                               platform_ndk_pb2.ReqFanTrayOpsPb())
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
-            return
+            return []
 
         self.num_fantrays = response.fan_nums.num_fantrays
 
@@ -356,6 +421,7 @@ class Chassis(ChassisBase):
             fan_index = fan_index + 1
             self._fan_drawer_list.append(fan_drawer)
 
+        self.fan_drawer_module_initialized = True
         return self._fan_drawer_list
 
     def allow_fan_platform_override(self):
@@ -364,17 +430,33 @@ class Chassis(ChassisBase):
             return True
         return False
 
+    def get_num_fan_drawers(self):
+        """
+        Retrieves the number of fan-drawers available on this chassis
+        Returns:
+            An integer, the number of drawers available on this chassis
+        """
+        return (len(self._get_fantray_list()))
+
+    def get_all_fan_drawers(self):
+        """
+        Retrieves all fan-drawers available on this chassis
+        Returns:
+            A list of objects representing all fan-drawers available on this chassis
+        """
+        return (self._get_fantray_list())
+
     # Thermal related
-    def get_thermal_list(self):
+    def _get_thermal_list(self):
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
         if not channel or not stub:
-            return
+            return []
         ret, response = nokia_common.try_grpc(stub.GetThermalDevicesInfo,
                                               platform_ndk_pb2.ReqTempParamsPb())
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
-            return
+            return []
 
         all_temp_devices = response.temp_devices
         self.num_thermals = len(all_temp_devices.temp_device)
@@ -390,30 +472,60 @@ class Chassis(ChassisBase):
                         temp_device_.fanalgo_sensor, self.thermal_stub)
                 self._thermal_list.append(thermal)
 
-    def get_all_thermals(self):
-        self.get_thermal_list()
         return self._thermal_list
+
+    def get_all_thermals(self):
+        """
+        Retrieves all thermals available on this chassis
+        Returns:
+            A list of objects representing all thermals available on this chassis
+        """
+        return (self._get_thermal_list())
 
     def get_thermal_manager(self):
         from .thermal_manager import ThermalManager
         return ThermalManager
 
+    #Component related
     def _get_component_list(self):
+        if self.component_module_initialized:
+            return self._component_list
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FIRMWARE_SERVICE)
         if not channel or not stub:
-            return
+            return []
         ret, response = nokia_common.try_grpc(stub.HwFirmwareGetComponents,
                                               platform_ndk_pb2.ReqHwFirmwareInfoPb())
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
-            return
+            return []
 
         for i in range(len(response.firmware_info.component)):
             hw_dev = response.firmware_info.component[i]
             component = Component(i, hw_dev.dev_type, hw_dev.dev_name,
                                   hw_dev.dev_desc, self.firmware_stub)
             self._component_list.append(component)
+
+        self.component_module_initialized = True
+        return self._component_list
+
+    def get_num_components(self):
+        """
+        Retrieves the number of components available on this chassis
+        Returns:
+            An integer, the number of components available on this chassis
+        """
+        return (len(self._get_component_list()))
+
+    def get_all_components(self):
+        """
+        Retrieves all components available on this chassis
+        Returns:
+            A list of objects representing all components available on this chassis
+        """
+        return (self._get_component_list())
+
 
     # SFP operations below
     def initialize_sfp(self):
@@ -555,7 +667,7 @@ class Chassis(ChassisBase):
         Returns:
             A string containing the hardware product name for this chassis.
         """
-        return self._eeprom.get_product_name()
+        return self.get_eeprom().get_product_name()
 
     def get_base_mac(self):
         """
@@ -565,7 +677,7 @@ class Chassis(ChassisBase):
             A string containing the MAC address in the format
             'XX:XX:XX:XX:XX:XX'
         """
-        return self._eeprom.get_base_mac()
+        return self.get_eeprom().get_base_mac()
 
     def get_serial(self):
         """
@@ -574,7 +686,7 @@ class Chassis(ChassisBase):
         Returns:
             A string containing the hardware serial number for this chassis.
         """
-        return self._eeprom.get_serial_number()
+        return self.get_eeprom().get_serial_number()
 
     def get_serial_number(self):
         """
@@ -583,7 +695,7 @@ class Chassis(ChassisBase):
         Returns:
             A string containing the hardware serial number for this chassis.
         """
-        return self._eeprom.get_serial_number()
+        return self.get_eeprom().get_serial_number()
 
     def get_model(self):
         """
@@ -591,7 +703,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Model/part number of chassis
         """
-        return self._eeprom.get_part_number()
+        return self.get_eeprom().get_part_number()
 
     def get_system_eeprom_info(self):
         """
@@ -602,7 +714,7 @@ class Chassis(ChassisBase):
             OCP ONIE TlvInfo EEPROM format and values are their corresponding
             values.
         """
-        return self._eeprom.get_system_eeprom_info()
+        return self.get_eeprom().get_system_eeprom_info()
 
     def get_eeprom(self):
         """
@@ -610,6 +722,8 @@ class Chassis(ChassisBase):
         Returns :
             The instance of the Sys Eeprom
         """
+        if self._eeprom is None:
+            self._eeprom = Eeprom()
         return self._eeprom
 
     # Midplane

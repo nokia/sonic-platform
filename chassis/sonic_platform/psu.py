@@ -157,7 +157,10 @@ class Psu(PsuBase):
             passed all its internal self-tests, False if not.
         """
         status = False
-        if self.get_status():
+        power = self.get_power()
+
+        if (self.get_status() and (power > 0.0) and
+            (power < self.get_maximum_supplied_power())):
             status = True
 
         return status
