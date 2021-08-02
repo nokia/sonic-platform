@@ -108,6 +108,7 @@ class Chassis(ChassisBase):
         self.get_eeprom()
 
     def get_presence(self):
+        self.get_all_modules()
         module = self._get_my_module()
         if module is not None:
             return module.get_presence()
@@ -473,6 +474,14 @@ class Chassis(ChassisBase):
                 self._thermal_list.append(thermal)
 
         return self._thermal_list
+
+    def get_num_thermals(self):
+        """
+        Retrieves the number of thermals available on this chassis
+        Returns:
+            An integer, the number of thermals available on this chassis
+        """
+        return (len(self._get_thermal_list()))
 
     def get_all_thermals(self):
         """
