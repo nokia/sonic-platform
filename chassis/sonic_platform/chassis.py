@@ -206,6 +206,7 @@ class Chassis(ChassisBase):
             self._module_list.append(supervisor)
             self._module_list.append(module)
             logger.log_info('Not control card. Adding self into module list')
+            self.module_module_initialized = True
             return self._module_list
 
         # Only on CPM
