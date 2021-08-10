@@ -18,7 +18,8 @@ DESCRIPTION_MAPPING = {
     "imm32-100g-qsfp28+4-400g-qsfpdd": "Nokia-IXR7250-32x100G-4x400G",
     "cpm-ixr": "Nokia-IXR7250-SUP",
     "cpm2-ixr": "Nokia-IXR7250-SUP",
-    "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G"
+    "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G",
+    "imm60-100g-qsfp28": "Nokia-IXR7250E-60x100G"
 }
 
 class Module(ModuleBase):
@@ -149,7 +150,29 @@ class Module(ModuleBase):
         Returns:
             bool: True if the request has been successful, False if not
         """
-        return False
+        # For fabric modules, return False. Reboot requires syncd etc needs to
+        # be stopped first for clean bringup.
+        if self.get_type() == self.MODULE_TYPE_FABRIC:
+            return False
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+        if not channel or not stub:
+            return False
+
+        platform_module_type = self.get_platform_type()
+        ret, response = nokia_common.try_grpc(
+            stub.RebootSlot,
+            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self.get_slot(),
+                                             reboot_type=reboot_type))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            return False
+
+        if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+            return False
+
+        return True
 
     def set_admin_state(self, up):
         """
