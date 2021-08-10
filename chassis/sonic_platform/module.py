@@ -18,8 +18,9 @@ DESCRIPTION_MAPPING = {
     "imm32-100g-qsfp28+4-400g-qsfpdd": "Nokia-IXR7250-32x100G-4x400G",
     "cpm-ixr": "Nokia-IXR7250-SUP",
     "cpm2-ixr": "Nokia-IXR7250-SUP",
-    "imm36-400g-qsfpdd": "Nokia-IXR7250-36x400G",
-    "imm60-100g-qsfp28": "Nokia-IXR7250E-60x100G"
+    "imm36-400g-qsfpdd": "Nokia-IXR7250E-36x400G",
+    "imm60-100g-qsfp28": "Nokia-IXR7250E-60x100G",
+    "cpm2-ixr-e": "Nokia-IXR7250E-SUP-10"
 }
 
 class Module(ModuleBase):
