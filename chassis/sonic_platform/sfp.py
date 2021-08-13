@@ -1904,11 +1904,14 @@ class Sfp(SfpBase):
                                                                            hw_port_id_begin=self.index,
                                                                            val=lpmode))
         nokia_common.channel_shutdown(channel)
+
         if ret is False:
             return False
         status_msg = response.sfp_status
         self.invalidate_page_cache(ALL_PAGES_TYPE)
-        return status_msg.status
+        
+        return(True)
+        # return status_msg.status
 
     def get_lpmode(self):
         """
@@ -1920,11 +1923,13 @@ class Sfp(SfpBase):
         op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+
         if not channel or not stub:
             return False
         ret, response = nokia_common.try_grpc(stub.GetSfpLPStatus,
                                               platform_ndk_pb2.ReqSfpOpsPb(type=op_type, hw_port_id_begin=self.index))
         nokia_common.channel_shutdown(channel)
+
         if ret is False:
             return False
         status_msg = response.sfp_status
@@ -2022,3 +2027,30 @@ class Sfp(SfpBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def _get_error_code(self):
+        """
+        Get error code of the SFP module
+
+        Returns:
+            The error code
+        """
+        return NotImplementedError
+
+    def get_error_description(self):
+        """
+        Get error description
+
+        Args:
+            error_code: The error code returned by _get_error_code
+
+        Returns:
+            The error description
+        """
+        if not self.get_presence():
+           error_description = self.SFP_STATUS_UNPLUGGED
+        else:
+           error_description = self.SFP_STATUS_OK
+
+        return error_description 
+        # return NotImplementedError
