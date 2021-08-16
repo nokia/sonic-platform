@@ -185,8 +185,7 @@ class Thermal(ThermalBase):
             not
         """
         # Thermal threshold values are pre-defined based on HW.
-        self.thermal_low_threshold = temperature
-        return True
+        return False
 
     def get_high_critical_threshold(self):
         """
