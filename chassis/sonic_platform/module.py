@@ -11,6 +11,8 @@ try:
     from sonic_platform_base.module_base import ModuleBase
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
+    from sonic_platform.eeprom import Eeprom
+    
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -36,7 +38,10 @@ class Module(ModuleBase):
         self.oper_status = ModuleBase.MODULE_STATUS_EMPTY
         self.midplane_status = nokia_common.NOKIA_INVALID_IP
         self.max_consumed_power = 0.0
-
+        self.eeprom = None
+        if nokia_common._get_my_slot() == module_slot:
+            self.eeprom = Eeprom()
+       
     def get_name(self):
         """
         Retrieves the name of the device
@@ -250,6 +255,31 @@ class Module(ModuleBase):
             return False
         return response.midplane_status
 
+    
+    def get_model(self):
+        if self.eeprom is not None:
+            return self.get_eeprom().get_part_number()
+        return None
+
+    
+    def get_serial(self):
+        if self.eeprom is not None:
+            return self.get_eeprom().get_serial_number()
+        return None
+
+    
+    def get_base_mac(self):
+        if self.eeprom is not None:
+            return self.eeprom.get_base_mac()
+        return None    
+
+            
+    def get_system_eeprom_info(self):
+        if self.eeprom is not None:
+            return self.eeprom.get_system_eeprom_info()    
+        return None
+     
+    
     def get_all_asics(self):
         asic_list = []
         if self.get_name().startswith(ModuleBase.MODULE_TYPE_FABRIC):
