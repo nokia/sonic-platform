@@ -280,8 +280,12 @@ main() {
         else
             echo "WARNING: gzip operation appears to have failed." >&2
         fi
+        mv ${TARFILE} /tmp/hw-mgmt-dump.tar.gz
+        echo "platform specific dump is in /tmp/hw-mgmt-dump.tar.gz"
+    else
+        mv ${TARFILE} /tmp/hw-mgmt-dump.tar
+        echo "platform specific dump is in /tmp/hw-mgmt-dump.tar"
     fi
 
-    echo ${TARFILE}
 }
 main
