@@ -7,17 +7,13 @@
 # All rights reserved.
 #
 
-import sys
 import argparse
-import logging
 import json
 from google.protobuf.json_format import MessageToJson
 import subprocess
 
-import grpc
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
-from platform_ndk import platform_ndk_pb2_grpc
 
 eeprom_default_dict = {
     "0x21": "Product Name",
@@ -46,6 +42,7 @@ DEBUG = False
 args = []
 format_type = ''
 
+
 def pretty_time_delta(seconds):
     sign_string = '-' if seconds < 0 else ''
     seconds = abs(int(seconds))
@@ -60,6 +57,7 @@ def pretty_time_delta(seconds):
         return '%s %dm %ds' % (sign_string, minutes, seconds)
     else:
         return '%s %ds' % (sign_string, seconds)
+
 
 def print_table(field, item_list):
     i = 0
@@ -92,7 +90,7 @@ def show_led():
     port_end = 35
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_LED_SERVICE)
     if not channel or not stub:
-       return
+        return
     led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_PORT
     port_idx = platform_ndk_pb2.ReqLedIndexPb(start_idx=port_start,
                                               end_idx=port_end)
@@ -126,7 +124,7 @@ def show_led():
 def show_psu():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     arg1 = platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0)
     ret, response = nokia_common.try_grpc(stub.ShowPsuInfo, arg1)
@@ -172,7 +170,7 @@ def show_psu():
 def show_psu_detail():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     response = stub.ShowPsuInfo(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0))
     if len(response.psu_info.psu_device) == 0:
@@ -207,7 +205,7 @@ def show_psu_detail():
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
-            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            dict_item = {f.rstrip(): v for f, v in zip(field, item)}
             json_list.append(dict_item)
 
         print(json.dumps(json_list, indent=4))
@@ -221,7 +219,7 @@ def show_psu_detail():
 def show_fan():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=0)
     response = stub.ShowFanInfo(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
@@ -261,7 +259,7 @@ def show_fan():
 def show_fan_detail():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     # Get Num-fans
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=0)
@@ -338,7 +336,7 @@ def show_fan_detail():
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
-            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            dict_item = {f.rstrip(): v for f, v in zip(field, item)}
             json_list.append(dict_item)
 
         print(json.dumps(json_list, indent=4))
@@ -351,7 +349,7 @@ def show_fan_detail():
 def show_temp():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     response = stub.ShowThermalInfo(platform_ndk_pb2.ReqTempParamsPb())
 
@@ -800,7 +798,7 @@ def show_ndk_eeprom():
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
-            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            dict_item = {f.rstrip(): v for f, v in zip(field, item)}
             json_list.append(dict_item)
 
         print(json.dumps(json_list, indent=4))
@@ -809,6 +807,7 @@ def show_ndk_eeprom():
     print('CHASSIS-EEPROM INFORMATION')
     print_table(field, item_list)
     return
+
 
 def show_ndk_status():
     import datetime
@@ -823,14 +822,13 @@ def show_ndk_status():
                 platform = v
                 break
 
-    if ((platform == 'x86_64-nokia_ixr7250_cpm-r0') or
-        (platform == 'x86_64-nokia_ixr7250e_sup-r0')):
+    if ((platform == 'x86_64-nokia_ixr7250_cpm-r0') or (platform == 'x86_64-nokia_ixr7250e_sup-r0')):
         is_cpm = True
 
     if is_cpm:
-        proc_list = [ 'nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-watchdog' ]
+        proc_list = ['nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-watchdog']
     else:
-        proc_list = [ 'nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog', 'nokia-phy-mgr' ]
+        proc_list = ['nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog', 'nokia-phy-mgr']
     item_list = []
     for proc_item in proc_list:
         item = []
@@ -840,7 +838,7 @@ def show_ndk_status():
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         outstr = stdout.decode('ascii')
-        test=dict(item.split("=",1) for item in outstr.splitlines())
+        test = dict(item.split("=", 1) for item in outstr.splitlines())
         if test['LoadState'] == 'not-found':
             continue
         item.append(proc_item)
@@ -857,7 +855,7 @@ def show_ndk_status():
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         outstr = stdout.decode('ascii')
-        f,v = outstr.rstrip("UTC \n").split(' ',1)
+        f, v = outstr.rstrip("UTC \n").split(' ', 1)
         start_time_utc = datetime.datetime.strptime(v, '%Y-%m-%d %H:%M:%S')
         current_time_utc = datetime.datetime.utcnow()
         uptime = (current_time_utc - start_time_utc)
@@ -876,7 +874,7 @@ def show_ndk_status():
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
-            dict_item = { f.rstrip():v for f,v in zip(field, item)}
+            dict_item = {f.rstrip(): v for f, v in zip(field, item)}
             json_list.append(dict_item)
 
         print(json.dumps(json_list, indent=4))
@@ -884,6 +882,7 @@ def show_ndk_status():
 
     print('PLATFORM NDK STATUS INFORMATION')
     print_table(field, item_list)
+
 
 def show_fabric_pcieinfo(hw_slot):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
@@ -918,6 +917,7 @@ def show_fabric_pcieinfo(hw_slot):
     print_table(field, item_list)
     return
 
+
 def request_devmgr_admintech(filepath):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
     if not channel or not stub:
@@ -925,20 +925,23 @@ def request_devmgr_admintech(filepath):
 
     stub.ReqAdminTech(platform_ndk_pb2.ReqAdminTechPb(admintech_path=filepath))
 
+
 def request_ndk_admintech():
     process = subprocess.call(['/usr/local/bin/nokia_ndk_techsupport'])
+
 
 def set_temp_offset(offset):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     stub.SetThermalOffset(platform_ndk_pb2.ReqTempParamsPb(temp_offset=offset))
+
 
 def set_fan_algo_disable(disable):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     req_fan_algo = platform_ndk_pb2.SetFanTrayAlgorithmPb(fantray_algo_disable=disable)
@@ -948,17 +951,17 @@ def set_fan_algo_disable(disable):
 def set_fan_speed(speed):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     stub.SetFanTargetSpeed(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx,
-        fantray_speed=speed))
+                                                            fantray_speed=speed))
 
 
 def set_fantray_led(index, color):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=index)
     _led_info = nokia_common.led_color_to_info(color)
@@ -986,7 +989,7 @@ def set_led(type_str, color):
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_LED_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     _led_info = nokia_common.led_color_to_info(color)
     stub.SetLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type, led_info=_led_info))
@@ -1015,13 +1018,14 @@ def set_log_restore_default():
     _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_RESET_ALL
     stub.ReqLogResetAll(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type))
 
+
 def set_asic_temp(name, temp, threshold):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
     if not channel or not stub:
-       return
+        return
 
     asic_temp_entry = platform_ndk_pb2.AsicTempPb.AsicTempDevicePb(name=name, current_temp=temp,
-            threshold=threshold)
+                                                                   threshold=threshold)
     asic_devices = []
     asic_devices.append(asic_temp_entry)
     asic_temp_all = platform_ndk_pb2.AsicTempPb(temp_device=asic_devices)
@@ -1104,48 +1108,47 @@ def main():
     set_parser = subparsers.add_parser('set', help='set help')
     setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
 
-    #Set temp-offset
+    # Set temp-offset
     set_tempoff_parser = setsubparsers.add_parser('temp-offset', help='set tempoffset value')
     set_tempoff_parser.add_argument('offset', nargs='?', help='int from 0-100')
 
-    #Set fan-algorithm
+    # Set fan-algorithm
     set_fanalgo_parser = setsubparsers.add_parser('fan-algorithm', help='set fan-algo value')
     set_fanalgo_parser.add_argument('disable', nargs='?', help='1(disable) or 0(enable)')
 
-    #Set fan-speed
+    # Set fan-speed
     set_fanspeed_parser = setsubparsers.add_parser('fan-speed', help='set fan-speed value')
     set_fanspeed_parser.add_argument('speed', nargs='?', help='int from 0-100')
 
-    #Set fanled
+    # Set fanled
     set_fanled_parser = setsubparsers.add_parser('fantray-led', help='set fan-led')
     set_fanled_parser.add_argument('index', nargs='?', help='0-MAX')
     set_fanled_parser.add_argument('color', nargs='?', help='off, red, amber, green')
 
-    #Set led
+    # Set led
     set_deviceled_parser = setsubparsers.add_parser('led', help='set device led')
-    set_deviceled_parser.add_argument('device', nargs='?', help='port/fantray/sfm/board/master-psu/master-fan/master-sfm')
+    set_deviceled_parser.add_argument('device', nargs='?',
+                                      help='port/fantray/sfm/board/master-psu/master-fan/master-sfm')
     set_deviceled_parser.add_argument('color', nargs='?', help='off, red, amber, green')
 
-    #Set loglvl
+    # Set loglvl
     set_loglvl_parser = setsubparsers.add_parser('log-level', help='set logging level')
     set_loglvl_parser.add_argument('level', nargs='?', help='Levels - \n' +
-                      '\t0 or EMERG\n' +
-                      '\t1 or ALERT\n' +
-                      '\t2 or CRIT\n' +
-                      '\t3 or ERR\n' +
-                      '\t4 or WARNING\n' +
-                      '\t5 or NOTICE\n' +
-                      '\t6 or INFO\n' +
-                      '\t7 or DEBUG\n' +
-                      '\t8 or TRACE\n')
-    set_loglvl_parser.add_argument('module', nargs='?', help='Modules - \n' +
-                      '\tall\n' +
-                      '\tcommon\n')
+                                   '\t0 or EMERG\n' +
+                                   '\t1 or ALERT\n' +
+                                   '\t2 or CRIT\n' +
+                                   '\t3 or ERR\n' +
+                                   '\t4 or WARNING\n' +
+                                   '\t5 or NOTICE\n' +
+                                   '\t6 or INFO\n' +
+                                   '\t7 or DEBUG\n' +
+                                   '\t8 or TRACE\n')
+    set_loglvl_parser.add_argument('module', nargs='?', help='Modules - \n' + '\tall\n' + '\tcommon\n')
 
-    #Set log-restore
+    # Set log-restore
     set_logreset_parser = setsubparsers.add_parser('log-level-restore', help='reset logging level')
 
-    #Set asic temp
+    # Set asic temp
     set_asictemp_parser = setsubparsers.add_parser('asic-temp', help='set asic temp-device')
     set_asictemp_parser.add_argument('name', nargs='?', help='sensor name')
     set_asictemp_parser.add_argument('temp', nargs='?', help='current temp')
@@ -1157,16 +1160,16 @@ def main():
 
     # Devmgr admintech
     req_devmgr_admintech_parser = reqsubparsers.add_parser('devmgr-admintech',
-            help='collect devmgr admintech')
+                                                           help='collect devmgr admintech')
     req_devmgr_admintech_parser.add_argument('filepath', nargs='?', help='<filepath>')
 
     # NDK admintech
     req_ndk_admintech_parser = reqsubparsers.add_parser('ndk-admintech',
-            help='collect NDK admintech')
+                                                        help='collect NDK admintech')
 
     # An illustration of how access the arguments.
     args = base_parser.parse_args()
-    d=vars(args)
+    d = vars(args)
     if args.cmd == 'show':
         if args.showcmd == 'platform':
             format_type = d['json-format']
@@ -1251,6 +1254,7 @@ def main():
             request_devmgr_admintech(d['filepath'])
         elif args.reqcmd == 'ndk-admintech':
             request_ndk_admintech()
+
 
 if __name__ == "__main__":
     main()

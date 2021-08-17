@@ -65,25 +65,25 @@ class Chassis(ChassisBase):
         self.firmware_stub = None
 
         # Module list
-        #self._get_module_list()
+        # self._get_module_list()
         self._module_list = []
         self.module_module_initialized = False
 
         # PSU list
-        #self._get_psu_list()
+        # self._get_psu_list()
         self._psu_list = []
         self.psu_module_initialized = False
 
         # FAN list
-        #self._get_fantray_list()
+        # self._get_fantray_list()
         self._fan_drawer_list = []
         self.fan_drawer_module_initialized = False
 
         # Thermal list
-        #self._get_thermal_list()
+        # self._get_thermal_list()
 
         # Component List
-        #self._get_component_list()
+        # self._get_component_list()
         self._component_list = []
         self.component_module_initialized = False
 
@@ -471,7 +471,7 @@ class Chassis(ChassisBase):
             for i in range(self.num_thermals):
                 temp_device_ = all_temp_devices.temp_device[i]
                 thermal = Thermal(i, temp_device_.device_idx, temp_device_.sensor_name,
-                        temp_device_.fanalgo_sensor, self.thermal_stub)
+                                  temp_device_.fanalgo_sensor, self.thermal_stub)
                 self._thermal_list.append(thermal)
 
         return self._thermal_list
@@ -496,7 +496,7 @@ class Chassis(ChassisBase):
         from .thermal_manager import ThermalManager
         return ThermalManager
 
-    #Component related
+    # Component related
     def _get_component_list(self):
         if self.component_module_initialized:
             return self._component_list
@@ -536,7 +536,6 @@ class Chassis(ChassisBase):
         """
         return (self._get_component_list())
 
-
     # SFP operations below
     def initialize_sfp(self):
         from sonic_platform.sfp import Sfp
@@ -549,14 +548,14 @@ class Chassis(ChassisBase):
             op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
             channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
             if not channel or not stub:
-               logger.log_error("Failure retrieving channel, stub in initialize_sfp")  
-               return False
+                logger.log_error("Failure retrieving channel, stub in initialize_sfp")
+                return False
 
             ret, response = nokia_common.try_grpc(stub.GetSfpNumAndType,
-                                              platform_ndk_pb2.ReqSfpOpsPb(type=op_type))
+                                                  platform_ndk_pb2.ReqSfpOpsPb(type=op_type))
             nokia_common.channel_shutdown(channel)
             if ret is False:
-                logger.log_error("Failure on GetSfpNumAndType in initialize_sfp")            
+                logger.log_error("Failure on GetSfpNumAndType in initialize_sfp")
                 return False
 
             msg = response.sfp_num_type

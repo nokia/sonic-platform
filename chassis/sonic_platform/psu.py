@@ -59,7 +59,7 @@ class Psu(PsuBase):
         if self.is_cpm == 0:
             return self.not_available_error
 
-        if self.get_presence() == False:
+        if self.get_presence() is False:
             return self.not_available_error
 
         if self.model != 'Unknown':
@@ -92,7 +92,7 @@ class Psu(PsuBase):
         if self.serial != 'Unknown':
             return self.serial
 
-        if self.get_presence() == False:
+        if self.get_presence() is False:
             return self.not_available_error
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -134,7 +134,7 @@ class Psu(PsuBase):
         status = response.psu_presence
 
         # Reset if PSU presence is False
-        if status == False:
+        if status is False:
             self.reset()
 
         return status
@@ -174,8 +174,7 @@ class Psu(PsuBase):
         status = False
         power = self.get_power()
 
-        if (self.get_status() and (power > 0.0) and
-            (power < self.get_maximum_supplied_power())):
+        if (self.get_status() and (power > 0.0) and (power < self.get_maximum_supplied_power())):
             status = True
 
         return status
@@ -214,7 +213,7 @@ class Psu(PsuBase):
         return []
 
     def get_temperature(self):
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.ambient_temperature
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -231,7 +230,7 @@ class Psu(PsuBase):
         return self.ambient_temperature
 
     def get_temperature_high_threshold(self):
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.max_temperature
 
         if self.max_temperature != 0.0:
@@ -254,7 +253,7 @@ class Psu(PsuBase):
         return self.max_temperature
 
     def get_current(self):
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.output_current
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -271,7 +270,7 @@ class Psu(PsuBase):
         return self.output_current
 
     def get_power(self):
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.output_power
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -288,7 +287,7 @@ class Psu(PsuBase):
         return self.output_power
 
     def get_voltage(self):
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.output_voltage
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -308,7 +307,7 @@ class Psu(PsuBase):
         if self.max_voltage != 0.0:
             return self.max_voltage
 
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.max_voltage
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -331,7 +330,7 @@ class Psu(PsuBase):
         if self.min_voltage != 0.0:
             return self.min_voltage
 
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.min_voltage
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -357,7 +356,7 @@ class Psu(PsuBase):
         if self.is_cpm == 0:
             return 0.0
 
-        if self._get_cached_status() == False:
+        if self._get_cached_status() is False:
             return self.max_supplied_power
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
@@ -436,4 +435,3 @@ class Psu(PsuBase):
             string: Revision value of device
         """
         return self.revision
- 

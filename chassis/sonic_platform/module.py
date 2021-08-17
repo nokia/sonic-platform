@@ -12,7 +12,7 @@ try:
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
     from sonic_platform.eeprom import Eeprom
-    
+
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -24,6 +24,7 @@ DESCRIPTION_MAPPING = {
     "imm60-100g-qsfp28": "Nokia-IXR7250E-60x100G",
     "cpm2-ixr-e": "Nokia-IXR7250E-SUP-10"
 }
+
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
@@ -41,7 +42,7 @@ class Module(ModuleBase):
         self.eeprom = None
         if nokia_common._get_my_slot() == module_slot:
             self.eeprom = Eeprom()
-       
+
     def get_name(self):
         """
         Retrieves the name of the device
@@ -255,31 +256,26 @@ class Module(ModuleBase):
             return False
         return response.midplane_status
 
-    
     def get_model(self):
         if self.eeprom is not None:
             return self.get_eeprom().get_part_number()
         return None
 
-    
     def get_serial(self):
         if self.eeprom is not None:
             return self.get_eeprom().get_serial_number()
         return None
 
-    
     def get_base_mac(self):
         if self.eeprom is not None:
             return self.eeprom.get_base_mac()
-        return None    
+        return None
 
-            
     def get_system_eeprom_info(self):
         if self.eeprom is not None:
-            return self.eeprom.get_system_eeprom_info()    
+            return self.eeprom.get_system_eeprom_info()
         return None
-     
-    
+
     def get_all_asics(self):
         asic_list = []
         if self.get_name().startswith(ModuleBase.MODULE_TYPE_FABRIC):

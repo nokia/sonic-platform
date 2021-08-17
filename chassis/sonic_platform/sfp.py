@@ -225,9 +225,10 @@ SFP_MODULE_TYPE_SFP56                       = 4;
 SFP_MODULE_TYPE_QSFP                        = 5;
 SFP_MODULE_TYPE_QSFP_PLUS                   = 6;
 SFP_MODULE_TYPE_QSFP28                      = 7;
-SFP_MODULE_TYPE_QSFP56                      = 8;  
+SFP_MODULE_TYPE_QSFP56                      = 8;
 SFP_MODULE_TYPE_QSFPDD                      = 9;
 """
+
 
 class Sfp(SfpBase):
     """
@@ -267,7 +268,7 @@ class Sfp(SfpBase):
 
     def __init__(self, index, sfp_type, stub):
         SfpBase.__init__(self)
-        self.sfp_type = sfp_type      
+        self.sfp_type = sfp_type
         self.index = index
         self.sfpi_obj = None
         self.sfpd_obj = None
@@ -1883,7 +1884,7 @@ class Sfp(SfpBase):
             return False
         status = response.sfp_status.status
         self.invalidate_page_cache(ALL_PAGES_TYPE)
-        
+
         if status == 0:
             return True
         else:
@@ -1907,9 +1908,9 @@ class Sfp(SfpBase):
 
         if ret is False:
             return False
-        status_msg = response.sfp_status
+        # status_msg = response.sfp_status
         self.invalidate_page_cache(ALL_PAGES_TYPE)
-        
+
         return(True)
         # return status_msg.status
 
@@ -2048,9 +2049,9 @@ class Sfp(SfpBase):
             The error description
         """
         if not self.get_presence():
-           error_description = self.SFP_STATUS_UNPLUGGED
+            error_description = self.SFP_STATUS_UNPLUGGED
         else:
-           error_description = self.SFP_STATUS_OK
+            error_description = self.SFP_STATUS_OK
 
-        return error_description 
+        return error_description
         # return NotImplementedError

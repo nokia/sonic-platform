@@ -36,7 +36,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
             except Exception as e:
                 # if there is a permission issue to create directory,
                 # use /tmp to instead
-                cache_file=os.path.join("/tmp",CACHE_FILE) 
+                cache_file = os.path.join("/tmp", CACHE_FILE)
                 pass
         if not os.path.exists(cache_file):
             channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_EEPROM_SERVICE)

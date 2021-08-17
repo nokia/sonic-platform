@@ -23,10 +23,10 @@ NOKIA_DEVMGR_SONIC_SRVR_IP = "127.0.0.1"
 NOKIA_DEVMGR_MONITOR_UPDATE_PERIOD_SECS = 1
 NOKIA_CHANNEL_FILE_PATH = "/tmp/nokia_grpc_server"
 
-NOKIA_DEVMGR_UNIX_SOCKET_PATH = NOKIA_UNIX_SOCKET_PREFIX+\
-        NOKIA_SONIC_UNIX_SOCKET_FOLDER+\
-        NOKIA_DEVMGR_SONIC_UNIX_SOCKET_NAME+":"+\
-        NOKIA_DEVMGR_SONIC_SRVR_PORT
+NOKIA_DEVMGR_UNIX_SOCKET_PATH = NOKIA_UNIX_SOCKET_PREFIX + \
+                                NOKIA_SONIC_UNIX_SOCKET_FOLDER + \
+                                NOKIA_DEVMGR_SONIC_UNIX_SOCKET_NAME + ":" + \
+                                NOKIA_DEVMGR_SONIC_SRVR_PORT
 
 NOKIA_FP_START_PORTID = 0
 NOKIA_FP_END_PORTID = 35
@@ -55,10 +55,12 @@ NOKIA_GRPC_UTIL_SERVICE = 'Util-Service'
 NOKIA_GRPC_EEPROM_SERVICE = 'Eeprom-Service'
 
 my_chassis_type = platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
+
+
 def channel_setup(service):
     server_path = NOKIA_DEVMGR_UNIX_SOCKET_PATH
     if os.path.exists(NOKIA_CHANNEL_FILE_PATH):
-        server_path=(open(NOKIA_CHANNEL_FILE_PATH, 'r').readline().rstrip())
+        server_path = (open(NOKIA_CHANNEL_FILE_PATH, 'r').readline().rstrip())
     _channel = grpc.insecure_channel(server_path)
     _stub = None
 
@@ -114,7 +116,7 @@ def try_grpc(callback, *args, **kwargs):
         status_code = platform_ndk_pb2.ResponseCode.NDK_ERR_FAILURE
         err_msg = 'Grpc error code '+str(e.code())
         resp_status = platform_ndk_pb2.ResponseStatus(status_code=status_code,
-                error_msg=err_msg)
+                                                      error_msg=err_msg)
         resp = platform_ndk_pb2.DefaultResponse(response_status=resp_status)
         return_val = False
 
@@ -152,6 +154,7 @@ def _get_my_slot():
 
 
 def get_chassis_type():
+    global my_chassis_type
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
     if not channel or not stub:
         return my_chassis_type
@@ -207,6 +210,7 @@ def led_info_to_color(led_info):
         _color = DeviceBase.STATUS_LED_COLOR_RED
 
     return _color
+
 
 def hw_module_status_name(status_type):
     status_ = ModuleBase.MODULE_STATUS_EMPTY

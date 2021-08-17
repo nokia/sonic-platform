@@ -102,7 +102,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
             for key in keys:
                 # Skip temperature sensors not required for FAN reading.
                 if not key.endswith('(fan)'):
-                    continue;
+                    continue
 
                 status, fvs = lc_thermal_tbl.get(key)
                 fv_dict = dict(fvs)
