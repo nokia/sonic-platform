@@ -262,12 +262,12 @@ class Module(ModuleBase):
 
     def get_model(self):
         if self.eeprom is not None:
-            return self.get_eeprom().get_part_number()
+            return self.eeprom.get_part_number()
         return None
 
     def get_serial(self):
         if self.eeprom is not None:
-            return self.get_eeprom().get_serial_number()
+            return self.eeprom.get_serial_number()
         return None
 
     def get_base_mac(self):
