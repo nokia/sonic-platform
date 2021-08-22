@@ -162,6 +162,10 @@ class Module(ModuleBase):
         if self.get_type() == self.MODULE_TYPE_FABRIC:
             return False
 
+        # Allow only reboot of self
+        if nokia_common._get_my_slot() != self.get_slot():
+            return False
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
         if not channel or not stub:
             return False
