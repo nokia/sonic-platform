@@ -27,12 +27,20 @@ function platform_ndk_health_monitor()
 
 watchdog_sleep_time=30
 start_date=`date -u`
+MAX_RETAINED_LOGS=10
 
 set -x
 
 suf=`date -u "+%Y%m%d%H%M%S"`
 
-wd_init_log_file=/var/log/nokia-watchdog-init-$suf.log
+ls -t /var/log/nokia-watchdog-init*.log| cat -n | while read n f; do if [ $n -gt $MAX_RETAINED_LOGS ]; then echo "pruning $n $f"; rm $f; else cp -p $f `printf "/tmp/nokia-watchdog-init%d.log" $n`; rm $f; fi; done
+ls -t /var/log/nokia-watchdog-last*.log| cat -n | while read n f; do if [ $n -gt $MAX_RETAINED_LOGS ]; then echo "pruning $n $f"; rm $f; else cp -p $f `printf "/tmp/nokia-watchdog-last%d.log" $n`; rm $f; fi; done
+ls -t /var/log/nokia-watchdog*.log| cat -n | while read n f; do if [ $n -gt $MAX_RETAINED_LOGS ]; then echo "pruning $n $f"; rm $f; else cp -p $f `printf "/tmp/nokia-watchdog%d.log" $n`; rm $f; fi; done
+
+cp -p /tmp/nokia-watchdog* /var/log/
+rm -f /tmp/nokia-watchdog*
+
+wd_init_log_file=/var/log/nokia-watchdog-init.log
 echo "Started at $start_date" > $wd_init_log_file
 ls -las /dev/watch* >> $wd_init_log_file
 stat /dev/watch* >> $wd_init_log_file
@@ -85,7 +93,7 @@ echo "sync done " `date -u` >> $wd_init_log_file
 
 
 watchdog_fail=1
-wd_log_file=/var/log/nokia-watchdog-$suf.log
+wd_log_file=/var/log/nokia-watchdog.log
 echo "start watchdog monitoring" > $wd_log_file
 
 #Option to disable watchdog
