@@ -324,6 +324,10 @@ class Chassis(ChassisBase):
         """
         return (self._get_module_list())
 
+    def get_module(self, index):
+        self._get_module_list()
+        return super(Chassis, self).get_module(index)
+
     # PSU and power related
     def _get_psu_list(self):
         if not self.is_cpm:
