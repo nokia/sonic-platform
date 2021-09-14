@@ -1206,6 +1206,7 @@ def main():
             show_syseeprom()
         elif args.showcmd == 'midplane':
             format_type = d['json-format']
+            show_midplane_status(int(d['hw-slot']))
         elif args.showcmd == 'ndk-eeprom':
             format_type = d['json-format']
             show_ndk_eeprom()
