@@ -1,2 +1,2 @@
-__all__ = ["platform", "chassis"]
+__all__ = ["platform"]
 from sonic_platform import *

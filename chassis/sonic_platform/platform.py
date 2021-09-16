@@ -9,7 +9,6 @@
 
 try:
     from sonic_platform_base.platform_base import PlatformBase
-    from sonic_platform.chassis import Chassis
 except ImportError as e:
     raise ImportError("%s - required module not found" % e)
 
@@ -19,6 +18,10 @@ platformDict = {'platform': 'IXR7250'}
 class Platform(PlatformBase):
     def __init__(self):
         self.platform = self.getPlatform()
+        try:
+            from sonic_platform.chassis import Chassis
+        except ImportError as e:
+            raise ImportError("%s - required module not found" % e)
         self.chassis = Chassis()
 
     def getPlatformDict(self):
