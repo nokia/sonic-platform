@@ -26,10 +26,6 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 logger = Logger("Chassis")
 
-# Support for vodka only here.  Need to modify this logic later to discern actual
-# number of ASICs and ports per prior to next platform
-NUM_SFP = 36
-
 
 class Chassis(ChassisBase):
     """
@@ -564,13 +560,13 @@ class Chassis(ChassisBase):
 
             msg = response.sfp_num_type
             logger.log_info("GetSfpNumAndType: {}".format(msg))
-            num_sfp = msg.num_ports
+            self.num_sfp = msg.num_ports
 
             # index 0 is placeholder with no valid entry
             # self._sfp_list.append(None)
 
             self.sfp_stub = None
-            for index in range(1, num_sfp+1):
+            for index in range(1, self.num_sfp+1):
                 if index <= msg.type1_hw_port_id_end:
                     sfp_type = msg.type1_port
                 elif index <= msg.type2_hw_port_id_end:
@@ -605,9 +601,12 @@ class Chassis(ChassisBase):
             # use the same stub as direct sfp ops does
             self.sfp_event_stub = self.sfp_stub
 
+            if not self.sfp_module_initialized:
+               self.initialize_sfp()
+
             logger.log_info("Initializing sfp_event with num {} and stub {} : sfp stub {}".format(
-                NUM_SFP, self.sfp_event_stub, self.sfp_stub))
-            self.sfp_event_list = sfp_event(NUM_SFP, self.sfp_event_stub)
+                self.num_sfp, self.sfp_event_stub, self.sfp_stub))
+            self.sfp_event_list = sfp_event(self.num_sfp, self.sfp_event_stub)
             self.sfp_event_list.initialize()
             self.sfp_event_initialized = True
 

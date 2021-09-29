@@ -213,13 +213,13 @@ class sfp_event:
                     if port_list[i] != self.port_status_list[i]:
                         # Port 8 will be index 7 in port_list
                         if port_list[i] is True:
-                            port_change[i] = '1'
+                            port_change[i+1] = '1'
                         else:
-                            port_change[i] = '0'
+                            port_change[i+1] = '0'
 
                         logger.log_info(
-                            "sfp_event.check_sfp_status: port{} status changed to {} ".format(i, port_change[i]))
-                        Sfp.SfpHasBeenTransitioned(i, port_change[i])
+                            "sfp_event.check_sfp_status: port{} status changed to {} ".format(i+1, port_change[i+1]))
+                        Sfp.SfpHasBeenTransitioned(i+1, port_change[i+1])
 
                 # Save the current port status list
                 self.port_status_list = port_list
