@@ -5,6 +5,8 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>  // copy to/from user
 #include <linux/delay.h>
+#include <linux/version.h>
+#include <linux/io.h>
 
 MODULE_AUTHOR("Nokia Corporation");
 MODULE_DESCRIPTION("BDE-BDB Helper Module");
@@ -44,6 +46,7 @@ static int _proc_release(struct inode * inode, struct file * file)
     return single_release(inode, file);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 struct file_operations _proc_fops = {
     owner:      THIS_MODULE,
     open:       _proc_open,
@@ -52,6 +55,15 @@ struct file_operations _proc_fops = {
     write:      _proc_write,
     release:    _proc_release,
 };
+#else
+struct proc_ops _proc_fops = {
+    proc_open:       _proc_open,
+    proc_read:       seq_read,
+    proc_lseek:     seq_lseek,
+    proc_write:      _proc_write,
+    proc_release:    _proc_release,
+};
+#endif
 
 /* FILE OPERATIONS */
 
@@ -542,7 +554,7 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
     case LUBDE_NOKIA_OP_BDB_INIT:
         // this is the global BDB init for devmgr etc
         printk(KINFO "BDB init @ %llx sz %x\n", io.p0, io.d0);
-        _cpuctl_base_addr = ioremap_nocache(io.p0, io.d0);
+        _cpuctl_base_addr = ioremap(io.p0, io.d0);
         break;
     case LUBDE_NOKIA_OP_BDB_READ:
         io.rc = bdbReadWord(io.dev, io.d0, io.d1, io.dx.buf);
