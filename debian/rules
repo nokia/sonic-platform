@@ -26,6 +26,7 @@ UTILS_DIR := utils
 SERVICE_DIR := service
 PLATFORM_DIR := sonic_platform
 CONF_DIR := conf
+BLDENV := $(shell lsb_release -cs)
 
 %:
 	dh $@ --with systemd,python3 --buildsystem=pybuild
@@ -36,8 +37,8 @@ clean:
 	dh_clean
 
 build:
-	if [ -e /sonic/target/debs/buster/ndk_1.0-1_amd64.deb ]; then \
-		dpkg -x /sonic/target/debs/buster/ndk_1.0-1_amd64.deb debian/sonic-platform-nokia-chassis; \
+	if [ -e /sonic/target/debs/$(BLDENV)/ndk_1.0-1_amd64.deb ]; then \
+		dpkg -x /sonic/target/debs/$(BLDENV)/ndk_1.0-1_amd64.deb debian/sonic-platform-nokia-chassis; \
 		cp debian/sonic-platform-nokia-chassis/opt/srlinux/bin/platform_ndk_pb2* chassis/platform_ndk/; \
 	fi
 	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
