@@ -2,13 +2,10 @@ common/utils/nokia-watchdog.sh opt/srlinux/bin
 common/service/nokia-watchdog.service etc/systemd/system
 common/utils/openbdb.sh usr/local/bin
 common/service/openbdb.service etc/systemd/system
-chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250_32x100g_4x400g-r0
-chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250_cpm-r0
-chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250-r0
 chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250e_sup-r0
 chassis/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250e_36x400g-r0
 chassis/utils/nokia_cmd usr/local/bin
 chassis/utils/hw-management-generate-dump.sh usr/bin
 chassis/utils/nokia_install_ndk_service usr/local/bin
 chassis/utils/70-persistent-net.rules etc/udev/rules.d
-chassis/utils/blacklist.conf /etc/modprobe.d
+chassis/utils/blacklist.conf etc/modprobe.d
