@@ -29,8 +29,6 @@ watchdog_sleep_time=30
 start_date=`date -u`
 MAX_RETAINED_LOGS=10
 
-set -x
-
 suf=`date -u "+%Y%m%d%H%M%S"`
 
 ls -t /var/log/nokia-watchdog-init*.log| cat -n | while read n f; do if [ $n -gt $MAX_RETAINED_LOGS ]; then echo "pruning $n $f"; rm $f; else cp -p $f `printf "/tmp/nokia-watchdog-init%d.log" $n`; rm $f; fi; done
@@ -45,38 +43,37 @@ echo "Started at $start_date" > $wd_init_log_file
 ls -las /dev/watch* >> $wd_init_log_file
 stat /dev/watch* >> $wd_init_log_file
 
-# remove sp5100 driver
+# check for and remove sp5100 driver just in case blacklist somehow not present
 lsmod | grep 5100 >> $wd_init_log_file
 modprobe -v -r sp5100_tco >> $wd_init_log_file
+sleep 1
+if [ ! -e /dev/watchdog ]; then
+   echo "no /dev/watchdog present" >> $wd_init_log_file	
+else
+   echo "/dev/watchdog present" >> $wd_init_log_file
+fi
 
-# ls -las /lib/modules/4.19.0-9-2-amd64/nokia* >> $wd_init_log_file
-# find /host -name nokia_gpio_wdt.ko >> $wd_init_log_file
-# find /host -name blacklist.conf >> $wd_init_log_file
-echo "check for /dev/watchdog at " `date -u` >> $wd_init_log_file
-
-i=0
-while [ ! -e /dev/watchdog ] && [ $i -le 10 ] ; do 
-   ((i+=1))
-   sleep 1
-done	
-
-echo "done check $i for /dev/watchdog at " `date -u` >> $wd_init_log_file
+echo "done check for /dev/watchdog at " `date -u` >> $wd_init_log_file
 
 ls -las /dev/watch* >> $wd_init_log_file
 stat /dev/watch* >> $wd_init_log_file
 
 depmod -A
+
+echo "before modprobe nokia_gpio_wdt at " `date -u` >> $wd_init_log_file
 modprobe -v nokia_gpio_wdt >> $wd_init_log_file
-echo "after modprobe" >> $wd_init_log_file
+while [ "$?" != "0" ]
+do
+    sleep 1
+    modprobe -v nokia_gpio_wdt >> $wd_init_log_file
+done
+echo "after modprobe nokia_gpio_wdt at " `date -u` >> $wd_init_log_file
+
 sleep 2
 
 ls -las /dev/watch* >> $wd_init_log_file
 stat /dev/watch* >> $wd_init_log_file
 
-# keep it open while we write "w" to it in loop
-
-# exec 5>/dev/watchdog
-# echo "w" >&5
 exec {desc}>/dev/watchdog
 echo "w" >&${desc}
 
@@ -90,7 +87,6 @@ lsmod | grep 5100 >> $wd_init_log_file
 dmesg | grep nokia >> $wd_init_log_file
 sync
 echo "sync done " `date -u` >> $wd_init_log_file
-
 
 watchdog_fail=1
 wd_log_file=/var/log/nokia-watchdog.log
