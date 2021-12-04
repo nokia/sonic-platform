@@ -150,7 +150,7 @@ def test_fan_set_speed():
 
     if fan is not None:
         default_speed = fan.get_target_speed()
-        print "Fan-"+_get_index(fan)+" disabling fan-algorithm"
+        print("Fan-{} disabling fan-algorithm".format(_get_index(fan)))
         tolerance = fan.get_speed_tolerance()
 
         fan.disable_fan_algorithm(1)

@@ -464,8 +464,20 @@ class Chassis(ChassisBase):
         self.num_thermals = len(all_temp_devices.temp_device)
         i = 0
 
-        # Empty previous list
+        list_change = False
+        # If number of sensors are different
         if len(self._thermal_list) != self.num_thermals:
+            list_change = True
+        else:
+            for i in range(self.num_thermals):
+                temp_device_ = all_temp_devices.temp_device[i]
+                thermal_name = self._thermal_list[i].get_name()
+                if (thermal_name.find(temp_device_.sensor_name) == -1):
+                    list_change = True
+                    break
+
+        # Empty previous list
+        if list_change:
             del self._thermal_list[:]
 
             for i in range(self.num_thermals):
