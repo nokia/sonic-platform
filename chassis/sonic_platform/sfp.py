@@ -73,11 +73,11 @@ qsfp_compliance_code_tup = (
     'Fibre Channel Speed')
 
 
-info_dict_keys = ['type', 'hardwarerev', 'serialnum',
-                  'manufacturename', 'modelname', 'Connector',
-                  'vendor_date', 'vendor_oui', 'power', 'cable_length',
-                  'revision_compliance', 'flatmem', 'fw_revision',
-                  'app_advertising', 'supported_link_length', 'type_abbrv_name']
+# info_dict_keys = ['type', 'hardwarerev', 'serialnum',
+#                  'manufacturename', 'modelname', 'Connector',
+#                  'vendor_date', 'vendor_oui', 'power', 'cable_length',
+#                  'revision_compliance', 'flatmem', 'fw_revision',
+#                  'app_advertising', 'supported_link_length', 'type_abbrv_name']
 
 dom_dict_keys = ['rx_los',       'tx_fault',   'reset_status',
                  'power_lpmode', 'tx_disable', 'tx_disable_channel',
@@ -130,7 +130,7 @@ sff8436_parser = {
     'manufacturename':  [INFO_TYPE, 20, 16, 'parse_vendor_name'],
     'vendor_oui':       [INFO_TYPE,  37, 3, 'parse_vendor_oui'],
     'modelname':        [INFO_TYPE, 40, 16, 'parse_vendor_pn'],
-    'hardwarerev':      [INFO_TYPE, 56,  2, 'parse_vendor_rev'],
+    'vendor_rev':       [INFO_TYPE, 56,  2, 'parse_vendor_rev'],
     'options':          [INFO_TYPE, 64,  4, 'parse_option_params', QSFP_DOM_STRUCT],
     'ext_spec_compliance': [INFO_TYPE, 64,  1, 'parse_ext_specification_compliance'],
     'serialnum':        [INFO_TYPE, 68, 16, 'parse_vendor_sn'],
@@ -169,7 +169,7 @@ qsfpdd_parser = {
     'manufacturename':    [INFO_TYPE,  1, 16, 'parse_vendor_name', DD_INFO_STRUCT],
     'vendor_oui':         [INFO_TYPE, 17,  3, 'parse_vendor_oui', DD_INFO_STRUCT],
     'modelname':          [INFO_TYPE, 20, 16, 'parse_vendor_pn', DD_INFO_STRUCT],
-    'hardwarerev':        [INFO_TYPE, 36,  2, 'parse_vendor_rev', DD_INFO_STRUCT],
+    'vendor_rev':         [INFO_TYPE, 36,  2, 'parse_vendor_rev', DD_INFO_STRUCT],
     'serialnum':          [INFO_TYPE, 38, 16, 'parse_vendor_sn', DD_INFO_STRUCT],
     'vendor_date':        [INFO_TYPE, 54,  8, 'parse_vendor_date', DD_INFO_STRUCT],
     'MIT':                [INFO_TYPE, 84,  1, 'parse_MIT', DD_INFO_STRUCT],
@@ -705,7 +705,7 @@ class Sfp(SfpBase):
                 return None
 
             # Vendor Revision
-            data_type = 'hardwarerev'
+            data_type = 'vendor_rev'
             vendor_rev_data = self._get_eeprom_data(data_type)
             if (vendor_rev_data is not None):
                 vendor_rev = vendor_rev_data['data']['Vendor Rev']['value']
@@ -847,7 +847,7 @@ class Sfp(SfpBase):
             transceiver_info_dict['type_abbrv_name'] = type_abbrv_data
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
-            transceiver_info_dict['hardware_rev'] = vendor_rev
+            transceiver_info_dict['vendor_rev'] = vendor_rev
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
             transceiver_info_dict['vendor_date'] = vendor_date
@@ -936,7 +936,7 @@ class Sfp(SfpBase):
                 return transceiver_info_dict
 
             # Vendor Revision
-            vendor_rev_data = self._get_eeprom_data('hardwarerev')
+            vendor_rev_data = self._get_eeprom_data('vendor_rev')
             if (vendor_rev_data is not None):
                 vendor_rev = vendor_rev_data['data']['Vendor Rev']['value']
             else:
@@ -953,7 +953,7 @@ class Sfp(SfpBase):
             transceiver_info_dict['type'] = identifier
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
-            transceiver_info_dict['hardware_rev'] = vendor_rev
+            transceiver_info_dict['vendor_rev'] = vendor_rev
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
             transceiver_info_dict['vendor_date'] = vendor_date
