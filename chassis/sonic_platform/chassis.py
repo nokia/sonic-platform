@@ -48,10 +48,10 @@ class Chassis(ChassisBase):
         # logger.set_min_log_priority_info()
 
         # Chassis specific slot numbering
-        self.is_chassis_modular = nokia_common.is_chassis_modular()
-        self.cpm_instance = nokia_common._get_cpm_slot()
-        self.my_instance = nokia_common._get_my_slot()
-        self.is_cpm = nokia_common.is_cpm()
+        self._cached_is_chassis_modular = False
+        self._cached_cpm_instance = False
+        self._cached_my_instance = False
+        self._cached_is_cpm = False
 
         # Create a GRPC channel
         self.chassis_stub = None
@@ -169,13 +169,32 @@ class Chassis(ChassisBase):
         return True
 
     def is_modular_chassis(self):
+        if self._cached_is_chassis_modular == False:
+            self.is_chassis_modular = nokia_common.is_chassis_modular()
+            self._cached_is_chassis_modular = True
+
         return self.is_chassis_modular
 
     def get_supervisor_slot(self):
+        if self._cached_cpm_instance == False:
+            self.cpm_instance = nokia_common._get_cpm_slot()
+            self._cached_cpm_instance = True
+
         return self.cpm_instance
 
     def get_my_slot(self):
+        if self._cached_my_instance == False:
+            self.my_instance = nokia_common._get_my_slot()
+            self._cached_my_instance = True
+
         return self.my_instance
+
+    def is_slot_cpm(self):
+        if self._cached_is_cpm == False:
+            self.is_cpm = nokia_common.is_cpm()
+            self._cached_is_cpm = True
+
+        return self.is_cpm
 
     def _get_module_list(self):
         if self.module_module_initialized:
@@ -184,7 +203,7 @@ class Chassis(ChassisBase):
         # Get maximum power consumed by each module like cards, fan-trays etc
         self._get_modules_consumed_power()
 
-        if self.is_modular_chassis() and not self.is_cpm:
+        if self.is_modular_chassis() and not self.is_slot_cpm():
             index = 0
             supervisor = Module(index,
                                 ModuleBase.MODULE_TYPE_SUPERVISOR+str(index),
@@ -216,7 +235,7 @@ class Chassis(ChassisBase):
         if ret is False:
             return []
 
-        if self.is_modular_chassis() and self.is_cpm:
+        if self.is_modular_chassis() and self.is_slot_cpm():
             for property_index in range(len(response.chassis_property.hw_property)):
                 hw_property = response.chassis_property.hw_property[property_index]
 
@@ -260,7 +279,7 @@ class Chassis(ChassisBase):
             return -1
 
         # For IMM on chassis, return supervisor-index as 0 and self index as 1
-        if not self.is_cpm:
+        if not self.is_slot_cpm():
             if module_name.startswith(ModuleBase.MODULE_TYPE_SUPERVISOR):
                 return 0
             else:
@@ -326,7 +345,7 @@ class Chassis(ChassisBase):
 
     # PSU and power related
     def _get_psu_list(self):
-        if not self.is_cpm:
+        if not self.is_slot_cpm():
             return []
 
         if self.psu_module_initialized:
@@ -393,7 +412,7 @@ class Chassis(ChassisBase):
 
     # Fan related
     def _get_fantray_list(self):
-        if not self.is_cpm:
+        if not self.is_slot_cpm():
             return []
 
         if self.fan_drawer_module_initialized:
