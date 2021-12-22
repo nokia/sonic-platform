@@ -161,6 +161,11 @@ class Psu(PsuBase):
             return self.status
 
         self.status = response.psu_status
+
+        # Reset if PSU presence is False
+        if status is False:
+            self.reset()
+
         return self.status
 
     def get_powergood_status(self):
