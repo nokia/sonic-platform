@@ -163,7 +163,7 @@ class Psu(PsuBase):
         self.status = response.psu_status
 
         # Reset if PSU presence is False
-        if status is False:
+        if self.status is False:
             self.reset()
 
         return self.status
