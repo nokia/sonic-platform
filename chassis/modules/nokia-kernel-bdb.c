@@ -1,9 +1,9 @@
-#include <linux/module.h>    // included for all kernel modules
-#include <linux/kernel.h>    // included for KERN_INFO
-#include <linux/init.h>      // included for __init and __exit macros
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/seq_file.h>
 #include <linux/proc_fs.h>
-#include <linux/uaccess.h>  // copy to/from user
+#include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/version.h>
 #include <linux/io.h>
@@ -18,6 +18,9 @@ MODULE_LICENSE("GPL");
 
 #define KINFO KERN_INFO KERNEL_MOD_NAME ": "
 #define KWARN KERN_WARNING KERNEL_MOD_NAME ": "
+
+#define atomicInc(ptr)        __atomic_fetch_add((uint32_t *)(ptr), (uint32_t)1, __ATOMIC_SEQ_CST)
+#define atomicDec(ptr)        __atomic_fetch_sub((uint32_t *)(ptr), (uint32_t)1, __ATOMIC_SEQ_CST)
 
 static void nokia_dump(struct seq_file *m);
 static int nokia_ioctl(unsigned int cmd, unsigned long arg);
@@ -65,12 +68,8 @@ struct proc_ops _proc_fops = {
 };
 #endif
 
-/* FILE OPERATIONS */
-
 static long _ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    //printk(KINFO ": ioctl %d %lx\n", cmd, arg);
-
     return nokia_ioctl(cmd, arg);
 }
 
@@ -92,18 +91,12 @@ static int _release(struct inode *inode, struct file *filp)
     return 0;
 }
 
-//static int _mmap(struct file *filp, struct vm_area_struct *vma)
-//{
-//    return -1;
-//}
-
 struct file_operations _fops = 
 {
     owner:      THIS_MODULE,
     unlocked_ioctl: _ioctl,
     open:           _open,
     release:        _release,
-//    mmap:           _mmap,
     compat_ioctl:   _ioctl,
 };
 
@@ -115,15 +108,15 @@ static int __init nokia_bdb_init(void)
     int rc = register_chrdev(KERNEL_MAJOR, KERNEL_MOD_NAME, &_fops);
     if (rc < 0)
     {
-	    printk(KWARN "can't get major %d", KERNEL_MAJOR);
-	    return rc;
+        printk(KWARN "can't get major %d", KERNEL_MAJOR);
+        return rc;
     }
 
     ent1 = proc_create(KERNEL_MOD_NAME, S_IRUGO | S_IWUGO, NULL, &_proc_fops);
     
     printk(KINFO "proc_create 2 = %p, kern_major=%d\n", ent1, KERNEL_MAJOR);
 
-    return 0;    // Non-zero return means that the module couldn't be loaded.
+    return 0;
 }
 
 static void __exit nokia_bdb_exit(void)
@@ -137,17 +130,14 @@ static void __exit nokia_bdb_exit(void)
 module_init(nokia_bdb_init);
 module_exit(nokia_bdb_exit);
 
-// Broadcom constants
-
-/* Ioctl control structure */
 typedef struct  {
-    unsigned int dev;   /* Device ID */
-    unsigned int rc;    /* Operation Return Code */
-    unsigned int d0;    /* Operation specific data */
+    unsigned int dev;
+    unsigned int rc;
+    unsigned int d0;
     unsigned int d1;
     unsigned int d2;
     unsigned int d3;    
-    uint64_t p0;        // bde_kernel_addr_t
+    uint64_t p0;
     union {
         unsigned int dw[2];
         unsigned char buf[64];
@@ -155,7 +145,6 @@ typedef struct  {
 } lubde_ioctl_t;
 
 
-/* LUBDE ioctls */
 #define LUBDE_MAGIC 'L'
 
 #define LUBDE_VERSION             _IO(LUBDE_MAGIC, 0)
@@ -194,25 +183,20 @@ typedef struct  {
 
 #define BDE_DEV_STATE_NORMAL        0
 
-#define BDE_SWITCH_DEV_TYPE       0x00100           // SAL_SWITCH_DEV_TYPE
-#define BDE_PCI_DEV_TYPE          0x00001           // SAL_PCI_DEV_TYPE
-#define BDE_DEV_BUS_ALT           0x04000           // SAL_DEV_BUS_ALT - legacy
-#define BDE_USER_DEV_TYPE         0x40000           // SAL_USER_DEV_TYPE - added by BCM to support BDB
+#define BDE_SWITCH_DEV_TYPE       0x00100
+#define BDE_PCI_DEV_TYPE          0x00001
+#define BDE_DEV_BUS_ALT           0x04000
+#define BDE_USER_DEV_TYPE         0x40000
 
+typedef unsigned char       uint8;
+typedef unsigned short      uint16;
+typedef unsigned int        uint32;
+typedef unsigned long       uint64;
 
-// NOKIA STUFFS
-
-typedef unsigned char		uint8;		/* 8-bit quantity  */
-typedef unsigned short		uint16;		/* 16-bit quantity */
-typedef unsigned int		uint32;		/* 32-bit quantity LP64 */
-typedef unsigned long		uint64;		/* 64-bit quantity LP64 */
-
-
-/* Debug output */
 static int nokia_debug;
-
 module_param(nokia_debug, int, 0);
-MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
+MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0)");
+
 
 #include <linux/mutex.h>
 
@@ -220,15 +204,21 @@ MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
 
 #define VALID_DEVICE(_n)                    (_n < MAX_NOKIA_RAMONS)
 #define IS_NOKIA_DEV(d)                     (VALID_DEVICE(d) && nokia_dev[d].is_valid)
-#define MAX_NOKIA_RAMONS                    18                              // may not all be present. Must not exceed LINUX_BDE_MAX_DEVICES
+#define MAX_NOKIA_RAMONS                    18
+#define MAX_SFMS                            8
+#define MAX_HWSLOT                          31
 #define POSTED_READ                         1
-#define DEV_TO_RAMON_HWSLOT(d)              (nokia_dev[d].hw_slot)           // starts at zero
+#define DEV_TO_RAMON_HWSLOT(d)              (nokia_dev[d].hw_slot)
+#define HW_SLOT_TO_SFM_NUM(s)               ((s)-DEFAULT_RAMON_BASE_HW_SLOT+1)   
 #define DEFAULT_RAMON_BASE_HW_SLOT          17
 #define SFM_NUM_TO_SFM_INDEX(_s)            ((_s)-1)
 #define IOCTL_BASE                          _cpuctl_base_addr
 #define A32_CPUCTL_BASE                     0x4000000000
-#define CPUCTL_SIZE                         (384*1024*1024)     // 256MB plus 128MB BDB window
+#define CPUCTL_SIZE                         (384*1024*1024)
 #define BDB_MIN_FIFO_DEPTH                  40
+#define BDB_SLOT_LOCK(s)                    ({ if (bdb_parallel) mutex_lock(&bdb_slot_lock[s]);})
+#define BDB_SLOT_UNLOCK(s)                  ({ if (bdb_parallel) mutex_unlock(&bdb_slot_lock[s]);})
+#define BDB_TIMEOUT                         (25*1000ULL*1000ULL)
 
 #define LUBDE_NOKIA_OP_ADD_UNIT             _IO(LUBDE_MAGIC, 100)
 #define LUBDE_NOKIA_OP_BDB_INIT             _IO(LUBDE_MAGIC, 101)
@@ -246,7 +236,7 @@ MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
 #define MEG_64                              (64*1024*1024)
 #define MEG_96                              (96*1024*1024)
 
-#define A32_SFM_FE_DEFAULT_BAR0             (GIG_2 + MEG_32)        // 0x82000000 - BAR0 for V4 SFM (no PCIe switch)
+#define A32_SFM_FE_DEFAULT_BAR0             (GIG_2 + MEG_32)
 #define BCM_FE9600_PCI_VENDOR_ID            (0x14e4)
 #define BCM_FE9600_PCI_DEVICE_ID            (0x8790)
 
@@ -256,26 +246,27 @@ MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
 #define RAMON_IPROC_BASE(_u)                (RAMON_BAR0(_u))
 
 #define read32(va)                          (*(volatile uint32 *) (va))
+#define read32_be(va)                       SWAP32((*(volatile uint32 *) (va)))
 #define write32(va,d)                       *(volatile uint32 *) (va) = (d)
+#define write32_be(va,d)                    ({ uint32_t _x = (d); *(volatile uint32 *) (va) = SWAP32(_x);})
 #define BDB_WAIT_US                         1000
 #define HW_BDB_CARD_PRESENT(_s)             !!(bdbSignalReg() & (1<<(_s)))
 
 
-// hardware register offsets
 #define M_BDB_SIGNAL_WFIFO_DEPTH    0xFF000000
 #define S_BDB_SIGNAL_WFIFO_DEPTH    24
 
 #define B_GEN_CONFIG_BDB_ENABLE     0x00000001
-#define B_GEN_CONFIG_P_READ_DONE    0x00000002  /* BDB posted read done */
-#define B_GEN_CONFIG_P_READ_ERR     0x00000004  /* BDB posted read failed */
-#define M_GEN_CONFIG_BDB_SLOT       0x000000F8  /* Back door bus slot select */
-#define M_GEN_CONFIG_BDB_3127       0x00001F00  /* BDB bits 31:27 on target */
-#define B_GEN_CONFIG_P_READ         0x00002000  /* Enable BDB posted reads */
-#define M_GEN_CONFIG_RTCCF_HOLD     0x0000C000  /* # RTC/CF hold time clks */
-#define M_GEN_CONFIG_RTCCF_ACTIVE   0x001F0000  /* # RTC/CF active clks 104Mhz*/
-#define M_GEN_CONFIG_RTCCF_SETUP    0x00E00000  /* # RTC/CF setup clks 104Mhz */
-#define M_GEN_CONFIG_VERSION        0xFF000000  /* FPGA Version */
-#define M_GEN_CONFIG_BDB_RESP_SLOT  0x1F000000  /* parallel BDB response slot */
+#define B_GEN_CONFIG_P_READ_DONE    0x00000002
+#define B_GEN_CONFIG_P_READ_ERR     0x00000004
+#define M_GEN_CONFIG_BDB_SLOT       0x000000F8
+#define M_GEN_CONFIG_BDB_3127       0x00001F00
+#define B_GEN_CONFIG_P_READ         0x00002000
+#define M_GEN_CONFIG_RTCCF_HOLD     0x0000C000
+#define M_GEN_CONFIG_RTCCF_ACTIVE   0x001F0000
+#define M_GEN_CONFIG_RTCCF_SETUP    0x00E00000
+#define M_GEN_CONFIG_VERSION        0xFF000000
+#define M_GEN_CONFIG_BDB_RESP_SLOT  0x1F000000
 
 #define S_GEN_CONFIG_BDB_SLOT       3
 #define S_GEN_CONFIG_BDB_3127       8
@@ -301,8 +292,7 @@ MODULE_PARM_DESC(nokia_debug,"Set debug level (default 0");
 #define BDB_ERROR_REG_OFF           0x14
 #define BDB_POSTED_READ_REG_OFF     0x20
 
-
-
+#define A64_XRS_SCRATCHPAD          0x00800500
 
 struct
 {
@@ -315,20 +305,37 @@ struct
     uint32      hw_slot;
     uint32      hw_main_baseaddr;
     uint32      hw_iproc_baseaddr;
+    uint32      last_subwin_base;
+    struct mutex iproc_lock;
 } nokia_dev[MAX_NOKIA_RAMONS];
 
 static void * _cpuctl_base_addr;
-static int msgCount = 10;
+static int msgCount = 100;
+static bool bdb_parallel = false;
+static volatile uint32 parallel_ops;
+static uint32 max_parallel;
+
+static uint32 bde_read, bde_write, nok_read, nok_write, iproc_read_reg, iproc_write_reg, iproc_cache_hit, bdb_spurious_ack;
+static uint32 bdb_read_fail, bdb_write_fail;
+static uint32 bdb_read_flushes, bdb_write_flushes, bdb_sac_write_fail, bdb_fifo_depth_wait;
+static uint32 bdb_write_retries, bdb_write_retry_failures, bdb_read_retries, bdb_read_retry_failures;
+static uint32 max_retries = 3, max_wait_time;
+
 
 static DEFINE_MUTEX(bdb_lock);
-static DEFINE_MUTEX(iproc_lock);            // since BDB mutex is not recursive
-
+static struct mutex bdb_slot_lock[MAX_HWSLOT+1];
 
 static void nokia_dump(struct seq_file *m)
 {
     int idx;
 
-    seq_printf(m, "Nokia-bdb v3 units (bdb base %p, use_count %d):\n", _cpuctl_base_addr, use_count);
+    seq_printf(m, "Nokia-bdb v3 units (bdb base %p, use_count %d parallel %d (max %d) debug %d):\n", _cpuctl_base_addr, use_count, bdb_parallel, max_parallel, nokia_debug);
+    seq_printf(m, " bde_read:    %10u  bde_write:   %10u\n", bde_read, bde_write);
+    seq_printf(m, " nok_read:    %10u  nok_write:   %10u\n", nok_read, nok_write);
+    seq_printf(m, " iproc_read:  %10u  iproc_write: %10u  cache_hit: %u\n", iproc_read_reg, iproc_write_reg, iproc_cache_hit);
+    seq_printf(m, " fifo_wait:  %6u  ack flush:   %6u  sac_write:  %6u  max_wait:   %u us\n", bdb_fifo_depth_wait, bdb_spurious_ack, bdb_sac_write_fail, max_wait_time/1000);
+    seq_printf(m, " read_fail:  %6u  read_flush:  %6u  read_retry: %4u  retry_fail: %u\n", bdb_read_fail,  bdb_read_flushes,  bdb_read_retries,  bdb_read_retry_failures);
+    seq_printf(m, " write_fail: %6u  write_flush: %6u  write_retry:%4u  retry_fail: %u\n", bdb_write_fail, bdb_write_flushes, bdb_write_retries, bdb_write_retry_failures);
 
     for (idx = 0; idx < MAX_NOKIA_RAMONS; idx++) 
     {
@@ -336,120 +343,274 @@ static void nokia_dump(struct seq_file *m)
             seq_printf(m, "\t%d (swi) : PCI device %s:%d:%d on Nokia SFM module hwslot %d\n", idx, NOKIA_DEV_NAME, nokia_dev[idx].sfm_num, nokia_dev[idx].unit, nokia_dev[idx].hw_slot);
     }
 
-    msgCount = 0;       // output BDB again
+    msgCount = 100;
 }
 
 uint32 bdbSignalReg(void)
 {
     void * bdb_regs   = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
-    return(SWAP32(read32(bdb_regs + BDB_SIGNAL_REG_OFF)));
+    return(read32_be(bdb_regs + BDB_SIGNAL_REG_OFF));
 }
 
-int bdbReadWord(uint32 hwSlot, uint32 addr, int wsize, void * ret)
+void bdbFlushRead(int hwSlot, bool read)
+{
+    void * bdb_regs = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
+    uint32 val, bdbSlot;
+
+    val = read32_be(bdb_regs + BDB_CTRL_REG_OFF);
+    bdbSlot = bdb_parallel ? (val & M_GEN_CONFIG_BDB_RESP_SLOT) >> S_GEN_CONFIG_BDB_RESP_SLOT : hwSlot;
+    if ((val & B_GEN_CONFIG_P_READ_DONE) && (hwSlot == bdbSlot))
+    {
+        if (bdb_parallel)
+        {
+            printk(KWARN "Clearing spurious ACK from slot %d for %s", hwSlot, read ? "read":"write");
+            bdb_spurious_ack++;
+        }
+        read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
+    }
+}
+
+uint32 bdbFifoDepth(uint32 hwSlot)
+{
+    if (bdb_parallel)
+    {
+        void * bdb_regs = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
+        uint32 val = read32_be(bdb_regs + BDB_CTRL_REG_OFF);
+        val = (val & ~M_GEN_CONFIG_BDB_SLOT) | (hwSlot << S_GEN_CONFIG_BDB_SLOT);
+        write32_be(bdb_regs + BDB_CTRL_REG_OFF, val);
+    }
+
+    return(bdbSignalReg() >> S_BDB_SIGNAL_WFIFO_DEPTH);
+}
+
+#define M_GEN_CONFIG_BDB_RESP_SLOT  0x1F000000
+#define B_GEN_CONFIG_RESP_WRACK     0x20000000
+#define B_GEN_CONFIG_RESP_ERROR     0x40000000
+
+static int bdbWaitForResult(int hwSlot, int * flushes)
+    {
+    void * bdb_regs = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
+    uint32 ctrl, bdbSlot;
+    uint64 nsecs = ktime_get_raw_ns();
+    uint64 now = nsecs;
+    uint64 timeout = BDB_TIMEOUT;
+    bool flushed = false;
+
+    while (true)                                                   
+    {   
+        uint64 old_now = now;                                                        
+        now = ktime_get_raw_ns();
+
+        ctrl = read32_be(bdb_regs + BDB_CTRL_REG_OFF);
+        bdbSlot = bdb_parallel ? ((ctrl & M_GEN_CONFIG_BDB_RESP_SLOT) >> S_GEN_CONFIG_BDB_RESP_SLOT) : hwSlot;
+
+        if ((ctrl & B_GEN_CONFIG_P_READ_DONE) && (hwSlot == bdbSlot))
+        {
+            if (!flushed && max_wait_time < (old_now-nsecs))
+                max_wait_time = (old_now-nsecs);
+
+            return (ctrl & (B_GEN_CONFIG_RESP_ERROR|B_GEN_CONFIG_P_READ_ERR)) ? LUBDE_FAIL : LUBDE_SUCCESS;
+        }
+
+                if ((now-nsecs) < timeout)
+        {
+            ndelay(32*10);
+            continue;
+        }
+
+        if (!(ctrl & B_GEN_CONFIG_P_READ_DONE) || !bdb_parallel)
+            break;
+
+        (*flushes)++;
+        flushed = true;
+
+        read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
+
+        timeout = 2*BDB_TIMEOUT;
+    }
+
+    return LUBDE_FAIL;
+}
+
+int bdbReadWordRaw(uint32 hwSlot, uint32 addr, int wsize, void * ret)
 {
     void * bdb_regs   = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
     void * bdb_window = IOCTL_BASE + IOCTL_BDB_WINDOW_OFFSET;
     void * ptr;
-    uint32 val, i;
-    static int errdone = 0;
+    uint32 val;
     int rc = LUBDE_SUCCESS;
+    int flushes = 0;
 
-    // if slot not present, fail cycle. 
-    if (!HW_BDB_CARD_PRESENT(hwSlot))
+    if (hwSlot > MAX_HWSLOT || !HW_BDB_CARD_PRESENT(hwSlot) || wsize > 8)
         return LUBDE_FAIL;
 
-    // lock access to ioctl r/m/w and bdb addr/data. Do we need to save/restore any regs?
+    BDB_SLOT_LOCK(hwSlot);
+
     mutex_lock(&bdb_lock);
 
-    // flush posted read
-    val = read32(bdb_regs + BDB_CTRL_REG_OFF);
-    if (val & B_GEN_CONFIG_P_READ_DONE)
-        read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
+    bdbFlushRead(hwSlot, true);
 
     val = BDB_BITS_DEFAULT | B_GEN_CONFIG_P_READ | (hwSlot << S_GEN_CONFIG_BDB_SLOT) | ((addr >> 27) << S_GEN_CONFIG_BDB_3127);
-    write32(bdb_regs + BDB_CTRL_REG_OFF, SWAP32(val));
+    write32_be(bdb_regs + BDB_CTRL_REG_OFF, val);
 
     ptr = bdb_window + (addr & ((1<<27)-1));
 
-    /* do the read (volatile as result is thrown away)  */
     if (wsize == 1)        *(uint8_t  *)ret = *(volatile uint8_t  *)ptr;
     else if (wsize == 2)   *(uint16_t *)ret = *(volatile uint16_t *)ptr;
     else if (wsize == 4)   *(uint32_t *)ret = *(volatile uint32_t *)ptr;
     else                   *(uint64_t *)ret = *(volatile uint64_t *)ptr;
 
-    // wait for result
-    for (i=0; i<BDB_WAIT_US; i++)        // 10us plenty?
+    if (bdb_parallel)
+        mutex_unlock(&bdb_lock);
+
+    atomicInc(&parallel_ops);
+
+    rc = bdbWaitForResult(hwSlot, &flushes);
+    if (rc == LUBDE_SUCCESS)
     {
-        val = SWAP32(read32(bdb_regs + BDB_CTRL_REG_OFF));
-        if (val & B_GEN_CONFIG_P_READ_DONE)
-            break;
-        udelay(1);
+        ptr = bdb_regs + BDB_POSTED_READ_REG_OFF + (addr & 3);
+        if (wsize == 1)        *(uint8_t *)ret  = *(volatile uint8_t *)ptr;
+        else if (wsize == 2)   *(uint16_t *)ret = *(volatile uint16_t *)ptr;
+        else if (wsize == 4)   *(uint32_t *)ret = *(volatile uint32_t *)ptr;
+        else                   *(uint64_t *)ret = *(volatile uint64_t *)ptr;
     }
 
-    // the result is in the posted_read_reg register, unsure why this isn't addr & 7 but this is what it sez in srl/panos
-    ptr = bdb_regs + BDB_POSTED_READ_REG_OFF + (addr & 3);
-    if (wsize == 1)        *(uint8_t *)ret  = *(volatile uint8_t *)ptr;
-    else if (wsize == 2)   *(uint16_t *)ret = *(volatile uint16_t *)ptr;
-    else if (wsize == 4)   *(uint32_t *)ret = *(volatile uint32_t *)ptr;
-    else                   *(uint64_t *)ret = *(volatile uint64_t *)ptr;
+    if (!bdb_parallel)
+        mutex_unlock(&bdb_lock);
 
-    mutex_unlock(&bdb_lock);
+    if (parallel_ops > max_parallel)
+        max_parallel = parallel_ops;
 
-    if (i >= BDB_WAIT_US)
+    atomicDec(&parallel_ops);
+
+    bdb_read_flushes += flushes;
+    if (rc == LUBDE_FAIL)
     {
-        if (errdone < 10)
+        if (bdb_read_fail < 20)
         {
-            printk(KWARN "Slot %d BDB read timeout %dus from %x (stat=%x) sig=%x\n", hwSlot, i, addr, val, bdbSignalReg());
-            errdone++;
+            printk(KWARN "Slot %d BDB read timeout from %x (stat=%x) sig=%x flushes=%d\n", hwSlot, addr, val, bdbSignalReg(), flushes);
         }
-        rc = LUBDE_FAIL;
+        bdb_read_fail++;
     }
+
+    BDB_SLOT_UNLOCK(hwSlot);
 
     return rc;
-
 } 
+
+int bdbReadWord(uint32 hwSlot, uint32 addr, int wsize, void * ret)
+{
+    int rc, retries = max_retries;
+
+    while (retries)
+    {
+        rc = bdbReadWordRaw(hwSlot, addr, wsize, ret);
+        if (rc == 0)
+        {
+            if (retries != max_retries)
+                printk(KWARN "Slot %d BDB read#%d retry SUCCESS addr %x data = %x\n", hwSlot, max_retries-retries+1, addr, *(uint32_t *)ret);
+            return rc;
+        }
+        retries--;
+        bdb_read_retries++;
+    }
+    bdb_read_retry_failures++;
+    return rc;
+}
 
 int bdbRead32(int d, uint32_t addr, uint32_t *ret)
 {
     return (bdbReadWord(DEV_TO_RAMON_HWSLOT(d), addr, 4, ret));
 }
 
-int bdbWriteWord(uint32 hwSlot, uint32 addr, int wsize, void * data)
+int bdbWriteWordRaw(uint32 hwSlot, uint32 addr, int wsize, void * data)
 {
     void * bdb_regs   = IOCTL_BASE + IOCTL_BDB_REGS_OFFSET;
     void * bdb_window = IOCTL_BASE + IOCTL_BDB_WINDOW_OFFSET;
     void * ptr;
     uint32 val;
+    int rc = LUBDE_SUCCESS;
 
-    // if slot not present, fail cycle. 
-    if (!HW_BDB_CARD_PRESENT(hwSlot) || wsize > 32)
+    if (hwSlot > MAX_HWSLOT || !HW_BDB_CARD_PRESENT(hwSlot) || wsize > 8)
         return LUBDE_FAIL;
 
-//    printf("bdbWrite32(%d, %x, %x) \n", d, addr, val);
+
+    BDB_SLOT_LOCK(hwSlot);
 
     mutex_lock(&bdb_lock);
 
-    // flush posted read
-    val = read32(bdb_regs + BDB_CTRL_REG_OFF);
-    if (val & B_GEN_CONFIG_P_READ_DONE)
-        read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
-    
-    // check for write overrun (busy-wait!)
-    while ((bdbSignalReg() >> S_BDB_SIGNAL_WFIFO_DEPTH) >= (BDB_MIN_FIFO_DEPTH+8-wsize));
+    bdbFlushRead(hwSlot, false);
+
+    while (bdbFifoDepth(hwSlot) >= (BDB_MIN_FIFO_DEPTH+8-wsize))
+        if (bdb_parallel)
+        {
+            bdb_fifo_depth_wait++;
+
+            mutex_unlock(&bdb_lock);
+            ndelay(32*10);
+            mutex_lock(&bdb_lock);
+        }
 
     val = BDB_BITS_DEFAULT | B_GEN_CONFIG_P_READ | (hwSlot << S_GEN_CONFIG_BDB_SLOT) | ((addr >> 27) << S_GEN_CONFIG_BDB_3127);
-    write32(bdb_regs + BDB_CTRL_REG_OFF, SWAP32(val));
+    write32_be(bdb_regs + BDB_CTRL_REG_OFF, val);
 
-    // write the data
     ptr = bdb_window + (addr & ((1<<27)-1));
     if (wsize == 1)         *(volatile uint8_t *)ptr  = *(uint8_t *)data;
     else if (wsize == 2)    *(volatile uint16_t *)ptr = *(uint16_t *)data;
     else if (wsize == 4)    *(volatile uint32_t *)ptr = *(uint32_t *)data;
-    else while (wsize)    { *(volatile uint64_t *)ptr = *(uint64_t *)data; ptr += 8; data += 8; wsize -= 8; }
+    else                    *(volatile uint64_t *)ptr = *(uint64_t *)data;
     mutex_unlock(&bdb_lock);
+    atomicInc(&parallel_ops);
 
-    return LUBDE_SUCCESS;           // no write acks so never failz
+    if (bdb_parallel)
+    {
+        int flushes = 0;
+        rc = bdbWaitForResult(hwSlot, &flushes);
+        read32(bdb_regs + BDB_POSTED_READ_REG_OFF);
+        bdb_write_flushes += flushes;
+
+        if (addr == A64_XRS_SCRATCHPAD && rc == LUBDE_FAIL)
+        {
+            bdb_sac_write_fail++;
+            rc = LUBDE_SUCCESS;
+        }
+
+        if (rc == LUBDE_FAIL)
+        {
+            if (bdb_write_fail < 20)
+            {
+                printk(KWARN "Slot %d BDB write ack timeout from %x (stat=%x) sig=%x flushes=%d\n", hwSlot, addr, val, bdbSignalReg(), flushes);
+            }
+            bdb_write_fail++;
+        }
+    }
+
+    if (parallel_ops > max_parallel)
+        max_parallel = parallel_ops;
+
+    atomicDec(&parallel_ops);
+
+    BDB_SLOT_UNLOCK(hwSlot);
+
+    return rc;
 } 
+
+int bdbWriteWord(uint32 hwSlot, uint32 addr, int wsize, void * data)
+{
+    int rc, retries = max_retries;
+
+    while (retries)
+    {
+        rc = bdbWriteWordRaw(hwSlot, addr, wsize, data);
+        if (rc == 0)
+            return rc;
+        retries--;
+        bdb_write_retries++;
+    }
+    bdb_write_retry_failures++;
+    return rc;
+}
+
 
 int bdbWrite32(int d, uint32 addr, uint32 data)
 {
@@ -460,22 +621,24 @@ int bdbWrite32(int d, uint32 addr, uint32 data)
 
 static uint32 iproc_map_addr(int d, unsigned int addr)
 {
-    uint32 data, subwin_base =(addr & ~0xfff);        // 4K subwindow
+    uint32 data, subwin_base =(addr & ~0xfff);
     uint32 iprocBase = nokia_dev[d].hw_iproc_baseaddr;
 
     if ((subwin_base == 0x10231000) || (subwin_base == 0x18013000)) 
     {
-        /* Route the INTC block access through IMAP0_6 */
         addr = 0x6000 + (addr & 0xfff);
     }
     else 
     {
-        /* Update base address for sub-window 7 */
-        bdbWrite32(d, iprocBase + BAR0_PAXB_IMAP0_7, subwin_base | 1);    // 1 is valid bit
-        bdbRead32(d, iprocBase + BAR0_PAXB_IMAP0_7, &data);
-        // could check result
-        
-        /* Read register through sub-window 7 */
+        if (nokia_dev[d].last_subwin_base != subwin_base)
+        {
+            bdbWrite32(d, iprocBase + BAR0_PAXB_IMAP0_7, subwin_base | 1);
+            bdbRead32(d, iprocBase + BAR0_PAXB_IMAP0_7, &data);
+            nokia_dev[d].last_subwin_base = subwin_base;
+        }
+        else
+            iproc_cache_hit++;
+
         addr = 0x7000 + (addr & 0xfff);
     }
 
@@ -485,14 +648,12 @@ static uint32 iproc_map_addr(int d, unsigned int addr)
 static int nokia_ioctl(unsigned int cmd, unsigned long arg)
 {
     lubde_ioctl_t io;
-    int rc = 0;
+    int i, rc = 0;
 
     if (copy_from_user(&io, (void *)arg, sizeof(io))) 
         return -EFAULT;
   
     io.rc = LUBDE_SUCCESS;
-
-    // printk(KINFO "Nokia ioctl cmd %x: %d %x %x %x\n", cmd, io.dev, io.d0, io.d1, io.d2);
 
     switch (cmd)
     {
@@ -500,30 +661,32 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         io.d0 = KBDE_VERSION;
         break;
     case LUBDE_GET_NUM_DEVICES:
-        io.d0 = MAX_NOKIA_RAMONS;                  // needs to return all possible devices, even ones that are not present, otherwise will not iterate through all bits of _inst_dev_mask
+        io.d0 = MAX_NOKIA_RAMONS;
         break;
     case LUBDE_ATTACH_INSTANCE:
-        break;                                     // no need to do anything here as we have no DMA memory
+        break;
     case LUBDE_GET_DEVICE:
-        io.d0 = nokia_dev[io.dev].device_id;       // BCM88790_DEVICE_ID
+        io.d0 = nokia_dev[io.dev].device_id;
         io.d1 = nokia_dev[io.dev].device_rev;
-        io.dx.dw[0] = io.dev;                      // probably not used (unique_id)
-        io.d2 = 0;                                 // zero memory addresses
+        io.dx.dw[0] = io.dev;
+        io.d2 = 0;
         io.d3 = 0;
         break;
     case LUBDE_GET_DEVICE_TYPE:
-        io.d0 = BDE_DEV_BUS_ALT | BDE_USER_DEV_TYPE | BDE_SWITCH_DEV_TYPE;
+        io.d0 = BDE_USER_DEV_TYPE | BDE_SWITCH_DEV_TYPE; 
         break;
     case LUBDE_GET_BUS_FEATURES:
-        io.d0 = io.d1 = io.d2 = 0;      // no big endian anywhere
+        io.d0 = io.d1 = io.d2 = 0;
         break;
     case LUBDE_GET_DMA_INFO:
-        io.d0 = io.d1 = 0;      // zero size / address means no dma
+        io.d0 = io.d1 = 0;
         break;
     case LUBDE_READ_REG_16BIT_BUS:
+        bde_read++;
         io.rc = bdbRead32(io.dev, nokia_dev[io.dev].hw_main_baseaddr + io.d0, &io.d1);
         break;
     case LUBDE_WRITE_REG_16BIT_BUS:
+        bde_write++;
         io.rc = bdbWrite32(io.dev, nokia_dev[io.dev].hw_main_baseaddr + io.d0, io.d1);
         break;
     case LUBDE_CPU_WRITE_REG:
@@ -539,25 +702,36 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         io.rc = LUBDE_FAIL;
         break;
     case LUBDE_IPROC_READ_REG:
-        mutex_lock(&iproc_lock);
-        io.rc = bdbRead32(io.dev, iproc_map_addr(io.dev, io.d0), &io.d1);
-        mutex_unlock(&iproc_lock);
-        break;
     case LUBDE_IPROC_WRITE_REG:
-        mutex_lock(&iproc_lock);
-        io.rc = bdbWrite32(io.dev, iproc_map_addr(io.dev, io.d0), io.d1);
-        mutex_unlock(&iproc_lock);
+        if (!IS_NOKIA_DEV(io.dev))
+            return -EINVAL;
+
+        mutex_lock(&nokia_dev[io.dev].iproc_lock);
+
+        if (cmd == LUBDE_IPROC_READ_REG)
+            io.rc = bdbReadWord(DEV_TO_RAMON_HWSLOT(io.dev), iproc_map_addr(io.dev, io.d0), 4, &io.d1);
+        else
+            io.rc = bdbWriteWord(DEV_TO_RAMON_HWSLOT(io.dev), iproc_map_addr(io.dev, io.d0), 4, &io.d1);
+
+        (cmd == LUBDE_IPROC_READ_REG) ? iproc_read_reg++ : iproc_write_reg++;
+
+        mutex_unlock(&nokia_dev[io.dev].iproc_lock);
+
         break;
     case LUBDE_GET_DEVICE_STATE:
         io.d0 = BDE_DEV_STATE_NORMAL;
         break;
     case LUBDE_NOKIA_OP_BDB_INIT:
-        // this is the global BDB init for devmgr etc
-        printk(KINFO "BDB init @ %llx sz %x\n", io.p0, io.d0);
+        printk(KINFO "BDB (new) init @ %llx sz %x parallel %x\n", io.p0, io.d0, io.d1);
         _cpuctl_base_addr = ioremap(io.p0, io.d0);
+        bdb_parallel = !!io.d1;
+        if (bdb_parallel)
+            for (i=0; i<=MAX_HWSLOT; i++)
+                mutex_init(&bdb_slot_lock[i]);
         break;
     case LUBDE_NOKIA_OP_BDB_READ:
         io.rc = bdbReadWord(io.dev, io.d0, io.d1, io.dx.buf);
+        nok_read++;
         if (nokia_debug && msgCount)
         {
             printk(KINFO "BDB read slot %d addr %x size %d = %x (%d)\n", io.dev, io.d0, io.d1, io.dx.dw[0], io.rc);
@@ -565,29 +739,36 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
         }
         break;
     case LUBDE_NOKIA_OP_BDB_WRITE:
+        io.rc = bdbWriteWord(io.dev, io.d0, io.d1, io.dx.buf);
+        nok_write++;
         if (nokia_debug && msgCount)
         {
-            printk(KINFO "BDB write slot %d addr %x size %d : %x\n", io.dev, io.d0, io.d1, io.dx.dw[0]);
+            printk(KINFO "BDB write slot %d addr %x size %d : %x (%d)\n", io.dev, io.d0, io.d1, io.dx.dw[0], io.rc);
             msgCount--;
         }
-        io.rc = bdbWriteWord(io.dev, io.d0, io.d1, io.dx.buf);
         break;
     case LUBDE_NOKIA_OP_ADD_UNIT:
-        // do we ever disable a slot using this API? TBD.
         if (!VALID_DEVICE(io.dev))
             return -EINVAL;
-        nokia_dev[io.dev].is_valid = 1;         // can't be changed
-        nokia_dev[io.dev].sfm_num = io.d0;
-        nokia_dev[io.dev].unit = io.d1;
-        nokia_dev[io.dev].device_id = io.d2;
-        nokia_dev[io.dev].device_rev = io.d3;
-        nokia_dev[io.dev].hw_main_baseaddr = io.dx.dw[0];
-        nokia_dev[io.dev].hw_iproc_baseaddr = io.dx.dw[1];
-        nokia_dev[io.dev].hw_slot = io.dx.dw[2] ? io.dx.dw[2] : (  nokia_dev[io.dev].sfm_num ? DEFAULT_RAMON_BASE_HW_SLOT+SFM_NUM_TO_SFM_INDEX(nokia_dev[io.dev].sfm_num) : 0);
-        printk(KINFO "Create Nokia dev %d rev=%x sfmnum=%d hwslot=%d base1=%x base2=%x\n", io.dev, nokia_dev[io.dev].device_rev, nokia_dev[io.dev].sfm_num, nokia_dev[io.dev].hw_slot, nokia_dev[io.dev].hw_main_baseaddr, nokia_dev[io.dev].hw_iproc_baseaddr);
-        //if (_dma_resource_alloc(1, &nokia_dev[io.dev].dma_offset) < 0)
-        //    return -EFAULT;
-        //printk(KINFO "nokia dev %d allocated dma @ offset %d\n", io.dev, nokia_dev[io.dev].dma_offset);
+        if (io.d0)
+        {
+            nokia_dev[io.dev].is_valid = true;
+            nokia_dev[io.dev].sfm_num = io.d0;
+            nokia_dev[io.dev].unit = io.d1;
+            nokia_dev[io.dev].device_id = io.d2;
+            nokia_dev[io.dev].device_rev = io.d3;
+            nokia_dev[io.dev].hw_main_baseaddr = io.dx.dw[0];
+            nokia_dev[io.dev].hw_iproc_baseaddr = io.dx.dw[1];
+            nokia_dev[io.dev].hw_slot = io.dx.dw[2];
+            nokia_dev[io.dev].last_subwin_base = -1;
+            mutex_init(&nokia_dev[io.dev].iproc_lock);
+            printk(KINFO "Create Nokia dev %d rev=%x sfmnum=%d hwslot=%d base1=%x base2=%x\n", io.dev, nokia_dev[io.dev].device_rev, nokia_dev[io.dev].sfm_num, nokia_dev[io.dev].hw_slot, nokia_dev[io.dev].hw_main_baseaddr, nokia_dev[io.dev].hw_iproc_baseaddr);
+        }
+        else
+        {
+            nokia_dev[io.dev].is_valid = false;
+            printk(KINFO "Disable Nokia dev %d rev=%x sfmnum=%d hwslot=%d base1=%x base2=%x\n", io.dev, nokia_dev[io.dev].device_rev, nokia_dev[io.dev].sfm_num, nokia_dev[io.dev].hw_slot, nokia_dev[io.dev].hw_main_baseaddr, nokia_dev[io.dev].hw_iproc_baseaddr);
+        }
         break;
     default:
         io.rc = LUBDE_FAIL;
@@ -597,7 +778,6 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
     if (copy_to_user((void *)arg, &io, sizeof(io)))
         return -EFAULT;
 
-    // printk(KINFO "Nokia ioctl ret %x: %d %x %x %x\n", cmd, io.rc, io.d0, io.d1, io.d2);
     return rc;
 }
 
