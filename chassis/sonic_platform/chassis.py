@@ -615,9 +615,7 @@ class Chassis(ChassisBase):
                 sfp = Sfp(index, sfp_type, self.sfp_stub)
                 logger.log_debug("Created SFP {} index {} with type {}".format(sfp, index, sfp_type))
                 self._sfp_list.append(sfp)
-                # force 1st read to dynamically set type and detect dom capability
-                sfp.get_transceiver_info()
-                sfp._dom_capability_detect()
+
             self.sfp_module_initialized = True
             logger.log_info("SFPs are now initialized... stub {}".format(self.sfp_stub))
         else:
