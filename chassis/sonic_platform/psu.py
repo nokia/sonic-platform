@@ -272,7 +272,7 @@ class Psu(PsuBase):
             return self.output_current
 
         self.output_current = response.output_current
-        return self.output_current
+        return round(self.output_current, 2)
 
     def get_power(self):
         if self._get_cached_status() is False:
@@ -289,7 +289,7 @@ class Psu(PsuBase):
             return self.output_power
 
         self.output_power = response.output_power
-        return self.output_power
+        return round(self.output_power, 2)
 
     def get_voltage(self):
         if self._get_cached_status() is False:
@@ -306,7 +306,7 @@ class Psu(PsuBase):
             return self.output_voltage
 
         self.output_voltage = response.output_voltage
-        return self.output_voltage
+        return round(self.output_voltage, 2)
 
     def get_voltage_high_threshold(self):
         if self.max_voltage != 0.0:
