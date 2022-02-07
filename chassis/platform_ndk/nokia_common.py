@@ -33,6 +33,7 @@ NOKIA_FP_END_PORTID = 35
 NOKIA_MAX_PORTS_PER_ASIC = 12
 NOKIA_CPM_SLOT_NUMBER = 0
 NOKIA_INVALID_SLOT_NUMBER = -1
+NOKIA_MAX_IMM_SLOTS = 8
 NOKIA_INVALID_IP = '0.0.0.0'
 NOKIA_INVALID_FIRMWARE_VERSION = '0.0'
 NOKIA_INVALID_STRING = 'N/A'
@@ -229,3 +230,13 @@ def hw_module_status_name(status_type):
         status_ = ModuleBase.MODULE_STATUS_ONLINE
 
     return status_
+
+def _reboot_IMMs():
+    channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return False
+    for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):
+        response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot))
+
+    channel_shutdown(channel)
+    return True

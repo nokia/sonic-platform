@@ -817,3 +817,7 @@ class Chassis(ChassisBase):
     def empty_fan_list(self, fantray_idx):
         fantray = self.get_fan_drawer(fantray_idx)
         del fantray._fan_list[:]
+
+
+    def reboot_imms(self):
+         nokia_common._reboot_IMMs()
