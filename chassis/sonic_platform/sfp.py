@@ -268,10 +268,17 @@ class Sfp(SfpBase):
 
     def __init__(self, index, sfp_type, stub):
         SfpBase.__init__(self)
-        self.sfp_type = sfp_type
-        self.index = index
         self.sfpi_obj = None
         self.sfpd_obj = None
+        if (sfp_type == platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFPDD):
+            self.sfp_type = QSFPDD_TYPE
+            self.sfpi_obj = qsfp_dd_InterfaceId()
+        elif (sfp_type == platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP28):
+            self.sfp_type = QSFP_TYPE
+            self.sfpi_obj = sff8436InterfaceId()
+        else:
+            self.sfp_type = None
+        self.index = index
         self.dom_capability_established = False
         self.flatmem = None
 
@@ -499,7 +506,6 @@ class Sfp(SfpBase):
             logger.log_debug("** _get_eeprom_data for SFP {} type {} and eeprom_key {} data {}".format(
                     self.index, self.sfp_type, eeprom_key, eeprom_data_raw))
             """
-
             if (eeprom_data_raw is not None):
                 if (qsfpdd_parser[eeprom_key][FUNC_NAME] == FUNC_ABSENT):
                     return eeprom_data_raw
@@ -527,7 +533,10 @@ class Sfp(SfpBase):
                 struct_type = sff8436_parser[eeprom_key][STRUCT_TYPE]
             else:
                 struct_type = None
-
+            """
+            logger.log_debug("** _get_eeprom_data for SFP {} type {} and eeprom_key {} data {}".format(
+                    self.index, self.sfp_type, eeprom_key, eeprom_data_raw))
+            """
             if (eeprom_data_raw is not None):
                 if (sff8436_parser[eeprom_key][FUNC_NAME] == FUNC_ABSENT):
                     return eeprom_data_raw
@@ -552,7 +561,6 @@ class Sfp(SfpBase):
             else:
                 logger.log_debug("_get_eeprom_data eeprom_data_raw is None for SFP {} sfp_type {} and "
                                  "eeprom_key {}".format(self.index, self.sfp_type, eeprom_key))
-
         return eeprom_data
 
     def get_transceiver_info(self):
