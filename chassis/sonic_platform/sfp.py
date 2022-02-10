@@ -242,7 +242,7 @@ class Sfp(SfpBase):
     def SfpHasBeenTransitioned(port, status):
         for inst in Sfp.instances:
             if (inst.index == port):
-                logger.log_error(
+                logger.log_info(
                     "SfpHasBeenTransitioned: invalidating_page_cache for Sfp index{} : status is {}".format(
                         inst.index, status))
                 inst.invalidate_page_cache(ALL_PAGES_TYPE)
