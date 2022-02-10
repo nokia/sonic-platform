@@ -855,6 +855,7 @@ class Sfp(SfpBase):
             transceiver_info_dict['type_abbrv_name'] = type_abbrv_data
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
+            transceiver_info_dict['hardware_rev'] = vendor_rev
             transceiver_info_dict['vendor_rev'] = vendor_rev
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
@@ -961,6 +962,7 @@ class Sfp(SfpBase):
             transceiver_info_dict['type'] = identifier
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
+            transceiver_info_dict['hardware_rev'] = vendor_rev
             transceiver_info_dict['vendor_rev'] = vendor_rev
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
