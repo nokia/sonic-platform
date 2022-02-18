@@ -527,6 +527,58 @@ def show_sfm_summary():
     print_table(field, item_list)
     return
 
+def show_sfm_eeprom():
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
+    req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_EEPROM
+    response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
+
+    if len(response.sfm_eeprom.eeprom_info) == 0:
+        print('SFM Eeprom not available')
+        return
+
+    if format_type == 'json-format':
+        json_response = MessageToJson(response,including_default_value_fields=True)
+        print(json_response)
+        return
+
+    field = []
+    field.append('SFM-Num')
+    field.append('Hwsku')
+    field.append('Num Asics')
+    field.append('     Name     ')
+    field.append('Assembly Num')
+    field.append('Deviation')
+    field.append(' Mfg Date ')
+    field.append('  Serial Num  ')
+    field.append('  Part Num    ')
+    field.append('Platform')
+    field.append('Hw Directive') 
+
+    i = 0
+    item_list = []
+    while i < len(response.sfm_eeprom.eeprom_info):
+        eeprom_info = response.sfm_eeprom.eeprom_info[i]
+        item = []
+        item.append(str(eeprom_info.sfm_num))
+        item.append(str(eeprom_info.hwsku))
+        item.append(str(eeprom_info.num_asics))
+        item.append(str(eeprom_info.name))
+        item.append(str(eeprom_info.eeprom_assembly_num))
+        item.append(str(eeprom_info.eeprom_deviation))
+        item.append(str(eeprom_info.eeprom_date))
+        item.append(str(eeprom_info.eeprom_serial))
+        item.append(str(eeprom_info.eeprom_part))
+        item.append(str(eeprom_info.eeprom_platform))
+        item.append(str(eeprom_info.eeprom_hw_directive))
+        item_list.append(item)
+        i += 1
+
+    print('SFM EEPROM TABLE')
+    print_table(field, item_list)
+    return
 
 def show_sfm_imm_links(imm_slot):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
@@ -1099,10 +1151,15 @@ def main():
     show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
     show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
 
+    
     # show fabric-pcieinfo
     show_fpcie_parser = showsubparsers.add_parser('fabric-pcie', help='show fabric-pcie')
     show_fpcie_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
     show_fpcie_parser.add_argument('json-format', nargs='?', help='show fabric-pcie <json-format>')
+    
+    # show sfm-eeprom
+    show_sfmeeprom_parser = showsubparsers.add_parser('sfm-eeprom', help='show sfm-eeprom info')
+    show_sfmeeprom_parser.add_argument('json-format', nargs='?', help='show sfm-eeprom <json-format>')
 
     # Set Commands
     set_parser = subparsers.add_parser('set', help='set help')
@@ -1219,6 +1276,9 @@ def main():
         elif args.showcmd == 'fabric-pcie':
             format_type = d['json-format']
             show_fabric_pcieinfo(int(d['hw-slot']))
+        elif args.showcmd == 'sfm-eeprom':
+            format_type = d['json-format']
+            show_sfm_eeprom()
     elif args.cmd == 'set':
         if args.setcmd == 'temp-offset':
             set_temp_offset(int(d['offset']))
