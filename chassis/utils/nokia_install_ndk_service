@@ -21,19 +21,19 @@ if [ -e /lib/systemd/system/nokia-phy-mgr.service ]; then
     systemctl enable nokia-phy-mgr.service
     phymgr=1
 fi
-if [[ devicemgr -eq 1 ]] || [[ qfpgamgr -eq 1 ]] || [[ ethmgr -eq 1 ]] || [[ phymgr -eq 1 ]]; then 
+if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]]; then 
     systemctl daemon-reload
 fi
 
-if [[ devicemgr -eq 1 ]]; then 
+if [[ $devicemgr -eq 1 ]]; then 
     systemctl start nokia-sr-device-mgr.service &
 fi
-if [[ qfpgamgr -eq 1 ]]; then
+if [[ $qfpgamgr -eq 1 ]]; then
     systemctl start nokia-ndk-qfpga-mgr.service &
 fi
-if [[ ethmgr -eq 1 ]]; then
+if [[ $ethmgr -eq 1 ]]; then
     systemctl start nokia-eth-mgr.service &
 fi
-if [[ phymgr -eq 1 ]]; then
+if [[ $phymgr -eq 1 ]]; then
     systemctl start nokia-phy-mgr.service &
 fi
