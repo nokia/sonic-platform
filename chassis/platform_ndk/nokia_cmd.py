@@ -108,6 +108,7 @@ def show_led():
     field.append('Interface     ')
     field.append('Status                    ')
 
+
     i = 0
     item_list = []
     while i < len(response.led_show.show_info):
@@ -1132,7 +1133,7 @@ def main():
 
     # show midplane
     show_midplane_parser = showsubparsers.add_parser('midplane', help='show midplane')
-    show_midplane_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
+    show_midplane_parser.add_argument('hw-slot', metavar='hw-slot',type=int, help='slot number integer. "show chassis modules status" shows valid slot numbers')
     show_midplane_parser.add_argument('json-format', nargs='?', help='json-format')
 
     # show logging
@@ -1151,10 +1152,9 @@ def main():
     show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
     show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
 
-    
     # show fabric-pcieinfo
     show_fpcie_parser = showsubparsers.add_parser('fabric-pcie', help='show fabric-pcie')
-    show_fpcie_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
+    show_fpcie_parser.add_argument('hw-slot', metavar='hw-slot', type=int, help='slot number integer. "nokia_cmd show sfm-summary" shows valid slot numbers')
     show_fpcie_parser.add_argument('json-format', nargs='?', help='show fabric-pcie <json-format>')
     
     # show sfm-eeprom
@@ -1279,6 +1279,8 @@ def main():
         elif args.showcmd == 'sfm-eeprom':
             format_type = d['json-format']
             show_sfm_eeprom()
+        else:
+            show_parser.print_help()
     elif args.cmd == 'set':
         if args.setcmd == 'temp-offset':
             set_temp_offset(int(d['offset']))
@@ -1310,12 +1312,17 @@ def main():
             set_log_restore_default()
         elif args.setcmd == 'set-asic-temp':
             set_asic_temp(d['name'], int(d['temp']), int(d['threshold']))
+        else:
+            set_parser.print_help()
     elif args.cmd == 'request':
         if args.reqcmd == 'devmgr-admintech':
             request_devmgr_admintech(d['filepath'])
         elif args.reqcmd == 'ndk-admintech':
             request_ndk_admintech()
-
+        else:
+             req_parser.print_help()
+    else:
+        base_parser.print_help()
 
 if __name__ == "__main__":
     main()
