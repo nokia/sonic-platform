@@ -55,6 +55,29 @@ NOKIA_GRPC_FIRMWARE_SERVICE = 'Firmware-Service'
 NOKIA_GRPC_UTIL_SERVICE = 'Util-Service'
 NOKIA_GRPC_EEPROM_SERVICE = 'Eeprom-Service'
 
+HW_SLOT_TO_EXTERNAL_SLOT_MAPPING = {
+    0: "A",
+    1: "1",
+    2: "2",
+    3: "3",
+    4: "4",
+    5: "5",
+    6: "6",
+    7: "7",
+    8: "8",
+    15: "1",
+    16: "2",
+    17: "3",
+    18: "4",
+    19: "5",
+    20: "6",
+    21: "7",
+    22: "8",
+    23: "B"
+}
+    
+
+
 my_chassis_type = platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
 
 
@@ -153,6 +176,11 @@ def _get_my_slot():
 
     return response.my_slot
 
+def hw_slot_to_external_slot(slot):
+    if slot in HW_SLOT_TO_EXTERNAL_SLOT_MAPPING:
+        return HW_SLOT_TO_EXTERNAL_SLOT_MAPPING[slot]
+    else:
+        return str(slot)
 
 def get_chassis_type():
     global my_chassis_type

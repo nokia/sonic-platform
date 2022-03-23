@@ -22,7 +22,8 @@ DESCRIPTION_MAPPING = {
     "cpm2-ixr": "Nokia-IXR7250-SUP",
     "imm36-400g-qsfpdd": "Nokia-IXR7250E-36x400G",
     "imm60-100g-qsfp28": "Nokia-IXR7250E-60x100G",
-    "cpm2-ixr-e": "Nokia-IXR7250E-SUP-10"
+    "cpm2-ixr-e": "Nokia-IXR7250E-SUP-10",
+    "cpm4-ixr": "Nokia-IXR7250E-SUP-10"
 }
 
 
@@ -77,7 +78,7 @@ class Module(ModuleBase):
         platform_module_type = self.get_platform_type()
         ret, response = nokia_common.try_grpc(
             stub.GetModuleName,
-            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self.get_slot()))
+            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
@@ -93,7 +94,7 @@ class Module(ModuleBase):
                     description = "Nokia-IXR7250-SUP-10"
         return description
 
-    def get_slot(self):
+    def _get_hw_slot(self):
         """
         Retrieves the slot where the module is present
 
@@ -101,6 +102,15 @@ class Module(ModuleBase):
             int: slot representation, usually number
         """
         return self.hw_slot
+    
+    def get_slot(self):
+        """
+        Retrieves the slot where the module is present
+
+        Returns:
+            int: slot representation, usually number
+        """
+        return nokia_common.hw_slot_to_external_slot(self.hw_slot)
 
     def get_type(self):
         """
@@ -124,7 +134,7 @@ class Module(ModuleBase):
         platform_module_type = self.get_platform_type()
         ret, response = nokia_common.try_grpc(
             stub.GetModuleStatus,
-            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self.get_slot()))
+            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
@@ -163,7 +173,7 @@ class Module(ModuleBase):
             return False
 
         # Allow only reboot of self
-        if nokia_common._get_my_slot() != self.get_slot():
+        if nokia_common._get_my_slot() != self._get_hw_slot():
             return False
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
@@ -173,7 +183,7 @@ class Module(ModuleBase):
         platform_module_type = self.get_platform_type()
         ret, response = nokia_common.try_grpc(
             stub.RebootSlot,
-            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self.get_slot(),
+            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot(),
                                              reboot_type=reboot_type))
         nokia_common.channel_shutdown(channel)
 
@@ -239,7 +249,7 @@ class Module(ModuleBase):
         if not channel or not stub:
             return self.midplane_ip
         ret, response = nokia_common.try_grpc(stub.GetMidplaneIP,
-                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self.get_slot()))
+                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
@@ -253,7 +263,7 @@ class Module(ModuleBase):
         if not channel or not stub:
             return False
         ret, response = nokia_common.try_grpc(stub.IsMidplaneReachable,
-                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self.get_slot()))
+                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
         nokia_common.channel_shutdown(channel)
 
         if ret is False:
@@ -287,7 +297,7 @@ class Module(ModuleBase):
             if not channel or not stub:
                 return asic_list
             ret, response = nokia_common.try_grpc(stub.GetFabricPcieInfo,
-                                                  platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self.get_slot()))
+                                                  platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
             nokia_common.channel_shutdown(channel)
 
             if ret is False:

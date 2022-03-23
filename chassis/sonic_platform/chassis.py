@@ -123,8 +123,8 @@ class Chassis(ChassisBase):
 
     def _get_my_module(self):
         module = None
-        my_slot = self.get_my_slot()
-        supervisor_slot = self.get_supervisor_slot()
+        my_hw_slot = self._get_my_hw_slot()
+        supervisor_hw_slot = self._get_supervisor_hw_slot()
         if supervisor_slot == my_slot:
             index = 0
         else:
@@ -175,19 +175,31 @@ class Chassis(ChassisBase):
 
         return self.is_chassis_modular
 
-    def get_supervisor_slot(self):
+    def _get_supervisor_hw_slot(self):
+        # internal supervisor slot number
         if self._cached_cpm_instance == False:
             self.cpm_instance = nokia_common._get_cpm_slot()
             self._cached_cpm_instance = True
 
         return self.cpm_instance
 
-    def get_my_slot(self):
+    def get_supervisor_slot(self):
+        # external slot name
+        hw_slot = self._get_supervisor_hw_slot()
+        return nokia_common.hw_slot_to_external_slot(hw_slot)
+    
+    def _get_my_hw_slot(self):
+        # internal slot
         if self._cached_my_instance == False:
             self.my_instance = nokia_common._get_my_slot()
             self._cached_my_instance = True
 
         return self.my_instance
+
+    def get_my_slot(self):
+        # external slot name
+        hw_slot = self._get_my_hw_slot()
+        return nokia_common.hw_slot_to_external_slot(hw_slot)
 
     def is_slot_cpm(self):
         if self._cached_is_cpm == False:
@@ -208,14 +220,14 @@ class Chassis(ChassisBase):
             supervisor = Module(index,
                                 ModuleBase.MODULE_TYPE_SUPERVISOR+str(index),
                                 ModuleBase.MODULE_TYPE_SUPERVISOR,
-                                self.get_supervisor_slot(), self.chassis_stub)
+                                self._get_supervisor_hw_slot(), self.chassis_stub)
             supervisor.set_maximum_consumed_power(self.supervisor_power)
 
             index = 1
             module = Module(index,
-                            ModuleBase.MODULE_TYPE_LINE+str(self.get_my_slot()-1),
+                            ModuleBase.MODULE_TYPE_LINE+str(self._get_my_hw_slot()-1),
                             ModuleBase.MODULE_TYPE_LINE,
-                            self.get_my_slot(), self.chassis_stub)
+                            self._get_my_hw_slot(), self.chassis_stub)
             module.set_maximum_consumed_power(self.line_card_power)
 
             self._module_list.append(supervisor)
@@ -246,7 +258,7 @@ class Chassis(ChassisBase):
                         module = Module(property_index,
                                         ModuleBase.MODULE_TYPE_SUPERVISOR+str(j),
                                         ModuleBase.MODULE_TYPE_SUPERVISOR,
-                                        self.get_supervisor_slot(),
+                                        self._get_supervisor_hw_slot(),
                                         self.chassis_stub)
                         module.set_maximum_consumed_power(self.supervisor_power)
                         self._module_list.append(module)
