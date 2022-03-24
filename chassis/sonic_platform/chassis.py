@@ -125,10 +125,10 @@ class Chassis(ChassisBase):
         module = None
         my_hw_slot = self._get_my_hw_slot()
         supervisor_hw_slot = self._get_supervisor_hw_slot()
-        if supervisor_slot == my_slot:
+        if supervisor_hw_slot == my_hw_slot:
             index = 0
         else:
-            index = self.get_module_index(ModuleBase.MODULE_TYPE_LINE+str(my_slot-1))
+            index = self.get_module_index(ModuleBase.MODULE_TYPE_LINE+str(my_hw_slot-1))
 
         module = self.get_module(index)
         return module

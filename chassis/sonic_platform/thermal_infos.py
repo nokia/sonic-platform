@@ -87,7 +87,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
             if chassis.get_module(module_index - 1).get_type() != ModuleBase.MODULE_TYPE_LINE:
                 continue
 
-            slot = chassis.get_module(module_index - 1).get_slot()
+            slot = chassis.get_module(module_index - 1)._get_hw_slot()
             table_name = 'TEMPERATURE_INFO_'+str(slot)
             lc_thermal_tbl = swsscommon.Table(chassis_state_db, table_name)
 
