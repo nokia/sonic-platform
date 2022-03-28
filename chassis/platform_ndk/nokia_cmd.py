@@ -1085,6 +1085,177 @@ def set_asic_temp(name, temp, threshold):
     stub.SetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb(asic_temp=asic_temp_all))
 
 
+def show_midplane_port_counters(port):
+    global format_type
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_port_name=port))
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    print('  PORT STATISTICS  ')
+    i = 0
+    while i < len(response.port_counters._stats_entry):
+        counters = response.port_counters._stats_entry[i]
+        print('================================================')
+        print("Statistics for {}:".format(counters._port))
+        print('================================================')
+        stats_len = 0
+        while stats_len < len(counters._stats):
+          print(counters._stats[stats_len])
+          stats_len += 1
+        i += 1
+    print('================================================')
+    return
+
+def show_midplane_port_status(port):
+    global format_type
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqMidplanePortStatus(platform_ndk_pb2.ReqMidplanePortStatusInfoPb(_port_name=port))
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    field = []
+    field.append('Slot/Port   ')
+    field.append('Admin Status')
+    field.append('Oper Status')
+    field.append('Speed ')
+    field.append('Duplex     ')
+    field.append('Linkscan  ')
+    field.append('AutoNeg  ')
+    field.append('STP state')
+    field.append('Intf mode')
+    field.append('MTU ')
+    item_list = []
+    i = 0
+    while i < len(response.port_status._port_status):
+        port_status = response.port_status._port_status[i]
+        item = []
+        item.append(port_status._port_name)
+        item.append(port_status._admin_status)
+        item.append(port_status._oper_status)
+        item.append(str(port_status._speed))
+        item.append(port_status._duplex)
+        item.append(port_status._linkscan)
+        item.append(port_status._autoneg)
+        item.append(port_status._stp_state)
+        item.append(port_status._intf_mode)
+        item.append(str(port_status._mtu))
+        item_list.append(item)
+        i += 1
+
+    print('   PORT STATUS')
+    print_table(field, item_list)
+    return
+
+def show_midplane_vlan_table(vlan):
+    global format_type
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    elif vlan == 'ALL':
+        vlan_id = 0
+    else:
+       vlan_id = int(vlan)
+
+    response = stub.ReqMidplaneVlanTable(platform_ndk_pb2.ReqMidplaneVlanTablePb(_vlan_id=vlan_id))
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    field = []
+    field.append('VLAN   ')
+    field.append('     Tagged Ports                       ')
+    field.append('Untagged Ports')
+    item_list = []
+    i = 0
+    while i < len(response._vlan_table._vlan_entry):
+        vlan_entry = response._vlan_table._vlan_entry[i]
+        item = []
+        item.append(str(vlan_entry._vlan_id))
+        mem_len = 0
+        mem_str = ""
+        while mem_len < len(vlan_entry._members):
+            mem_str += vlan_entry._members[mem_len]
+            if mem_len < (len(vlan_entry._members)-1):
+                mem_str += ","
+            mem_len += 1
+        item.append(mem_str)
+        untag_len = 0
+        untag_str = ""
+        while untag_len < len(vlan_entry._untagged):
+            untag_str += vlan_entry._untagged[untag_len]
+            if untag_len < (len(vlan_entry._untagged)-1):
+                untag_str += ","
+            untag_len += 1
+        item.append(untag_str)
+        item_list.append(item)
+        i += 1
+
+    print('  VLAN TABLE')
+    print_table(field, item_list)
+    return
+
+def show_midplane_mac_table(port):
+    global format_type
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqMidplaneMacTable(platform_ndk_pb2.ReqMidplaneMacTablePb(_port_name=port))
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    field = []
+    field.append('   Mac Address   ')
+    field.append('Vlan ')
+    field.append(' Slot  ')
+    field.append(' Type  ')
+    item_list = []
+    i = 0
+    while i < len(response._mac_table._mac_entry):
+        mac_entry = response._mac_table._mac_entry[i]
+        item = []
+        item.append(mac_entry._mac_address)
+        item.append(str(mac_entry._vlan))
+        item.append(mac_entry._port)
+        item.append(mac_entry._type)
+        item_list.append(item)
+        i += 1
+
+    print('   MAC TABLE')
+    print_table(field, item_list)
+    return
+
 def main():
     global format_type
 
@@ -1133,8 +1304,27 @@ def main():
 
     # show midplane
     show_midplane_parser = showsubparsers.add_parser('midplane', help='show midplane')
-    show_midplane_parser.add_argument('hw-slot', metavar='hw-slot',type=int, help='slot number integer. "show chassis modules status" shows valid slot numbers')
-    show_midplane_parser.add_argument('json-format', nargs='?', help='json-format')
+    show_midplane_sub_parser = show_midplane_parser.add_subparsers(help='show midplane options', dest="midplanecmd")
+    # show midplane status
+    show_midplane_status_parser = show_midplane_sub_parser.add_parser('status', help='show midplane status')
+    show_midplane_status_parser.add_argument('hw-slot', nargs='?', help='slot number integer')
+    show_midplane_status_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show midplane port-counters
+    show_midplane_port_ctr_parser = show_midplane_sub_parser.add_parser('port-counters', help='show midplane port counters')
+    show_midplane_port_ctr_parser.add_argument('--hw-slot', nargs='?', default='ALL_PORTS', help='slot name lc1,lc2,lc3,lc4,lc5,lc6,lc7,lc8,cpm-xe0,cpm-xe1')
+    show_midplane_port_ctr_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show midplane port-status
+    show_midplane_port_status_parser = show_midplane_sub_parser.add_parser('port-status', help='show midplane port status')
+    show_midplane_port_status_parser.add_argument('--hw-slot', nargs='?', default='ALL_PORTS', help='slot name lc1,lc2,lc3,lc4,lc5,lc6,lc7,lc8,cpm-xe0,cpm-xe1')
+    show_midplane_port_status_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show midplane vlan-table
+    show_midplane_vlan_table_parser = show_midplane_sub_parser.add_parser('vlan-table', help='show midplane vlan table')
+    show_midplane_vlan_table_parser.add_argument('--vlan-id', nargs='?', default='ALL', help='vlan id integer')
+    show_midplane_vlan_table_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show midplane mac-table
+    show_midplane_mac_table_parser = show_midplane_sub_parser.add_parser('mac-table', help='show midplane mac table')
+    show_midplane_mac_table_parser.add_argument('--hw-slot', nargs='?', default='ALL_PORTS', help='slot name lc1,lc2,lc3,lc4,lc5,lc6,lc7,lc8,cpm-xe0,cpm-xe1')
+    show_midplane_mac_table_parser.add_argument('json-format', nargs='?', help='json-format')
 
     # show logging
     show_logging_parser = showsubparsers.add_parser('logging', help='show logging info')
@@ -1263,7 +1453,16 @@ def main():
             show_syseeprom()
         elif args.showcmd == 'midplane':
             format_type = d['json-format']
-            show_midplane_status(int(d['hw-slot']))
+            if args.midplanecmd == 'status':
+              show_midplane_status(int(d['hw-slot']))
+            elif args.midplanecmd == 'port-counters':
+              show_midplane_port_counters(d['hw_slot'])
+            elif args.midplanecmd == 'port-status':
+              show_midplane_port_status(d['hw_slot'])
+            elif args.midplanecmd == 'vlan-table':
+              show_midplane_vlan_table(d['vlan_id'])
+            elif args.midplanecmd == 'mac-table':
+              show_midplane_mac_table(d['hw_slot'])
         elif args.showcmd == 'ndk-eeprom':
             format_type = d['json-format']
             show_ndk_eeprom()

@@ -28,6 +28,9 @@ NOKIA_DEVMGR_UNIX_SOCKET_PATH = NOKIA_UNIX_SOCKET_PREFIX + \
                                 NOKIA_DEVMGR_SONIC_UNIX_SOCKET_NAME + ":" + \
                                 NOKIA_DEVMGR_SONIC_SRVR_PORT
 
+NOKIA_MIDPLANE_SONIC_SRVR_PORT = "60070"
+NOKIA_MIDPLANE_ETHMGR_SOCKET_PATH = "0.0.0.0:" + \
+                                   NOKIA_MIDPLANE_SONIC_SRVR_PORT
 NOKIA_FP_START_PORTID = 0
 NOKIA_FP_END_PORTID = 35
 NOKIA_MAX_PORTS_PER_ASIC = 12
@@ -54,6 +57,7 @@ NOKIA_GRPC_LED_SERVICE = 'Led-Service'
 NOKIA_GRPC_FIRMWARE_SERVICE = 'Firmware-Service'
 NOKIA_GRPC_UTIL_SERVICE = 'Util-Service'
 NOKIA_GRPC_EEPROM_SERVICE = 'Eeprom-Service'
+NOKIA_GRPC_MIDPLANE_SERVICE = 'Midplane-Service'
 
 HW_SLOT_TO_EXTERNAL_SLOT_MAPPING = {
     0: "A",
@@ -82,7 +86,11 @@ my_chassis_type = platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
 
 
 def channel_setup(service):
-    server_path = NOKIA_DEVMGR_UNIX_SOCKET_PATH
+    if service == NOKIA_GRPC_MIDPLANE_SERVICE:
+       server_path = NOKIA_MIDPLANE_ETHMGR_SOCKET_PATH
+    else:
+       server_path = NOKIA_DEVMGR_UNIX_SOCKET_PATH
+
     if os.path.exists(NOKIA_CHANNEL_FILE_PATH):
         server_path = (open(NOKIA_CHANNEL_FILE_PATH, 'r').readline().rstrip())
     _channel = grpc.insecure_channel(server_path)
@@ -113,6 +121,8 @@ def channel_setup(service):
         _stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(_channel)
     elif service == NOKIA_GRPC_EEPROM_SERVICE:
         _stub = platform_ndk_pb2_grpc.EepromPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_MIDPLANE_SERVICE:
+        _stub = platform_ndk_pb2_grpc.MidplanePlatformNdkServiceStub(_channel)
 
     return _channel, _stub
 
