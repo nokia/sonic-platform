@@ -11,6 +11,7 @@ import argparse
 import json
 from google.protobuf.json_format import MessageToJson
 import subprocess
+import time
 
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
@@ -41,6 +42,28 @@ verbose = False
 DEBUG = False
 args = []
 format_type = ''
+
+sfm_asic_dict = {
+    1: [0,1],
+    2: [2,3],
+    3: [4,5],
+    4: [6,7],
+    5: [8,9],
+    6: [10,11],
+    7: [12,13],
+    8: [14,15]
+}
+
+sfm_hw_slot_mapping = {
+    1: 15,
+    2: 16,
+    3: 17,
+    4: 18,
+    5: 19,
+    6: 20,
+    7: 21,
+    8: 22
+}
 
 
 def pretty_time_delta(seconds):
@@ -1256,6 +1279,46 @@ def show_midplane_mac_table(port):
     print_table(field, item_list)
     return
 
+def set_shutdown_sfm(num):
+    if num not in sfm_hw_slot_mapping:
+        print("Invalid SFM number {}. Valid range is (1..8)".format(num))
+        return
+
+    asic_list = sfm_asic_dict[num]
+    for asic in asic_list:
+        print("Shutdown swss@{} and syncd@{} services".format(asic, asic))
+        # Process state
+        process = subprocess.Popen(['sudo', 'systemctl', 'stop', 'swss@{}.service'.format(asic)],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+    # wait for service is down
+    time.sleep(2)
+
+    print("Power off SFM-{} module ...".format(num))
+    hw_slot = sfm_hw_slot_mapping[num]
+    nokia_common._power_onoff_SFM(hw_slot,False)
+
+def set_startup_sfm(num):
+    if num not in sfm_hw_slot_mapping:
+        print("Invalid SFM number {}. Valid range is (1..8)".format(num))
+        return
+
+    print("Power up SFM-{} module ...".format(num))
+    hw_slot = sfm_hw_slot_mapping[num]
+    nokia_common._power_onoff_SFM(hw_slot,True)
+    # wait SFM HW init done.
+    time.sleep(15)
+
+    asic_list = sfm_asic_dict[num]
+    for asic in asic_list:
+        print("Start the swss@{} and syncd@{} ...".format(asic, asic))
+        # Process state
+        process = subprocess.Popen(['sudo', 'systemctl', 'start', 'swss@{}.service'.format(asic)],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+ 
 def main():
     global format_type
 
@@ -1401,6 +1464,14 @@ def main():
     set_asictemp_parser.add_argument('temp', nargs='?', help='current temp')
     set_asictemp_parser.add_argument('threshold', nargs='?', help='threshold')
 
+    # set stop-sfm
+    set_shutdownsfm_parser = setsubparsers.add_parser('shutdown-sfm', help='shutdown a sfm and related asic services (swss and syncd)')
+    set_shutdownsfm_parser.add_argument('sfm-num', metavar='sfm-num', type=int, help='SFM slot number starts from 1')
+    
+    # set start-sfm
+    set_startupsfm_parser = setsubparsers.add_parser('startup-sfm', help='startup a sfm and related asic services (swss and syncd)')
+    set_startupsfm_parser.add_argument('sfm-num', metavar='sfm-num', type=int, help='SFM slot number starts from 1')
+         
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
@@ -1511,6 +1582,17 @@ def main():
             set_log_restore_default()
         elif args.setcmd == 'set-asic-temp':
             set_asic_temp(d['name'], int(d['temp']), int(d['threshold']))
+        elif args.setcmd == 'shutdown-sfm':
+            if not nokia_common.is_cpm():
+                print('Command is only supported on Supervisor card')
+                return
+            
+            set_shutdown_sfm(d['sfm-num'])
+        elif args.setcmd == 'startup-sfm':
+            if not nokia_common.is_cpm():
+                print('Command is only supported on Supervisor card')
+                return
+            set_startup_sfm(d['sfm-num'])    
         else:
             set_parser.print_help()
     elif args.cmd == 'request':

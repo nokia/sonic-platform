@@ -278,3 +278,16 @@ def _reboot_IMMs():
 
     channel_shutdown(channel)
     return True
+
+def _power_onoff_SFM(hw_slot, powerOn):
+    channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
+    if not channel or not stub:
+        return False
+    if powerOn is True:
+        power_status_ = platform_ndk_pb2.SetHwModulePowerStatus(power_status=platform_ndk_pb2.HWModulePowerStatus.HW_MODULE_POWER_ON)
+    else:
+        power_status_ = platform_ndk_pb2.SetHwModulePowerStatus(power_status=platform_ndk_pb2.HWModulePowerStatus.HW_MODULE_POWER_OFF)
+    response = stub.PowerOnOffSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot, set_power_status=power_status_))
+
+    channel_shutdown(channel)
+    return True
