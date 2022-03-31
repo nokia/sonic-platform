@@ -17,6 +17,7 @@ try:
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
     from sonic_py_common.logger import Logger
+    from sonic_py_common import device_info
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -281,6 +282,7 @@ class Sfp(SfpBase):
         self.index = index
         self.dom_capability_established = False
         self.flatmem = None
+        self._version_info = device_info.get_sonic_version_info()
 
         """
         self.qsfpDDInfo = qsfp_dd_InterfaceId()
@@ -856,7 +858,8 @@ class Sfp(SfpBase):
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
             transceiver_info_dict['hardware_rev'] = vendor_rev
-            transceiver_info_dict['vendor_rev'] = vendor_rev
+            if self._version_info not in ["201811", "201911", "202012", "202106", "202111"]:
+                transceiver_info_dict['vendor_rev'] = vendor_rev
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
             transceiver_info_dict['vendor_date'] = vendor_date
@@ -962,8 +965,12 @@ class Sfp(SfpBase):
             transceiver_info_dict['type'] = identifier
             transceiver_info_dict['manufacturer'] = vendor_name
             transceiver_info_dict['model'] = vendor_pn
-            transceiver_info_dict['hardware_rev'] = vendor_rev
-            transceiver_info_dict['vendor_rev'] = vendor_rev
+        
+            if self._version_info in ["201811", "201911", "202012", "202106", "202111"]:
+                transceiver_info_dict['hardware_rev'] = vendor_rev
+            else:
+                transceiver_info_dict['vendor_rev'] = vendor_rev
+
             transceiver_info_dict['serial'] = vendor_sn
             transceiver_info_dict['vendor_oui'] = vendor_oui
             transceiver_info_dict['vendor_date'] = vendor_date
