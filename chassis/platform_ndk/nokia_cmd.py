@@ -1117,7 +1117,8 @@ def show_midplane_port_counters(port):
     if not channel or not stub:
         return
 
-    response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_port_name=port))
+    req_type = platform_ndk_pb2.ethMgrPortCounterRequest.ETH_MGR_GET_COUNTERS
+    response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type, _port_name=port))
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1278,6 +1279,19 @@ def show_midplane_mac_table(port):
     print('   MAC TABLE')
     print_table(field, item_list)
     return
+
+def clear_midplane_port_counters():
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    req_type = platform_ndk_pb2.ethMgrPortCounterRequest.ETH_MGR_CLEAR_COUNTERS
+    response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type))
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print('Clearing Port counters failed')
 
 def set_shutdown_sfm(num):
     if num not in sfm_hw_slot_mapping:
@@ -1485,6 +1499,15 @@ def main():
     req_ndk_admintech_parser = reqsubparsers.add_parser('ndk-admintech',
                                                         help='collect NDK admintech')
 
+    # Clear Commands
+    clear_parser = subparsers.add_parser('clear', help='Clear help')
+    clearsubparsers = clear_parser.add_subparsers(help='clear cmd options', dest="clearcmd")
+
+    #clear midplane port-counters
+    clear_midplane_port_counter_parser = clearsubparsers.add_parser('midplane',
+                                                           help='clear midplane counters')
+    clear_midplane_port_counter_parser.add_argument('port-counters', nargs='?', help='clear port counters')
+
     # An illustration of how access the arguments.
     args = base_parser.parse_args()
     d = vars(args)
@@ -1602,6 +1625,9 @@ def main():
             request_ndk_admintech()
         else:
              req_parser.print_help()
+    elif args.cmd == 'clear':
+        if args.clearcmd == 'midplane':
+          clear_midplane_port_counters()
     else:
         base_parser.print_help()
 
