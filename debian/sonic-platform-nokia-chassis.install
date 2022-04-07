@@ -9,3 +9,5 @@ chassis/utils/hw-management-generate-dump.sh usr/bin
 chassis/utils/nokia_install_ndk_service usr/local/bin
 chassis/utils/70-persistent-net.rules etc/udev/rules.d
 chassis/utils/blacklist.conf etc/modprobe.d
+common/utils/asic-thermal.py opt/srlinux/bin
+common/service/asic-thermal.service etc/systemd/system
