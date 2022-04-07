@@ -1,0 +1,11 @@
+[Unit]
+Description=Nokia IXR-7250 Asic Thermal service
+After=nokia-sr-device-mgr.service
+
+[Service]
+Restart=on-failure
+RestartSec=30
+ExecStart=/usr/bin/python3 /opt/srlinux/bin/asic-thermal.py
+
+[Install]
+WantedBy=multi-user.target

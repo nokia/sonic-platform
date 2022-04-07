@@ -4,4 +4,6 @@ systemctl start nokia-watchdog.service
 systemctl enable openbdb.service
 systemctl start openbdb.service
 
+systemctl enable asic-thermal.service
+systemctl start asic-thermal.service
 /usr/local/bin/nokia_install_ndk_service

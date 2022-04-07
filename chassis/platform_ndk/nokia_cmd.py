@@ -15,6 +15,8 @@ import time
 
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
+from sonic_py_common import multi_asic
+from swsscommon import swsscommon
 
 eeprom_default_dict = {
     "0x21": "Product Name",
@@ -1107,6 +1109,55 @@ def set_asic_temp(name, temp, threshold):
     asic_temp_all = platform_ndk_pb2.AsicTempPb(temp_device=asic_devices)
     stub.SetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb(asic_temp=asic_temp_all))
 
+def show_asic_temperature():
+    if nokia_common.is_cpm() == 1:
+      print('Command is not supported CPM card')
+      return
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
+    if not channel or not stub:
+       return
+
+    response = stub.GetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    field = []
+    field.append('Asic   ')
+    field.append('Name    ')
+    field.append('Current Temperature')
+    field.append('Threshold')
+    item_list = []
+    dram_list = []
+    if multi_asic.is_multi_asic():
+      # Load the namespace details first from the database_global.json file.
+      swsscommon.SonicDBConfig.initializeGlobalConfig()
+    namespaces = multi_asic.get_front_end_namespaces()
+    for namespace in namespaces:
+      i = 0
+      while i < len(response.asic_temp_devices.temp_device):
+         asic_temp = response.asic_temp_devices.temp_device[i]
+         ns,name = asic_temp.name.split('_')
+         if namespace == ns:
+           item = []
+           item.append(ns)
+           item.append(name)
+           item.append(str(asic_temp.current_temp))
+           item.append(str(asic_temp.threshold))
+           if 'dram' in name:
+             dram_list.append(item)
+           else:
+             item_list.append(item)
+         i += 1
+    item_list.sort()
+    print('  ASIC TEMPERATURE')
+    print_table(field, item_list)
+    print('  ASIC DRAM TEMPERATURE')
+    print_table(field, dram_list)
+    return
 
 def show_midplane_port_counters(port):
     global format_type
@@ -1428,6 +1479,10 @@ def main():
     show_sfmeeprom_parser = showsubparsers.add_parser('sfm-eeprom', help='show sfm-eeprom info')
     show_sfmeeprom_parser.add_argument('json-format', nargs='?', help='show sfm-eeprom <json-format>')
 
+    # show asic-temperature
+    show_asictemp_parser = showsubparsers.add_parser('asic-temperature', help='show asic-temperature info')
+    show_asictemp_parser.add_argument('json-format', nargs='?', help='show asic-temperature <json-format>')
+
     # Set Commands
     set_parser = subparsers.add_parser('set', help='set help')
     setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
@@ -1485,7 +1540,7 @@ def main():
     # set start-sfm
     set_startupsfm_parser = setsubparsers.add_parser('startup-sfm', help='startup a sfm and related asic services (swss and syncd)')
     set_startupsfm_parser.add_argument('sfm-num', metavar='sfm-num', type=int, help='SFM slot number starts from 1')
-         
+
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
@@ -1572,6 +1627,9 @@ def main():
         elif args.showcmd == 'sfm-eeprom':
             format_type = d['json-format']
             show_sfm_eeprom()
+        elif args.showcmd == 'asic-temperature':
+            format_type = d['json-format']
+            show_asic_temperature()
         else:
             show_parser.print_help()
     elif args.cmd == 'set':
