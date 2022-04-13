@@ -5,43 +5,33 @@
 # Description: Module contains the definitions to the asic thermal information from STATE_DB and
 # populate Nokia platform NDK
 #
-# Copyright (c) 2019, Nokia
+# Copyright (c) 2022, Nokia
 # All rights reserved.
 #
 
 
 from sonic_py_common import multi_asic
 from swsscommon import swsscommon
-from swsscommon.swsscommon import SonicV2Connector
+from swsscommon.swsscommon import SonicV2Connector,ConfigDBConnector
 from natsort import natsorted
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
 from platform_ndk import nokia_cmd
 import time
-import subprocess
 import sys
 
 
 
 # The empty namespace refers to linux host namespace.
-EMPTY_NAMESPACE = ''
-REDIS_TIMEOUT_MSECS = 0
+ASIC_SENSOR_DEFAULT_POLL_INTERVAL = 60 # sonic uses 60s as default polling interval
 ASIC_TEMP_INFO = "*ASIC_TEMPERATURE_INFO*"
-ASIC_SENSORS = "*ASIC_SENSORS*"
 ASIC_SENSOR_POLL_INTERVAL = 'ASIC_SENSORS_POLLER_INTERVAL'
 ASIC_SENSOR_POLL_STATUS = 'ASIC_SENSORS_POLLER_STATUS'
 ASIC_SENSOR_ADMIN_STATE = 'admin_status'
 ASIC_SENSOR_INTERVAL = 'interval'
 ASIC_TEMP_DEVICE_THRESHOLD = 102
 temp_mon_list = ['FAB0', 'FAB1', 'FAB2', 'FAB3', 'NIF0', 'NIF1', 'PRM', 'EMI0', 'EMI1' ]
-SONIC_CFGGEN_PATH = '/usr/local/bin/sonic-cfggen'
-HWSKU_KEY = 'DEVICE_METADATA.localhost.hwsku'
-PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
-
-
-def db_connect(db_name, namespace=EMPTY_NAMESPACE):
-   return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace)
 
 class asic_thermal(object):
 
@@ -52,23 +42,6 @@ class asic_thermal(object):
      self.config_db_keys = {}
      self.state_db_keys = {}
      self.poll_interval = {}
-     proc = subprocess.Popen([SONIC_CFGGEN_PATH, '-H', '-v', PLATFORM_KEY],
-                                    stdout=subprocess.PIPE,
-                                    shell=False,
-                                    stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
-     stdout = proc.communicate()[0]
-     proc.wait()
-     self.platform = stdout.rstrip('\n')
-
-     proc = subprocess.Popen([SONIC_CFGGEN_PATH, '-d', '-v', HWSKU_KEY],
-                                    stdout=subprocess.PIPE,
-                                    shell=False,
-                                    stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
-     stdout = proc.communicate()[0]
-     proc.wait()
-     self.hwsku = stdout.rstrip('\n')
 
      if multi_asic.is_multi_asic():
        # Load the namespace details first from the database_global.json file.
@@ -80,7 +53,9 @@ class asic_thermal(object):
         asic_id = multi_asic.get_asic_index_from_namespace(namespace)
         self.db[asic_id] = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
         self.db[asic_id].connect(self.db[asic_id].STATE_DB)
-        self.db[asic_id].connect(self.db[asic_id].CONFIG_DB)
+        self.config_db[asic_id] = ConfigDBConnector(use_unix_socket_path=True, namespace=namespace)
+        self.config_db[asic_id].connect()
+
         self.poll_interval[asic_id] = 0
      return
 
@@ -91,26 +66,18 @@ class asic_thermal(object):
     return self.namespaces
 
   def get_asic_sensor_config(self, asic_id):
-    self.config_db_keys[asic_id] = self.db[asic_id].keys(self.db[asic_id].CONFIG_DB, ASIC_SENSORS)
-    if not self.config_db_keys[asic_id]:
+    if not self.db[asic_id].CONFIG_DB:
       return False
-    poller_status = 'disable'
 
-    for cfg_key in natsorted(self.config_db_keys[asic_id]):
-       key_list = cfg_key.split('|')
-       if len(key_list) != 2: # error data in DB, log it and ignore
-          print('Warn: Invalid key in table {}: {}'.format(ASIC_SENSORS, cfg_key))
-          continue
-
-       name = key_list[1]
-       data_dict = self.db[asic_id].get_all(self.db[asic_id].CONFIG_DB, cfg_key)
-       if name == ASIC_SENSOR_POLL_STATUS:
-         #Check if the ASIC SENSOR polling is enabled in config_db
-         poller_status = data_dict[ASIC_SENSOR_ADMIN_STATE]
-
-       if name == ASIC_SENSOR_POLL_INTERVAL:
-         #Get ASIC SENSOR polling interval config_db
-         self.poll_interval[asic_id] = data_dict[ASIC_SENSOR_INTERVAL]
+    asic_sensor = self.config_db[asic_id].get_entry('ASIC_SENSORS', 'ASIC_SENSORS_POLLER_STATUS')
+    if not asic_sensor:
+      return False
+    poller_status = asic_sensor[ASIC_SENSOR_ADMIN_STATE]
+    asic_interval = self.config_db[asic_id].get_entry('ASIC_SENSORS', 'ASIC_SENSORS_POLLER_INTERVAL')
+    if not asic_interval:
+      self.poll_interval[asic_id] = ASIC_SENSOR_DEFAULT_POLL_INTERVAL
+    else:
+      self.poll_interval[asic_id] = asic_interval[ASIC_SENSOR_INTERVAL]
     if poller_status == 'enable':
       return True
     else:
@@ -142,6 +109,8 @@ class asic_thermal(object):
 
   def update_temperature(self, namespace, asic_temp_data):
     for key, value in asic_temp_data.items():
+       if (int(value)) == 0:
+         return
        temp,index = key.split('_')
        asic_temp = ''
        if temp == 'temperature':
@@ -185,10 +154,16 @@ class asic_thermal(object):
     return
 
 if __name__ == "__main__":
-   thermal = asic_thermal()
-   platform,hwsku = thermal.get_platform_and_hwsku()
-   if platform == 'x86_64-nokia_ixr7250e_sup-r0':
-     print('Asic thermal is not supported in CPM')
-     sys.exit()
+   while True:
+     #Wait till GRPC is setup
+     slot = nokia_common._get_my_slot()
+     if slot >= 0:
+        break
+     time.sleep(1)
+
+   if nokia_common.is_cpm() == True:
+      print('Asic thermal is not supported in CPM')
+      sys.exit()
    else:
+     thermal = asic_thermal()
      thermal.update_asic_temperature()
