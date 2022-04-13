@@ -15,8 +15,6 @@ import time
 
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
-from sonic_py_common import multi_asic
-from swsscommon import swsscommon
 
 eeprom_default_dict = {
     "0x21": "Product Name",
@@ -1132,26 +1130,20 @@ def show_asic_temperature():
     field.append('Threshold')
     item_list = []
     dram_list = []
-    if multi_asic.is_multi_asic():
-      # Load the namespace details first from the database_global.json file.
-      swsscommon.SonicDBConfig.initializeGlobalConfig()
-    namespaces = multi_asic.get_front_end_namespaces()
-    for namespace in namespaces:
-      i = 0
-      while i < len(response.asic_temp_devices.temp_device):
-         asic_temp = response.asic_temp_devices.temp_device[i]
-         ns,name = asic_temp.name.split('_')
-         if namespace == ns:
-           item = []
-           item.append(ns)
-           item.append(name)
-           item.append(str(asic_temp.current_temp))
-           item.append(str(asic_temp.threshold))
-           if 'dram' in name:
-             dram_list.append(item)
-           else:
-             item_list.append(item)
-         i += 1
+    i = 0
+    while i < len(response.asic_temp_devices.temp_device):
+       asic_temp = response.asic_temp_devices.temp_device[i]
+       ns,name = asic_temp.name.split('_')
+       item = []
+       item.append(ns)
+       item.append(name)
+       item.append(str(asic_temp.current_temp))
+       item.append(str(asic_temp.threshold))
+       if 'dram' in name:
+          dram_list.append(item)
+       else:
+          item_list.append(item)
+       i += 1
     item_list.sort()
     print('  ASIC TEMPERATURE')
     print_table(field, item_list)
