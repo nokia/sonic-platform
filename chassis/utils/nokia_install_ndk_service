@@ -39,7 +39,7 @@ if [ -e /lib/systemd/system/nokia-asic-thermal.service ]; then
    asicthermal=1
 fi
 
-if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]]i || [[ $asicthermal -eq 1 ]]; then 
+if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]] || [[ $asicthermal -eq 1 ]]; then 
     systemctl daemon-reload
 fi
 
