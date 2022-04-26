@@ -1123,6 +1123,10 @@ def show_asic_temperature():
       print(json_response)
       return
 
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response.response_status.error_msg)
+       return
+
     field = []
     field.append('Asic   ')
     field.append('Name    ')
@@ -1168,6 +1172,10 @@ def show_midplane_port_counters(port):
       print(json_response)
       return
 
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response.response_status.error_msg)
+       return
+
     print('  PORT STATISTICS  ')
     i = 0
     while i < len(response.port_counters._stats_entry):
@@ -1198,6 +1206,10 @@ def show_midplane_port_status(port):
       json_response = MessageToJson(response)
       print(json_response)
       return
+
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response.response_status.error_msg)
+       return
 
     field = []
     field.append('Slot/Port   ')
@@ -1253,6 +1265,10 @@ def show_midplane_vlan_table(vlan):
       print(json_response)
       return
 
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response.response_status.error_msg)
+       return
+
     field = []
     field.append('VLAN   ')
     field.append('     Tagged Ports                       ')
@@ -1302,6 +1318,10 @@ def show_midplane_mac_table(port):
       print(json_response)
       return
 
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response.response_status.error_msg)
+       return
+
     field = []
     field.append('   Mac Address   ')
     field.append('Vlan ')
@@ -1335,6 +1355,376 @@ def clear_midplane_port_counters():
     response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type))
     if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
        print('Clearing Port counters failed')
+
+def show_qfpga_port_status():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqQfpgaPortSummary(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    field = []
+    field.append('  Port  ')
+    field.append('OperStatus ')
+    field.append(' MTU  ')
+    field.append(' Speed  ')
+    field.append(' Vlan ')
+    item_list = []
+    i = 0
+
+    while i < len(response._port_summary._port):
+       port = "Port"+str(i)
+       port_sum = response._port_summary._port[port]
+       item = []
+       item.append(port)
+       item.append(port_sum._oper_status)
+       item.append(str(port_sum._mtu))
+       item.append(str(port_sum._speed))
+       j = 0
+       vlan = ""
+       vlan_len = len(port_sum._vlan)
+       while j < vlan_len:
+         if vlan_len != 1 and j != (vlan_len-1):
+           vlan = vlan + str(port_sum._vlan[j]) + ","
+         else:
+           vlan = vlan + str(port_sum._vlan[j])
+         j += 1
+       item.append(str(vlan))
+       item_list.append(item)
+       i += 1
+    print('   PORT SUMMARY')
+    print_table(field, item_list)
+    return
+
+def show_qfpga_port_statistics(port):
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqQfpgaPortStatsSummary(platform_ndk_pb2.ReqQfpgaInfoPb(_port = port))
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    print('       PORT STATISTICS  ')
+    i = 0
+    print('==============================================')
+    while i < len(response._port_stats._port):
+       port = "Port"+str(i)
+       counters = response._port_stats._port[port]
+       if counters._port != port:
+           i += 1
+           continue
+       print('Port : ', port)
+       print('==============================================')
+       print('RxOctetsGood                 : ', str(counters._rx_octets_good))
+       print('TxOctetsGood                 : ', str(counters._tx_octets_good))
+       print('RxPacketsGoodPause           : ', str(counters._rx_pkts_good_pause))
+       print('RxPacketsGoodUnicast         : ', str(counters._rx_pkts_good_unicast))
+       print('RxPacketsGoodMulticast       : ', str(counters._rx_pkts_good_multicast))
+       print('RxPacketsGoodBroadcast       : ', str(counters._rx_pkts_good_broadcast))
+       print('RxPacketsGoodOverlong        : ', str(counters._rx_pkts_good_overlong))
+       print('RxPacketsFailOverlong        : ', str(counters._rx_pkts_fail_overlong))
+       print('TxPacketsGoodPause           : ', str(counters._tx_pkts_good_pause))
+       print('TxPacketsGoodUnicast         : ', str(counters._tx_pkts_good_unicast))
+       print('TxPacketsGoodMulticast       : ', str(counters._tx_pkts_good_multicast))
+       print('TxPacketsGoodBroadcast       : ', str(counters._tx_pkts_good_broadcast))
+       print('TxPacketsGoodInitDefer       : ', str(counters._tx_pkts_good_init_defer))
+       print('TxPacketsGoodInitExcessDefer : ', str(counters._tx_pkts_good_init_excess_defer))
+       print('TxPacketsGood0Collisions     : ', str(counters._tx_pkts_good_0_collisions))
+       print('TxPacketsGood1Collisions     : ', str(counters._tx_pkts_good_1_collision))
+       print('TxPacketsGood2To7Collisions  : ', str(counters._tx_pkts_good_2_to_7_collisions))
+       print('TxPacketsGood8To15Collisions : ', str(counters._tx_pkts_good_8_to_15_collisions))
+       print('TxPacketsFailExcessCollisions: ', str(counters._tx_pkts_fail_excess_collisions))
+       print('TxPacketsFailLateCollisions  : ', str(counters._tx_pkts_fail_late_collisions))
+       print('TxPacketsFailFcsError        : ', str(counters._tx_pkts_fail_fcs_error))
+       print('PacketsGood64Octets          : ', str(counters._pkts_good_64_octets))
+       print('PacketsGood65To127Octets     : ', str(counters._pkts_good_65to127_octets))
+       print('PacketsGood128To255Octets    : ', str(counters._pkts_good_128to255_octets))
+       print('PacketsGood256To511Octets    : ', str(counters._pkts_good_256to511_octets))
+       print('PacketsGood512To1023Octets   : ', str(counters._pkts_good_512to1023_octets))
+       print('PacketsGood1024To1518Octets  : ', str(counters._pkts_good_1024to1518_octets))
+       print('PacketsGood1519PlusOctets    : ', str(counters._pkts_good_1519plus_octets))
+       print('RxFragments                  : ', str(counters._rx_fragments))
+       print('SymbolOrDribbleError         : ', str(counters._symbol_or_dribble_error))
+       print('FcsError                     : ', str(counters._fcs_error))
+       print('RunTimeError                 : ', str(counters._runt_error))
+       print('==============================================')
+       i += 1
+    print('==============================================')
+    return
+
+def show_qfpga_error_counters():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqQfpgaErrorCounters(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    counters = response._error_counters
+    print('==============================================')
+    print('      Qfpga  Error Counters')
+    print('==============================================')
+    print('FCS Error                 : ', str(counters._fcs_error))
+    print('TTL pkt Error             : ', str(counters._ttl_pkts_error))
+    print('Network LIF Error         : ', str(counters._network_lif_error))
+    print('Runt Pkt Error            : ', str(counters._runt_pkts_error))
+    print('Unknown IP version Error  : ', str(counters._unknown_ip_version_error))
+    print('IP HdrLen Error           : ', str(counters._ip_hdr_len_error))
+    print('IP Checksum Error         : ', str(counters._ip_checksum_error))
+    print('LACP Error                : ', str(counters._lacp_disable_error))
+    print('LLDP Error                : ', str(counters._lldp_disable_error))
+    print('Dot1x Disable Error       : ', str(counters._dot1x_disable_error))
+    print('EFM Disable Error         : ', str(counters._efm_disable_error))
+    print('Unknown UC Drop           : ', str(counters._unknown_unicast_error))
+    print('Unknown MC Drop           : ', str(counters._unknown_multicast_error))
+    print('Broadcast Drop            : ', str(counters._broadcast_drop))
+    print('MAC Move Disable Drop     : ', str(counters._mac_move_disable_error))
+    print('Extra Tag Drop            : ', str(counters._extra_tag_drop))
+    print('Invalid CFM Level Drop    : ', str(counters._invalid_cfm_level_drop))
+    print('Src Knockout Drop         : ', str(counters._src_knockout_drop))
+    print('MTU Exceeded Drop         : ', str(counters._mtu_exceeded_drop))
+    print('AIS Disable Drop          : ', str(counters._cfm_ais_disable_drop))
+    print('APS Disable Drop          : ', str(counters._cfm_aps_disable_drop))
+    print('RAPS Disable Drop         : ', str(counters._cfm_raps_disable_drop))
+    print('ETH-LM Disable Drop       : ', str(counters._cfm_lm_disable_drop))
+    print('ETH-DM Disable Drop       : ', str(counters._cfm_dm_disable_drop))
+    print('Oper Shutdown Drop        : ', str(counters._oper_shutdown_drop))
+    print('Ingress Protection Drop   : ', str(counters._ingress_protection_drop))
+    print('Parser Drop               : ', str(counters._parser_drop))
+    print('STP Block                 : ', str(counters._stp_block))
+    print('Unknown SAP Drop          : ', str(counters._unknown_sap_drop))
+    print('EFM Loopback Drop         : ', str(counters._efm_loopback_drop))
+    print('Src Miss Drop             : ', str(counters._src_miss_drop))
+    print('Egress STP Block          : ', str(counters._egress_stp_block))
+    print('Egress Oper Shut Drop     : ', str(counters._egress_oper_shut_drop))
+    print('Spork Send Error          : ', str(counters._spork_send_error))
+    print('Policer RED Drop          : ', str(counters._policer_red_drop))
+    print('Ingress TM Drop           : ', str(counters._ingress_tm_drop))
+    print('Multicast FIFO Drop FC BE : ', str(counters._mcast_fifo_drop_fc_be))
+    print('Multicast FIFO Drop FC L2 : ', str(counters._mcast_fifo_drop_fc_l2))
+    print('Multicast FIFO Drop FC AF : ', str(counters._mcast_fifo_drop_fc_af))
+    print('Multicast FIFO Drop FC L1 : ', str(counters._mcast_fifo_drop_fc_l1))
+    print('Multicast FIFO Drop FC H2 : ', str(counters._mcast_fifo_drop_fc_h2))
+    print('Multicast FIFO Drop FC EF : ', str(counters._mcast_fifo_drop_fc_ef))
+    print('Multicast FIFO Drop FC H1 : ', str(counters._mcast_fifo_drop_fc_h1))
+    print('Multicast FIFO Drop FC NC : ', str(counters._mcast_fifo_drop_fc_nc))
+    print('Unknown Label Drop        : ', str(counters._unknown_label_drop))
+    print('MPLS Drop                 : ', str(counters._mpls_drop))
+    print('Egress port oper shut     : ', str(counters._egress_port_oper_shut))
+    print('Egress tunnel oper shut   : ', str(counters._egress_tunnel_oper_shut))
+    print('Egress lif oper shut      : ', str(counters._egress_lif_oper_shut))
+    print('ISIS ERROR                : ', str(counters._isis_errors))
+    print('synce Disable             : ', str(counters._synce_disable))
+    print('RPF Check                 : ', str(counters._rpf_check_drops))
+    print('Rx Mtu Exceeded           : ', str(counters._rx_mtu_exceeded))
+    print('SMAC Error                : ', str(counters._smac_errors))
+    print('==============================================')
+    return
+
+
+def show_qfpga_vlan_counters():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqQfpgaVlanCounters(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    print('==============================================')
+    print('       IMM TO CPM STATISTICS')
+    print('==============================================')
+    field = []
+    field.append('  EPIPE ')
+    field.append(' VLAN ')
+    field.append(' SAP INGRESS')
+    field.append(' SAP EGRESS')
+    field.append(' POLICER DROP')
+    field.append(' QUEUE DROP')
+    item_list = []
+    i = 0
+    while i < len(response._vlan_counters._imm_to_cpm_stats):
+       epipe = response._vlan_counters._imm_to_cpm_stats[i]
+       item = []
+       item.append(str(epipe._epipe))
+       item.append(str(epipe._vlan))
+       item.append(str(epipe._sap_ingress))
+       item.append(str(epipe._sap_egress))
+       item.append(str(epipe._policer_drop))
+       item.append(str(epipe._queue_drop))
+       item_list.append(item)
+       i += 1
+    print_table(field, item_list)
+    print('==============================================')
+    print('       CPM TO IMM STATISTICS')
+    print('==============================================')
+    field = []
+    field.append('  EPIPE ')
+    field.append(' VLAN ')
+    field.append(' SAP INGRESS')
+    field.append(' SAP EGRESS')
+    field.append(' POLICER DROP')
+    field.append(' QUEUE DROP')
+    item_list1 = []
+    i = 0
+    while i < len(response._vlan_counters._cpm_to_imm_stats):
+       epipe = response._vlan_counters._cpm_to_imm_stats[i]
+       item = []
+       item.append(str(epipe._epipe))
+       item.append(str(epipe._vlan))
+       item.append(str(epipe._sap_ingress))
+       item.append(str(epipe._sap_egress))
+       item.append(str(epipe._policer_drop))
+       item.append(str(epipe._queue_drop))
+       item_list1.append(item)
+       i += 1
+    print_table(field, item_list1)
+    return
+
+def show_qfpga_epipe_config():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqQfpgaEpipeConfig(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    print('==============================================')
+    print('       EPIPE CONFIGURATION')
+    print('==============================================')
+    field = []
+    field.append('  EPIPE ')
+    field.append(' VLAN ')
+    field.append(' PRIORITY')
+    field.append(' WEIGHT')
+    field.append(' SAP1_ID')
+    field.append(' SAP1_PORT_NUM')
+    field.append(' SAP1_QUEUE_ID')
+    field.append(' SAP1_POLICER_ID')
+    field.append(' SAP2_ID')
+    field.append(' SAP2_PORT_NUM')
+    field.append(' SAP2_QUEUE_ID')
+    field.append(' SAP2_POLICER_ID')
+    item_list = []
+    i = 0
+    while i < len(response._epipe_config._epipe_info):
+       epipe = response._epipe_config._epipe_info[i]
+       item = []
+       item.append(str(epipe._epipe_id))
+       item.append(str(epipe._vlan_id))
+       item.append(str(epipe._priority))
+       item.append(str(epipe._weight))
+       item.append(str(epipe._sap_1._sap_id))
+       item.append(str(epipe._sap_1._port_num))
+       item.append(str(epipe._sap_1._queue_id))
+       item.append(str(epipe._sap_1._policer_id))
+       item.append(str(epipe._sap_2._sap_id))
+       item.append(str(epipe._sap_2._port_num))
+       item.append(str(epipe._sap_2._queue_id))
+       item.append(str(epipe._sap_2._policer_id))
+       item_list.append(item)
+       i += 1
+    print_table(field, item_list)
+    return
+
+def show_qfpga_version():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+       return
+
+    response = stub.ReqQfpgaVersion(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    version = response._version_info._version
+    revision = response._version_info._revision
+    print('The E2E_4X1G FPGA (qfpga) version is {}, revision is {}'.format(str(version),str( revision)))
+    return
+
+def clear_qfpga_stats():
+    global format_type
+    if nokia_common.is_cpm() == 1:
+       print('Command is not supported in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
+    if not channel or not stub:
+       return
+
+    response = stub.ReqQfpgaClearStats(platform_ndk_pb2.ReqQfpgaInfoPb())
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print('Clearing Qfpga Stats failed')
+    return
 
 def set_shutdown_sfm(num):
     if num not in sfm_hw_slot_mapping:
@@ -1475,6 +1865,29 @@ def main():
     show_asictemp_parser = showsubparsers.add_parser('asic-temperature', help='show asic-temperature info')
     show_asictemp_parser.add_argument('json-format', nargs='?', help='show asic-temperature <json-format>')
 
+    # show qfpga
+    show_qfpga_parser = showsubparsers.add_parser('qfpga', help='show qfpga')
+    show_qfpga_sub_parser = show_qfpga_parser.add_subparsers(help='show qfpga options', dest="qfpgacmd")
+    # show qfpga port-status
+    show_qfpga_port_status_parser = show_qfpga_sub_parser.add_parser('port-status', help='show qfpga port status')
+    show_qfpga_port_status_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show qfpga port-statistics
+    show_qfpga_port_stats_parser = show_qfpga_sub_parser.add_parser('port-statistics', help='show qfpga port statistics')
+    show_qfpga_port_stats_parser.add_argument('--port-desc', nargs='?', default='ALL_PORTS', help='port-name: cpma, cpmb, eth1/eth1-midplane/lcpu0, eth0/mgmt1/lcpu1')
+    show_qfpga_port_stats_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show qfpga error-counters
+    show_qfpga_error_counter_parser = show_qfpga_sub_parser.add_parser('error-counters', help='show qfpga error counters')
+    show_qfpga_error_counter_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show qfpga vlan-counters
+    show_qfpga_vlan_counters_parser = show_qfpga_sub_parser.add_parser('vlan-counters', help='show qfpga vlan counters')
+    show_qfpga_vlan_counters_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show qfpga epipe-config
+    show_qfpga_epipe_config_parser = show_qfpga_sub_parser.add_parser('epipe-config', help='show qfpga epipe configuration')
+    show_qfpga_epipe_config_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show qfpga version
+    show_qfpga_version_parser = show_qfpga_sub_parser.add_parser('version', help='show qfpga version')
+    show_qfpga_version_parser.add_argument('json-format', nargs='?', help='json-format')
+
     # Set Commands
     set_parser = subparsers.add_parser('set', help='set help')
     setsubparsers = set_parser.add_subparsers(help='set cmd options', dest="setcmd")
@@ -1554,6 +1967,10 @@ def main():
     clear_midplane_port_counter_parser = clearsubparsers.add_parser('midplane',
                                                            help='clear midplane counters')
     clear_midplane_port_counter_parser.add_argument('port-counters', nargs='?', help='clear port counters')
+    #clear qfpga stats
+    clear_qfpga_stats_parser = clearsubparsers.add_parser('qfpga',
+                                                           help='clear qfpga stats')
+    clear_qfpga_stats_parser.add_argument('stats', nargs='?', help='clear stats')
 
     # An illustration of how access the arguments.
     args = base_parser.parse_args()
@@ -1622,6 +2039,20 @@ def main():
         elif args.showcmd == 'asic-temperature':
             format_type = d['json-format']
             show_asic_temperature()
+        elif args.showcmd == 'qfpga':
+            format_type = d['json-format']
+            if args.qfpgacmd == 'port-status':
+              show_qfpga_port_status()
+            elif args.qfpgacmd == 'port-statistics':
+              show_qfpga_port_statistics(d['port_desc'])
+            elif args.qfpgacmd == 'error-counters':
+              show_qfpga_error_counters()
+            elif args.qfpgacmd == 'vlan-counters':
+              show_qfpga_vlan_counters()
+            elif args.qfpgacmd == 'epipe-config':
+              show_qfpga_epipe_config()
+            elif args.qfpgacmd == 'version':
+              show_qfpga_version()
         else:
             show_parser.print_help()
     elif args.cmd == 'set':
@@ -1678,6 +2109,8 @@ def main():
     elif args.cmd == 'clear':
         if args.clearcmd == 'midplane':
           clear_midplane_port_counters()
+        if args.clearcmd == 'qfpga':
+          clear_qfpga_stats()
     else:
         base_parser.print_help()
 
