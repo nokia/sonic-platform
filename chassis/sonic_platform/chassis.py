@@ -645,16 +645,16 @@ class Chassis(ChassisBase):
             if not self.sfp_module_initialized:
                self.initialize_sfp()
 
-            logger.log_info("Initializing sfp_event with num {} and stub {} : sfp stub {}".format(
-                self.num_sfp, self.sfp_event_stub, self.sfp_stub))
+            # logger.log_info("Initializing sfp_event timeout {} with num {} and stub {} : sfp stub {}".format(timeout, self.num_sfp, self.sfp_event_stub, self.sfp_stub))
             self.sfp_event_list = sfp_event(self.num_sfp, self.sfp_event_stub)
             self.sfp_event_list.initialize()
             self.sfp_event_initialized = True
 
-        timeout = 0
+        # timeout = 0
+        if timeout < 2000:
+            timeout = 2000
         port_dict = {}
         self.sfp_event_list.check_sfp_status(port_dict, timeout)
-
         return True, {'sfp': port_dict}
 
     def get_num_sfps(self):

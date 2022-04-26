@@ -172,6 +172,8 @@ class sfp_event:
             port_list.append(port_status.status)
 
         # logger.log_error("Transceiver multi-status response with len{}".format(num_ports))
+        # logger.log_error("Transceiver multi-status response : {}".format(port_list))
+
         return port_list
 
     def check_sfp_status(self, port_change, timeout):
@@ -192,6 +194,8 @@ class sfp_event:
 
         if (start_time > end_time):
             return False, {}  # Time wrap or possibly incorrect timeout
+
+        # logger.log_error("entered sfp_event.check_sfp_status with timeout {} forever {}".format(timeout, forever))
 
         while (timeout >= 0):
             if (self.test_enable()):
@@ -229,7 +233,6 @@ class sfp_event:
                 time.sleep(MAX_NOKIA_SFP_EVENT_SLEEP_TIME)
             else:
                 timeout = end_time - time.time()
-                logger.log_error("Check sfp status timeout {}".format(timeout))
                 if timeout >= 1:
                     time.sleep(1)  # We poll at 1 second granularity
                 else:
