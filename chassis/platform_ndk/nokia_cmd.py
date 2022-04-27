@@ -65,6 +65,22 @@ sfm_hw_slot_mapping = {
     8: 22
 }
 
+qfpga_cli_port_name_dict = {
+    "Port0": "cpm-A",
+    "Port1": "cpm-B",
+    "Port2": "qfpgap0/eth1-midplane",
+    "Port3": "qfpgap1/eth0",
+}
+
+qfpga_ndk_port_name_dict = {
+    "ALL_PORTS": "ALL_PORTS",
+    "cpm-A": "cpma",
+    "cpm-B": "cpmb",
+    "qfpgap0": "eth1",
+    "eth1-midplane": "eth1",
+    "qfpgap1": "eth0",
+    "eth0": "eth0",
+}
 
 def pretty_time_delta(seconds):
     sign_string = '-' if seconds < 0 else ''
@@ -1378,6 +1394,7 @@ def show_qfpga_port_status():
 
     field = []
     field.append('  Port  ')
+    field.append(' Description          ')
     field.append('OperStatus ')
     field.append(' MTU  ')
     field.append(' Speed  ')
@@ -1390,6 +1407,7 @@ def show_qfpga_port_status():
        port_sum = response._port_summary._port[port]
        item = []
        item.append(port)
+       item.append(qfpga_cli_port_name_dict[port])
        item.append(port_sum._oper_status)
        item.append(str(port_sum._mtu))
        item.append(str(port_sum._speed))
@@ -1418,7 +1436,12 @@ def show_qfpga_port_statistics(port):
     if not channel or not stub:
         return
 
-    response = stub.ReqQfpgaPortStatsSummary(platform_ndk_pb2.ReqQfpgaInfoPb(_port = port))
+    port_name = qfpga_ndk_port_name_dict.get(port, "Undefined")
+    if port_name == 'Undefined':
+       print('port-desc must be one of: cpm-A, cpm-B, qfpgap0/eth1-midplane, qfpgap1/eth0')
+       return
+
+    response = stub.ReqQfpgaPortStatsSummary(platform_ndk_pb2.ReqQfpgaInfoPb(_port = port_name))
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1438,7 +1461,8 @@ def show_qfpga_port_statistics(port):
        if counters._port != port:
            i += 1
            continue
-       print('Port : ', port)
+       port_name = port+'/'+qfpga_cli_port_name_dict[port]
+       print('Port : ', port_name)
        print('==============================================')
        print('RxOctetsGood                 : ', str(counters._rx_octets_good))
        print('TxOctetsGood                 : ', str(counters._tx_octets_good))
@@ -1873,7 +1897,7 @@ def main():
     show_qfpga_port_status_parser.add_argument('json-format', nargs='?', help='json-format')
     # show qfpga port-statistics
     show_qfpga_port_stats_parser = show_qfpga_sub_parser.add_parser('port-statistics', help='show qfpga port statistics')
-    show_qfpga_port_stats_parser.add_argument('--port-desc', nargs='?', default='ALL_PORTS', help='port-name: cpma, cpmb, eth1/eth1-midplane/lcpu0, eth0/mgmt1/lcpu1')
+    show_qfpga_port_stats_parser.add_argument('--port-desc', nargs='?', default='ALL_PORTS', help='port-name: cpm-A, cpm-B, qfpgap0/eth1-midplane, qfpgap1/eth0')
     show_qfpga_port_stats_parser.add_argument('json-format', nargs='?', help='json-format')
     # show qfpga error-counters
     show_qfpga_error_counter_parser = show_qfpga_sub_parser.add_parser('error-counters', help='show qfpga error counters')
