@@ -1188,14 +1188,14 @@ def show_midplane_port_counters(port):
       print(json_response)
       return
 
-    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
-       print(response.response_status.error_msg)
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
        return
 
     print('  PORT STATISTICS  ')
     i = 0
-    while i < len(response.port_counters._stats_entry):
-        counters = response.port_counters._stats_entry[i]
+    while i < len(response._port_counters._stats_entry):
+        counters = response._port_counters._stats_entry[i]
         print('================================================')
         print("Statistics for {}:".format(counters._port))
         print('================================================')
@@ -1223,8 +1223,8 @@ def show_midplane_port_status(port):
       print(json_response)
       return
 
-    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
-       print(response.response_status.error_msg)
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
        return
 
     field = []
@@ -1240,8 +1240,8 @@ def show_midplane_port_status(port):
     field.append('MTU ')
     item_list = []
     i = 0
-    while i < len(response.port_status._port_status):
-        port_status = response.port_status._port_status[i]
+    while i < len(response._port_status._port_status):
+        port_status = response._port_status._port_status[i]
         item = []
         item.append(port_status._port_name)
         item.append(port_status._admin_status)
@@ -1281,8 +1281,8 @@ def show_midplane_vlan_table(vlan):
       print(json_response)
       return
 
-    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
-       print(response.response_status.error_msg)
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
        return
 
     field = []
@@ -1334,8 +1334,8 @@ def show_midplane_mac_table(port):
       print(json_response)
       return
 
-    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
-       print(response.response_status.error_msg)
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
        return
 
     field = []
@@ -1356,6 +1356,45 @@ def show_midplane_mac_table(port):
         i += 1
 
     print('   MAC TABLE')
+    print_table(field, item_list)
+    return
+
+def show_midplane_link_status_table():
+    global format_type
+    if nokia_common.is_cpm() == 0:
+       print('Command is supported only in CPM card')
+
+    channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
+    if not channel or not stub:
+        return
+
+    response = stub.ReqMidplaneLinkStatusTracker(platform_ndk_pb2.ReqMidplanePortStatusInfoPb())
+
+    if format_type == 'json-format':
+      json_response = MessageToJson(response)
+      print(json_response)
+      return
+
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+       print(response._response_status.error_msg)
+       return
+
+    field = []
+    field.append('  PORT   ')
+    field.append(' UP ')
+    field.append(' DOWN')
+    item_list = []
+    i = 0
+    while i < len(response._link_status._link_status_entry):
+        link_status = response._link_status._link_status_entry[i]
+        item = []
+        item.append(link_status._port)
+        item.append(str(link_status._up))
+        item.append(str(link_status._down))
+        item_list.append(item)
+        i += 1
+
+    print('   LINK STATUS FLAP')
     print_table(field, item_list)
     return
 
@@ -1859,6 +1898,9 @@ def main():
     show_midplane_mac_table_parser = show_midplane_sub_parser.add_parser('mac-table', help='show midplane mac table')
     show_midplane_mac_table_parser.add_argument('--hw-slot', nargs='?', default='ALL_PORTS', help='slot name lc1,lc2,lc3,lc4,lc5,lc6,lc7,lc8,cpm-xe0,cpm-xe1')
     show_midplane_mac_table_parser.add_argument('json-format', nargs='?', help='json-format')
+    # show midplane link-status-flap
+    show_midplane_link_status_parser = show_midplane_sub_parser.add_parser('link-status-flap', help='show link status flapping')
+    show_midplane_link_status_parser.add_argument('json-format', nargs='?', help='json-format')
 
     # show logging
     show_logging_parser = showsubparsers.add_parser('logging', help='show logging info')
@@ -2045,6 +2087,8 @@ def main():
               show_midplane_vlan_table(d['vlan_id'])
             elif args.midplanecmd == 'mac-table':
               show_midplane_mac_table(d['hw_slot'])
+            elif args.midplanecmd == 'link-status-flap':
+              show_midplane_link_status_table()
         elif args.showcmd == 'ndk-eeprom':
             format_type = d['json-format']
             show_ndk_eeprom()
