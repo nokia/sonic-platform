@@ -107,18 +107,18 @@ class asic_thermal(object):
     nokia_cmd.print_table(field, item_list)
     return
 
-  def update_temperature(self, namespace, asic_temp_data):
+  def update_temperature(self, asic_id, asic_temp_data):
     for key, value in asic_temp_data.items():
        if (int(value)) == 0:
          return
        temp,index = key.split('_')
        asic_temp = ''
        if temp == 'temperature':
-         temp_name = namespace+'_'+index+'--'+temp_mon_list[int(index)]
+         temp_name = 'ASIC' + str(asic_id) +'_' + index + '--' + temp_mon_list[int(index)]
        elif temp == 'average':
-         temp_name = namespace+'_'+ 'average'
+         temp_name = 'ASIC' + str(asic_id) + '_' + 'average'
        elif temp == 'maximum':
-         temp_name = namespace+'_'+ 'maximum'
+         temp_name = 'ASIC' + str(asic_id) +'_' + 'maximum'
 
        nokia_cmd.set_asic_temp(temp_name, int(value), ASIC_TEMP_DEVICE_THRESHOLD)
     return
@@ -133,7 +133,7 @@ class asic_thermal(object):
       for state_key in natsorted(self.state_db_keys[asic_id]):
          asic_temp_data = self.db[asic_id].get_all(self.db[asic_id].STATE_DB, state_key)
          # Update NDK
-         self.update_temperature(namespace, asic_temp_data)
+         self.update_temperature(asic_id, asic_temp_data)
 
     return
 
