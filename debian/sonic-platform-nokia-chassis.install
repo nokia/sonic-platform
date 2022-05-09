@@ -11,3 +11,5 @@ chassis/utils/70-persistent-net.rules etc/udev/rules.d
 chassis/utils/blacklist.conf etc/modprobe.d
 common/utils/nokia-asic-thermal.py opt/srlinux/bin
 common/service/nokia-asic-thermal.service lib/systemd/system
+common/utils/nokia-sfp-reset.py opt/srlinux/bin
+common/service/nokia-sfp-reset.service lib/systemd/system
