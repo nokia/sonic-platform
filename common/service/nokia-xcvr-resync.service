@@ -1,0 +1,10 @@
+[Unit]
+Description=Nokia IXR-7250 XCVR RESYNC Service
+
+[Service]
+Restart=on-failure
+RestartSec=30
+ExecStart=/usr/bin/python3 /opt/srlinux/bin/nokia-xcvr-resync.py
+
+[Install]
+WantedBy=multi-user.target

@@ -11,3 +11,5 @@ chassis/utils/70-persistent-net.rules etc/udev/rules.d
 chassis/utils/blacklist.conf etc/modprobe.d
 common/utils/nokia-asic-thermal.py opt/srlinux/bin
 common/service/nokia-asic-thermal.service lib/systemd/system
+common/utils/nokia-xcvr-resync.py opt/srlinux/bin
+common/service/nokia-xcvr-resync.service lib/systemd/system
