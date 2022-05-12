@@ -39,7 +39,7 @@ if [ -e /lib/systemd/system/nokia-asic-thermal.service ]; then
    asicthermal=1
 fi
 
-if [ -e /lib/systemd/system/nokia-sfp-reset.service ]; then
+if [ -e /lib/systemd/system/nokia-xcvr-resync.service ]; then
    source /host/machine.conf
    ASIC_CONF="/usr/share/sonic/device/${onie_platform}/asic.conf"
    if [ -e $ASIC_CONF ]; then
@@ -47,11 +47,11 @@ if [ -e /lib/systemd/system/nokia-sfp-reset.service ]; then
       num_asic=0
       while [ $num_asic -lt $NUM_ASIC ]
       do
-         sed -i "/^Description=.*/a After=syncd@$num_asic.service" /lib/systemd/system/nokia-sfp-reset.service
+         sed -i "/^Description=.*/a After=syncd@$num_asic.service" /lib/systemd/system/nokia-xcvr-resync.service
 	 ((num_asic++))
       done
    fi
-   systemctl enable nokia-sfp-reset.service
+   systemctl enable nokia-xcvr-resync.service
    sfpreset=1
 fi
 
@@ -78,5 +78,5 @@ if [[ $asicthermal -eq 1 ]]; then
     systemctl start nokia-asic-thermal.service &
 fi
 if [[ $sfpreset -eq 1 ]]; then
-    systemctl start nokia-sfp-reset.service &
+    systemctl start nokia-xcvr-resync.service &
 fi
