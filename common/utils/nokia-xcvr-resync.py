@@ -196,13 +196,13 @@ if __name__ == "__main__":
       sys.exit()
    else:
      hwsku = get_device_hwsku()
-     if hwsku == 'Nokia-IXR7250E-36x100G':
+     if hwsku != 'Nokia-IXR7250E-36x400G':
        print('Asic Xcvr resync is not supported in {}'.format(hwsku))
        sys.exit()
 
      sfp_reset = asic_xcvr_resync()
      logger = sfp_reset.setup_logger('Nokia-xcvr-resync')
-     logger.info('Starting Nokia-sfp-reset for hwsku {}'.format(hwsku))
+     logger.info('Starting Nokia-xcvr-resync for hwsku {}'.format(hwsku))
      sfp_reset.sfp_load_helper()
      while True:
         sfp_reset.handle_syncd_state()
