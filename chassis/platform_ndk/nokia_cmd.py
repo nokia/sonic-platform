@@ -16,6 +16,7 @@ import time
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
 
+
 eeprom_default_dict = {
     "0x21": "Product Name",
     "0x22": "Part Number",
@@ -1828,7 +1829,22 @@ def set_startup_sfm(num):
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         outstr = stdout.decode('ascii')
- 
+
+def set_xcvr_resync_feature(enable):
+    if enable == True:
+        print("Start the nokia-xcvr-resync.service")
+        process = subprocess.Popen(['sudo', 'systemctl', 'start', 'nokia-xcvr-resync.service'],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+    else:
+        print("Stop the nokia-xcvr-resync.service")
+        process = subprocess.Popen(['sudo', 'systemctl', 'stop', 'nokia-xcvr-resync.service'],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        outstr = stdout.decode('ascii')
+    return
+
 def main():
     global format_type
 
@@ -2012,6 +2028,14 @@ def main():
     set_startupsfm_parser = setsubparsers.add_parser('startup-sfm', help='startup a sfm and related asic services (swss and syncd)')
     set_startupsfm_parser.add_argument('sfm-num', metavar='sfm-num', type=int, help='SFM slot number starts from 1')
 
+    # Enable/Disable xcvr-resync
+    set_xcvr_resync_parser = setsubparsers.add_parser('xcvr-resync', help='set xcvr-resync')
+    set_xcvr_resync_sub_parser = set_xcvr_resync_parser.add_subparsers(help='set xcvr-resync options', dest="xcvrresynccmd")
+    #set xcvr-resync enable
+    set_xcvr_resync_enable_parser = set_xcvr_resync_sub_parser.add_parser('enable', help='Enable xcvr-resync')
+    #set xcvr-resync disable
+    set_xcvr_resync_disable_parser = set_xcvr_resync_sub_parser.add_parser('disable', help='Disable xcvr-resync')
+
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
@@ -2024,7 +2048,6 @@ def main():
     # NDK admintech
     req_ndk_admintech_parser = reqsubparsers.add_parser('ndk-admintech',
                                                         help='collect NDK admintech')
-
     # Clear Commands
     clear_parser = subparsers.add_parser('clear', help='Clear help')
     clearsubparsers = clear_parser.add_subparsers(help='clear cmd options', dest="clearcmd")
@@ -2164,7 +2187,15 @@ def main():
             if not nokia_common.is_cpm():
                 print('Command is only supported on Supervisor card')
                 return
-            set_startup_sfm(d['sfm-num'])    
+            set_startup_sfm(d['sfm-num'])
+        elif args.setcmd == 'xcvr-resync':
+            if nokia_common.is_cpm():
+              print('Command is not supported in Supervisor card')
+              return
+            if args.xcvrresynccmd == 'enable':
+              set_xcvr_resync_feature(True)
+            elif args.xcvrresynccmd == 'disable':
+              set_xcvr_resync_feature(False)
         else:
             set_parser.print_help()
     elif args.cmd == 'request':
