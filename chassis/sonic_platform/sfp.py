@@ -1638,6 +1638,7 @@ class Sfp(SfpBase):
         elif (self.sfp_type == QSFPDD_TYPE):
             # if (self.dom_tx_disable_supported) and (self.dom_tx_disable_per_channel_supported):
             tx_disable_data_raw = self._get_eeprom_data('tx_disable')
+
             if (tx_disable_data_raw is not None):
                 tx_disable_data = int(tx_disable_data_raw[0], 16)
                 tx_disable_list.append(tx_disable_data & 0x01 != 0)
@@ -1684,7 +1685,7 @@ class Sfp(SfpBase):
                 return None
             byte_data = self._get_eeprom_data('power_override')
             if byte_data is not None:
-                return ('On' == byte_data['data']['PowerOverRide'])
+                return ('On' == byte_data['data']['PowerOverRide']['value'])
         else:
             return NotImplementedError
 
@@ -1991,9 +1992,28 @@ class Sfp(SfpBase):
         Returns:
             A boolean, True if successful, False if not
         QSFP: page a0, address 86, lower 4 bits
-        """
 
-        return NotImplementedError
+            Not supported for single channel SFP types
+        """
+        if (self.sfp_type == QSFPDD_TYPE) or (self.sfp_type == QSFP_TYPE):
+            op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
+
+            grpc_channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+            if not grpc_channel or not stub:
+                return False
+
+            ret, response = nokia_common.try_grpc(stub.ReqSfpTxDisableChannel,
+                                                  platform_ndk_pb2.ReqSfpOpsPb(type=op_type,
+                                                                               hw_port_id_begin=self.index,
+                                                                               val=disable,
+                                                                               val1=channel))
+            nokia_common.channel_shutdown(grpc_channel)
+            if ret is False:
+                return False
+            status_msg = response.sfp_status
+            self.invalidate_page_cache(ALL_PAGES_TYPE)
+            return status_msg.status
+        return False
 
     def get_status(self):
         """
@@ -2027,7 +2047,39 @@ class Sfp(SfpBase):
             A boolean, True if power-override and power_set are set successfully,
             False if not
         """
-        return NotImplementedError
+        if (self.sfp_type == QSFP_TYPE):
+            op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
+
+            channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+            if not channel or not stub:
+                return False
+
+            power_override_bit = 0
+            if power_override:
+                power_override_bit |= 1 << 0
+
+            power_set_bit = 0
+            if power_set:
+                power_set_bit |= 1 << 1
+
+            byte93 = power_override_bit | power_set_bit
+
+            logger.log_error("set_power_override for Ethernet{} with channel {} power_override {} power_set {} byte93 {}".format(
+                    self.index, channel, power_override, power_set, byte93))
+
+            ret, response = nokia_common.try_grpc(stub.ReqSfpPowerOverride,
+                                                  platform_ndk_pb2.ReqSfpOpsPb(type=op_type,
+                                                                               hw_port_id_begin=self.index,
+                                                                               val=power_override,
+                                                                               val1=power_set))
+            nokia_common.channel_shutdown(channel)
+            if ret is False:
+                return False
+            status_msg = response.sfp_status
+            self.invalidate_page_cache(ALL_PAGES_TYPE)
+            return status_msg.status
+        return False
+
 
     def get_position_in_parent(self):
         """
