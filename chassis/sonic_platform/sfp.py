@@ -271,25 +271,12 @@ class Sfp(SfpBase):
         SfpBase.__init__(self)
         self.sfpi_obj = None
         self.sfpd_obj = None
-        if (sfp_type == platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFPDD):
-            self.sfp_type = QSFPDD_TYPE
-            self.sfpi_obj = qsfp_dd_InterfaceId()
-        elif (sfp_type == platform_ndk_pb2.RespSfpModuleType.SFP_MODULE_TYPE_QSFP28):
-            self.sfp_type = QSFP_TYPE
-            self.sfpi_obj = sff8436InterfaceId()
-        else:
-            self.sfp_type = None
+        self.sfp_type = None
+
         self.index = index
         self.dom_capability_established = False
         self.flatmem = None
         self._version_info = device_info.get_sonic_version_info()
-
-        """
-        self.qsfpDDInfo = qsfp_dd_InterfaceId()
-        self.qsfpDDDomInfo = qsfp_dd_Dom(calibration_type=1)
-        self.qsfpInfo = sff8436InterfaceId()
-        self.qsfpDomInfo = sff8436Dom()
-        """
 
         self.lastPresence = False
 
@@ -1008,8 +995,8 @@ class Sfp(SfpBase):
         if self.sfpi_obj is None:
             self.dom_supported = False
             self.dom_capability_established = False
-            # wait until self.sfpi_obj has been set to start with DOM ops
-            return
+            # force 1st read of data page
+            self.get_transceiver_info()
 
         self.invalidate_page_cache(ALL_PAGES_TYPE)
         self.dom_capability_established = True
@@ -1148,10 +1135,12 @@ class Sfp(SfpBase):
             self.dom_tx_power_supported = False
 
     def is_dom_supported(self):
+        if not self.dom_capability_established:
+            self._dom_capability_detect()
         return self.dom_supported
 
     def is_dom_tx_disable_supported(self):
-        if self.dom_supported:
+        if self.is_dom_supported():
             return self.dom_tx_disable_supported
         else:
             return False
@@ -1539,7 +1528,7 @@ class Sfp(SfpBase):
         """
         Retrieves the RX LOS (lost-of-signal) status of SFP
         """
-        if not self.dom_supported:
+        if not self.is_dom_supported():
             return None
 
         rx_los_list = []
@@ -1576,7 +1565,7 @@ class Sfp(SfpBase):
         """
         Retrieves the TX fault status of SFP
         """
-        if not self.dom_supported:
+        if not self.is_dom_supported():
             return None
 
         tx_fault_list = []
@@ -1618,7 +1607,7 @@ class Sfp(SfpBase):
         for QSFP-DD, disable states of each channel are in byte 130 page 10
 
         """
-        if not self.dom_supported:
+        if not self.is_dom_supported():
             return None
 
         if not self.dom_tx_disable_supported:
@@ -1681,7 +1670,7 @@ class Sfp(SfpBase):
         self.invalidate_page_cache(ALL_PAGES_TYPE)
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
             byte_data = self._get_eeprom_data('power_override')
             if byte_data is not None:
@@ -1700,7 +1689,7 @@ class Sfp(SfpBase):
         temp = None
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
             if self.dom_temp_supported:
                 dom_temp_data = self._get_eeprom_data('Temperature')
@@ -1728,7 +1717,7 @@ class Sfp(SfpBase):
         voltage = None
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
             if self.dom_volt_supported:
                 dom_voltage_data = self._get_eeprom_data('Voltage')
@@ -1758,7 +1747,7 @@ class Sfp(SfpBase):
         self.invalidate_page_cache(ALL_PAGES_TYPE)
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
 
             dom_channel_monitor_data = self._get_eeprom_data('ChannelMonitorwtxpwr')
@@ -1802,7 +1791,7 @@ class Sfp(SfpBase):
         self.invalidate_page_cache(ALL_PAGES_TYPE)
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
 
             if self.dom_rx_power_supported:
@@ -1849,7 +1838,7 @@ class Sfp(SfpBase):
         self.invalidate_page_cache(ALL_PAGES_TYPE)
 
         if self.sfp_type == QSFP_TYPE:
-            if not self.dom_supported or self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
 
             if self.dom_tx_power_supported:
