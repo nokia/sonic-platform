@@ -8,13 +8,14 @@
 #
 
 import os
-
 from sonic_platform_base.device_base import DeviceBase
 from sonic_platform_base.module_base import ModuleBase
 import grpc
 from platform_ndk import platform_ndk_pb2
 from platform_ndk import platform_ndk_pb2_grpc
+from datetime import datetime
 
+NOKIA_MIDPLANE_SUBNET = "10.6."
 NOKIA_UNIX_SOCKET_PREFIX = "unix://"
 NOKIA_SONIC_UNIX_SOCKET_FOLDER = "/var/run/redis/"
 NOKIA_DEVMGR_SONIC_UNIX_SOCKET_NAME = "devmgr_sonic_server"
@@ -134,6 +135,49 @@ def channel_setup(service):
 
     return _channel, _stub
 
+def midplane_channel_setup(service, hw_slot):
+    midplane_ip = NOKIA_MIDPLANE_SUBNET + str(hw_slot) + '.100' + ':'
+    if service == NOKIA_GRPC_MIDPLANE_SERVICE:
+      #Midplane/Ethmgr is supported only in CPM
+      return None, None
+    elif service == NOKIA_GRPC_QFPGA_SERVICE:
+       server_path = midplane_ip + NOKIA_QFPGA_SONIC_SRVR_PORT
+    else:
+        server_path = midplane_ip + NOKIA_DEVMGR_SONIC_SRVR_PORT
+
+    if os.path.exists(NOKIA_CHANNEL_FILE_PATH):
+        server_path = (open(NOKIA_CHANNEL_FILE_PATH, 'r').readline().rstrip())
+    _channel = grpc.insecure_channel(server_path)
+    _stub = None
+
+    _channel_ready = grpc.channel_ready_future(_channel)
+    try:
+        _channel_ready.result(timeout=0.5)
+    except grpc.FutureTimeoutError:
+        _channel = None
+        return _channel, _stub
+
+    if service == NOKIA_GRPC_CHASSIS_SERVICE:
+        _stub = platform_ndk_pb2_grpc.ChassisPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_PSU_SERVICE:
+        _stub = platform_ndk_pb2_grpc.PsuPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_FAN_SERVICE:
+        _stub = platform_ndk_pb2_grpc.FanPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_THERMAL_SERVICE:
+        _stub = platform_ndk_pb2_grpc.ThermalPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_LED_SERVICE:
+        _stub = platform_ndk_pb2_grpc.LedPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_XCVR_SERVICE:
+        _stub = platform_ndk_pb2_grpc.XcvrPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_FIRMWARE_SERVICE:
+        _stub = platform_ndk_pb2_grpc.FirmwarePlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_UTIL_SERVICE:
+        _stub = platform_ndk_pb2_grpc.UtilPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_EEPROM_SERVICE:
+        _stub = platform_ndk_pb2_grpc.EepromPlatformNdkServiceStub(_channel)
+    elif service == NOKIA_GRPC_QFPGA_SERVICE:
+        _stub = platform_ndk_pb2_grpc.QfpgaPlatformNdkServiceStub(_channel)
+    return _channel, _stub
 
 def channel_shutdown(_channel):
     _channel.close()
@@ -277,14 +321,44 @@ def hw_module_status_name(status_type):
 
     return status_
 
-def _reboot_IMMs():
+def _cpm_reboot_IMMs(imm_slot):
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)
     if not channel or not stub:
         return False
-    for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):
-        response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot))
-
+    response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot))
     channel_shutdown(channel)
+    return True
+
+def _reboot_IMMs_via_midplane(imm_slot, reboot_type=None):
+    time_now = datetime.now()
+    if reboot_type == "PMON_API":
+        user = "PMON_API"
+    else:
+        try:
+            user = os.getlogin()
+        except Exception:
+            user = "Unknown"
+
+    reboot_reason = ("User issued 'reboot from Supervisor' command [User: " + user + ", Time: " +
+                     str(time_now.strftime("%a %d %b %Y %I:%M:%S %p %Z"))+"]")
+    channel, stub = midplane_channel_setup(NOKIA_GRPC_CHASSIS_SERVICE, imm_slot)
+    if not channel or not stub:
+        return False
+    response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot,reboot_type=reboot_reason))
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+        print('Rebooting IMM {} via midplane failed'.format(imm_slot))
+        rv = False
+    else:
+        print('Rebooting - IMM {} - slot reboot requested via midplane'.format(imm_slot))
+        rv = True
+    channel_shutdown(channel)
+    return rv
+
+def _reboot_IMMs(reboot_type=None):
+    for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):
+        ret = _reboot_IMMs_via_midplane(imm_slot, reboot_type)
+        if ret == False:
+            _cpm_reboot_IMMs(imm_slot)
     return True
 
 def _power_onoff_SFM(hw_slot, powerOn):

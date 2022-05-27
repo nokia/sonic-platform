@@ -176,6 +176,9 @@ class Module(ModuleBase):
         if nokia_common._get_my_slot() != self._get_hw_slot():
             return False
 
+        if self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            nokia_common._reboot_IMMs("PMON_API")
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
         if not channel or not stub:
             return False
