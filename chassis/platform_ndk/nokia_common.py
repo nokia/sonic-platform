@@ -329,9 +329,9 @@ def _cpm_reboot_IMMs(imm_slot):
     channel_shutdown(channel)
     return True
 
-def _reboot_IMMs_via_midplane(imm_slot, reboot_type=None):
+def _reboot_IMMs_via_midplane(imm_slot, reboot_type_=None):
     time_now = datetime.now()
-    if reboot_type == "PMON_API":
+    if reboot_type_ == "PMON_API":
         user = "PMON_API"
     else:
         try:
@@ -339,12 +339,12 @@ def _reboot_IMMs_via_midplane(imm_slot, reboot_type=None):
         except Exception:
             user = "Unknown"
 
-    reboot_reason = ("User issued 'reboot from Supervisor' command [User: " + user + ", Time: " +
-                     str(time_now.strftime("%a %d %b %Y %I:%M:%S %p %Z"))+"]")
+    reboot_reason_ = ("User issued 'reboot from Supervisor' command [User: " + user);
     channel, stub = midplane_channel_setup(NOKIA_GRPC_CHASSIS_SERVICE, imm_slot)
     if not channel or not stub:
         return False
-    response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot,reboot_type=reboot_reason))
+    reboot_cause = platform_ndk_pb2.reboot_cause(reboot_type=reboot_type_, reboot_reason=reboot_reason_)
+    response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot,reboot_type_reason=reboot_cause))
     if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
         print('Rebooting IMM {} via midplane failed'.format(imm_slot))
         rv = False

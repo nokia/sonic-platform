@@ -160,7 +160,7 @@ class Module(ModuleBase):
         """
         return True
 
-    def reboot(self, reboot_type):
+    def reboot(self, reboot_type_):
         """
         Request to reboot/reset the module
 
@@ -183,11 +183,13 @@ class Module(ModuleBase):
         if not channel or not stub:
             return False
 
+        reboot_reason_ = ("User issued 'reboot from PMON' command [User: PMON-API")
         platform_module_type = self.get_platform_type()
+        reboot_cause = platform_ndk_pb2.reboot_cause(reboot_type=reboot_type_, reboot_reason=reboot_reason_)
         ret, response = nokia_common.try_grpc(
             stub.RebootSlot,
             platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot(),
-                                             reboot_type=reboot_type))
+                                  reboot_type_reason=reboot_cause))
         nokia_common.channel_shutdown(channel)
 
         if ret is False:

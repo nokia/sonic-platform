@@ -117,9 +117,17 @@ class Chassis(ChassisBase):
         return False
 
     def get_reboot_cause(self):
-        unknown = (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
-        # if reboot cause is non-hardware, return NON_HARDWARE
-        return unknown
+        reason = (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
+        my_hw_slot = self._get_my_hw_slot()
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+        if not channel or not stub:
+          return reason
+        response = stub.GetRebootReason(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=my_hw_slot))
+        nokia_common.channel_shutdown(channel)
+        if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+          if response.reboot_reason != 'None':
+            reason = (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, response.reboot_reason)
+        return reason
 
     def _get_my_module(self):
         module = None
