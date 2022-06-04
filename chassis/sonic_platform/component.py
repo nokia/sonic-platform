@@ -137,7 +137,7 @@ class Component(ComponentBase):
             A string containing the component firmware update notification if required.
             By default 'None' value will be used, which indicates that no actions are required
         """
-        return 'None'
+        return 'Slot will be rebooted after installing firmware'
 
     def install_firmware(self, image_path):
         """
@@ -149,7 +149,18 @@ class Component(ComponentBase):
         Returns:
             A boolean, True if install was successful, False if not
         """
-        return False
+        print('install_firmware dev_type:{} name:{}'.format(self.dev_type,self.name))
+        if self.dev_type != platform_ndk_pb2.HW_FIRMWARE_DEVICE_BIOS:
+           print('Firmware install is not supported for {}'.format(self.name))
+           return False
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FIRMWARE_SERVICE)
+        if not channel or not stub:
+            return False
+        ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
+                                platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, image_name = image_path))
+        nokia_common.channel_shutdown(channel)
+        return ret
 
     def update_firmware(self, image_path):
         """
