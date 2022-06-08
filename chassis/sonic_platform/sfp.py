@@ -36,6 +36,7 @@ CTRL_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_CTRL
 EXT_CTRL_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_EXT_CTRL
 UPPER_PAGE_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_UPPER_PAGE
 UPPER_BANK_PAGE_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_UPPER_BANK_AND_PAGE
+DIRECT_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_DIRECT
 
 
 ALL_PAGES_TYPE = 99
@@ -2113,3 +2114,107 @@ class Sfp(SfpBase):
 
         return error_description
         # return NotImplementedError
+
+
+    """
+    SFP refactored api_factory compliance below
+    """
+
+    def read_eeprom(self, offset, num_bytes):
+        """
+        read eeprom specfic bytes beginning from a random offset with size as num_bytes
+
+        Args:
+             offset :
+                     Integer, the offset from which the read transaction will start
+             num_bytes:
+                     Integer, the number of bytes to be read
+
+        Returns:
+            bytearray, if raw sequence of bytes are read correctly from the offset of size num_bytes
+            None, if the read_eeprom fails
+        """
+
+        # just temporarily until module datapath serialized init/deinit work is merged
+        raise NotImplementedError
+
+        # deconstruct page from offset
+        if offset <= 255:
+            page = 0
+            page_offset = offset
+        else:
+            page = (offset//128) - 1
+            page_offset = (offset%128) + 128
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+        if not channel or not stub:
+            logger.log_error("channel or stub is bad!  {}  {}".format(channel, stub))
+            return None
+        ret, response = nokia_common.try_grpc(stub.GetSfpEepromInfo,
+                                              platform_ndk_pb2.ReqSfpEepromPb(hw_port_id=self.index,
+                                                                              etype=DIRECT_TYPE,
+                                                                              offset=page_offset,
+                                                                              num_bytes=num_bytes,
+                                                                              page=page))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            return None
+
+        if response.data is None:
+            return None
+
+        raw = bytearray(response.data)
+
+        logger.log_debug("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
+        return raw
+        # raise NotImplementedError
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        """
+        write eeprom specfic bytes beginning from a random offset with size as num_bytes
+        and write_buffer as the required bytes
+
+        Args:
+             offset :
+                     Integer, the offset from which the read transaction will start
+             num_bytes:
+                     Integer, the number of bytes to be written
+             write_buffer:
+                     bytearray, raw bytes buffer which is to be written beginning at the offset
+
+        Returns:
+            a Boolean, true if the write succeeded and false if it did not succeed.
+        """
+
+        # just temporarily until module datapath serialized init/deinit work is merged
+        raise NotImplementedError
+
+        # deconstruct page from offset
+        if offset <= 255:
+            page = 0
+            page_offset = offset
+        else:
+            page = (offset//128) - 1
+            page_offset = (offset%128) + 128
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
+        if not channel or not stub:
+            return None
+
+        ret, response = nokia_common.try_grpc(stub.WriteSfpEepromDirect,
+                                              platform_ndk_pb2.ReqSfpEepromDirectPb(hw_port_id=self.index,
+                                                                              offset=page_offset,
+                                                                              num_bytes=num_bytes,
+                                                                              page=page,
+                                                                              data=bytes(write_buffer)))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            logger.log_error("Failed write_eeprom for SFP{} with offset {} and num_bytes {}".format(self.index, offset, num_bytes))
+            return False
+
+        status_msg = response.sfp_status
+        logger.log_debug("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(status_msg.status, self.index, offset, num_bytes, page, page_offset))
+        return status_msg.status
+
