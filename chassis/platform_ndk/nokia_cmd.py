@@ -1409,7 +1409,7 @@ def clear_midplane_port_counters():
 
     req_type = platform_ndk_pb2.ethMgrPortCounterRequest.ETH_MGR_CLEAR_COUNTERS
     response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type))
-    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+    if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
        print('Clearing Port counters failed')
 
 def show_qfpga_port_status():
