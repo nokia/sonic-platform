@@ -247,6 +247,9 @@ class Sfp(SfpBase):
                 logger.log_info(
                     "SfpHasBeenTransitioned: invalidating_page_cache for Sfp index{} : status is {}".format(
                         inst.index, status))
+                self.sfpi_obj = None
+                self.sfpd_obj = None
+                self.sfp_type = None
                 inst.invalidate_page_cache(ALL_PAGES_TYPE)
                 inst.dom_capability_established = False
                 return
@@ -477,6 +480,31 @@ class Sfp(SfpBase):
     def _get_eeprom_data(self, eeprom_key):
         eeprom_data = None
 
+        if (self.sfpi_obj is None) or (self.sfp_type is None):
+            self.invalidate_page_cache(ALL_PAGES_TYPE)
+
+            eeprom_data_raw = self._read_eeprom_bytes(INFO_TYPE, 0, 16)
+            if eeprom_data_raw is None:
+                logger.log_info("_read_eeprom_bytes returned None for SFP{}".format(self.index))
+                self.sfp_obj = None
+                self.sfp_type = None
+                return None
+
+            id = int(eeprom_data_raw[0], 16)
+
+            self.invalidate_page_cache(ALL_PAGES_TYPE)
+            if (id == 24):
+                self.sfp_type = QSFPDD_TYPE
+                self.sfpi_obj = qsfp_dd_InterfaceId()
+            elif (id == 17) or (id == 13):
+                self.sfp_type = QSFP_TYPE
+                self.sfpi_obj = sff8436InterfaceId()
+            else:
+                logger.log_error("Unknown module ID {} for SFP{}".format(id, self.index))
+                self.sfp_type = None
+                return None
+            logger.log_info("get_eeprom_data retrieved id {} for SFP{}".format(id, self.index))
+
         if (self.sfp_type == QSFPDD_TYPE):
             struct_type = qsfpdd_parser[eeprom_key][STRUCT_TYPE]
 
@@ -562,34 +590,6 @@ class Sfp(SfpBase):
         # transceiver_info_dict = dict.fromkeys(info_dict_keys, 'N/A')
 
         self.invalidate_page_cache(ALL_PAGES_TYPE)
-
-        # get upper page 0 Administrative data directly
-        # eeprom_raw = self._get_eeprom_data_raw()
-        # id = int(eeprom_raw[0], 16)
-
-        # pull the INFO page into cache so we can dynamically grab the ID
-        eeprom_data_raw = self._read_eeprom_bytes(INFO_TYPE, 0, 128)
-        if eeprom_data_raw is None:
-            logger.log_info("_read_eeprom_bytes returned None for Ethernet{}".format(self.index))
-            self.sfp_type = None
-            return None
-
-        id = int(eeprom_data_raw[0], 16)
-
-        # logger.log_debug("GTI for Ethernet{} id {} raw {}".format(self.index, id, eeprom_data_raw))
-
-        # we should set type correctly ad hoc, immediately after module insertion has been detected.
-        # Do it here for now...
-        if (id == 24):
-            self.sfp_type = QSFPDD_TYPE
-            self.sfpi_obj = qsfp_dd_InterfaceId()
-        elif (id == 17) or (id == 13):
-            self.sfp_type = QSFP_TYPE
-            self.sfpi_obj = sff8436InterfaceId()
-        else:
-            logger.log_error("Unknown module ID {} for Ethernet{}".format(id, self.index))
-            self.sfp_type = None
-            return None
 
         # now parse up the cached page
         iface_data = self._get_eeprom_data('type')
@@ -1698,7 +1698,7 @@ class Sfp(SfpBase):
                     temp = self._convert_string_to_num(dom_temp_data['data']['Temperature']['value'])
 
         elif self.sfp_type == QSFPDD_TYPE:
-            if self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
 
             if self.dom_temp_supported:
@@ -1726,7 +1726,7 @@ class Sfp(SfpBase):
                     voltage = self._convert_string_to_num(dom_voltage_data['data']['Vcc']['value'])
 
         elif self.sfp_type == QSFPDD_TYPE:
-            if self.sfpd_obj is None:
+            if not self.is_dom_supported() or self.sfpd_obj is None:
                 return None
 
             if self.dom_volt_supported:
@@ -1760,7 +1760,7 @@ class Sfp(SfpBase):
                 tx_bias_list.append(self._convert_string_to_num(dom_channel_monitor_data['data']['TX4Bias']['value']))
 
         elif self.sfp_type == QSFPDD_TYPE:
-            if self.sfpd_obj is None or self.flatmem:
+            if not self.is_dom_supported() or self.sfpd_obj is None or self.flatmem:
                 return None
 
             if self.dom_tx_bias_power_supported:
@@ -1807,7 +1807,7 @@ class Sfp(SfpBase):
                     return None
 
         elif self.sfp_type == QSFPDD_TYPE:
-            if self.sfpd_obj is None or self.flatmem:
+            if not self.is_dom_supported() or self.sfpd_obj is None or self.flatmem:
                 return None
 
             if self.dom_rx_power_supported:
@@ -1854,7 +1854,7 @@ class Sfp(SfpBase):
                     return None
 
         elif self.sfp_type == QSFPDD_TYPE:
-            if self.sfpd_obj is None or self.flatmem:
+            if not self.is_dom_supported() or self.sfpd_obj is None or self.flatmem:
                 return None
 
             if self.dom_tx_power_supported:
