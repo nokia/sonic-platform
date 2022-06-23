@@ -8,6 +8,7 @@
 #
 
 try:
+    import time
     from sonic_platform_base.thermal_base import ThermalBase
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
@@ -38,6 +39,7 @@ class Thermal(ThermalBase):
         self.thermal_low_critical_threshold = 0.0
         self.thermal_min_temp = nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD
         self.thermal_max_temp = 0.0
+        self.timestamp = 0
 
     def get_name(self):
         """
@@ -91,6 +93,38 @@ class Thermal(ThermalBase):
         else:
             return True
 
+    def _get_all_temperature_info(self):
+        current_time = time.time()
+        if self.timestamp != 0 and (current_time - self.timestamp) < 10:
+            return
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
+        if not channel or not stub:
+            return
+
+        ret, response = nokia_common.try_grpc(stub.GetThermalAllTempInfo,
+                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            return
+
+        self.timestamp = current_time
+        self.thermal_temperature = float(response.temp_info.curr_temp)
+        if float(response.temp_info.min_temp) == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_min_temp = min(self.thermal_min_temp, self.thermal_temperature)
+        else:
+            self.thermal_min_temp = float(response.temp_info.min_temp)
+            
+        if float(response.temp_info.max_temp) == nokia_common.NOKIA_INVALID_TEMP:
+            self.thermal_max_temp = max(self.thermal_max_temp, self.thermal_temperature)
+        else:
+            self.thermal_max_temp = float(response.temp_info.max_temp)
+            
+        self.thermal_low_threshold = float(response.temp_info.low_threshold)
+        self.thermal_high_threshold = min(float(response.temp_info.high_threshold),
+                                          nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD)
+        
     def get_temperature(self):
         """
         Retrieves current temperature reading from thermal
@@ -99,18 +133,7 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to
             nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
-        if not channel or not stub:
-            return self.thermal_temperature
-        ret, response = nokia_common.try_grpc(stub.GetThermalCurrTemp,
-                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.thermal_temperature
-
-        self.thermal_temperature = float(response.curr_temp)
-
+        self._get_all_temperature_info()
         return float("{:.3f}".format(self.thermal_temperature))
 
     def get_high_threshold(self):
@@ -122,19 +145,7 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
-        if not channel or not stub:
-            return self.thermal_high_threshold
-        ret, response = nokia_common.try_grpc(stub.GetThermalHighThreshold,
-                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.thermal_high_threshold
-
-        self.thermal_high_threshold = min(float(response.high_threshold),
-                                          nokia_common.NOKIA_SONIC_PMON_MAX_TEMP_THRESHOLD)
-
+        self._get_all_temperature_info()
         return float("{:.3f}".format(self.thermal_high_threshold))
 
     def get_low_threshold(self):
@@ -146,17 +157,7 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
-        if not channel or not stub:
-            return self.thermal_low_threshold
-        ret, response = nokia_common.try_grpc(stub.GetThermalLowThreshold,
-                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.thermal_low_threshold
-
-        self.thermal_low_threshold = float(response.low_threshold)
+        self._get_all_temperature_info()
         return float("{:.3f}".format(self.thermal_low_threshold))
 
     def set_high_threshold(self, temperature):
@@ -224,21 +225,7 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
-        if not channel or not stub:
-            return self.thermal_min_temp
-        ret, response = nokia_common.try_grpc(stub.GetThermalMinTemp,
-                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.thermal_min_temp
-
-        if float(response.min_temp) == nokia_common.NOKIA_INVALID_TEMP:
-            self.thermal_min_temp = min(self.thermal_min_temp, self.thermal_temperature)
-        else:
-            self.thermal_min_temp = float(response.min_temp)
-
+        self._get_all_temperature_info()
         return float("{:.3f}".format(self.thermal_min_temp))
 
     def get_maximum_recorded(self):
@@ -250,21 +237,7 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
-        if not channel or not stub:
-            return self.thermal_max_temp
-        ret, response = nokia_common.try_grpc(stub.GetThermalMaxTemp,
-                                              platform_ndk_pb2.ReqTempParamsPb(idx=self.map_index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.thermal_max_temp
-
-        if float(response.max_temp) == nokia_common.NOKIA_INVALID_TEMP:
-            self.thermal_max_temp = max(self.thermal_max_temp, self.thermal_temperature)
-        else:
-            self.thermal_max_temp = float(response.max_temp)
-
+        self._get_all_temperature_info()
         return float("{:.3f}".format(self.thermal_max_temp))
 
     def get_position_in_parent(self):
