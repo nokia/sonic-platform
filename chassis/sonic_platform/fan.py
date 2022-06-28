@@ -8,6 +8,7 @@
 #
 
 try:
+    import time
     from sonic_platform_base.fan_base import FanBase
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
@@ -34,6 +35,53 @@ class Fan(FanBase):
         if not self.is_psu_fan:
             self.fantray_idx = fantray_index
 
+        self.partno = nokia_common.NOKIA_INVALID_STRING
+        self.serialno = nokia_common.NOKIA_INVALID_STRING
+        self.presence = False
+        self.status = False
+        self.direction = Fan.FAN_DIRECTION_EXHAUST
+        self.timestamp = 0
+
+    def _reset_fan_info(self):
+        self.partno = nokia_common.NOKIA_INVALID_STRING
+        self.serialno = nokia_common.NOKIA_INVALID_STRING
+        self.presence = False
+        self.status = False
+        self.direction = Fan.FAN_DIRECTION_EXHAUST
+        self.timestamp = 0
+
+    def _get_fan_info(self):
+        # Return the default value if it is not a CPM
+        if self.is_cpm == 0:
+            return
+
+        current_time = time.time()
+        if self.timestamp != 0 and (current_time - self.timestamp < 10):
+            return
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
+        if not channel or not stub:
+            self._reset_fan_info()
+            return
+
+        req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=self.fantray_idx)
+        ret, response = nokia_common.try_grpc(stub.GetFanTrayInfo,
+                                              platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            self._reset_fan_info()
+            return
+
+        self.timestamp = current_time
+        self.partno = response.fan_info.partno
+        self.serialno = response.fan_info.serialno
+        self.presence = response.fan_info.presence
+        if response.fan_info.status == 'Online':
+            self.status = True
+        else:
+            self.status = False
+
     def get_name(self):
         """
         Retrieves the fan name
@@ -51,22 +99,8 @@ class Fan(FanBase):
         Returns:
             string: Part number of FAN
         """
-        if self.is_cpm == 0:
-            return nokia_common.NOKIA_INVALID_STRING
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
-        if not channel or not stub:
-            return nokia_common.NOKIA_INVALID_STRING
-        req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=self.fantray_idx)
-        ret, response = nokia_common.try_grpc(stub.GetFanTrayPartNo,
-                                              platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return nokia_common.NOKIA_INVALID_STRING
-
-        fantray_partno = response.fan_eeprom.fantray_edata
-        return fantray_partno
+        self._get_fan_info()
+        return self.partno
 
     def get_serial(self):
         """
@@ -74,22 +108,8 @@ class Fan(FanBase):
         Returns:
             string: Serial number of FAN
         """
-        if self.is_cpm == 0:
-            return nokia_common.NOKIA_INVALID_STRING
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
-        if not channel or not stub:
-            return nokia_common.NOKIA_INVALID_STRING
-        req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=self.fantray_idx)
-        ret, response = nokia_common.try_grpc(stub.GetFanTraySerialNo,
-                                              platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return nokia_common.NOKIA_INVALID_STRING
-
-        fantray_serialno = response.fan_eeprom.fantray_edata
-        return fantray_serialno
+        self._get_fan_info()
+        return self.serialno
 
     def get_presence(self):
         """
@@ -97,24 +117,8 @@ class Fan(FanBase):
         Returns:
             bool: True if fan is present, False if not
         """
-        status = False
-        if self.is_cpm == 0:
-            return status
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
-        if not channel or not stub:
-            return status
-        req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=self.fantray_idx)
-        ret, response = nokia_common.try_grpc(stub.GetFanPresence,
-                                              platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return status
-
-        presence_msg = response.fan_presence
-        status = presence_msg.fantray_presence
-        return status
+        self._get_fan_info()
+        return self.presence
 
     def get_status(self):
         """
@@ -122,27 +126,8 @@ class Fan(FanBase):
         Returns:
             bool: True if FAN is operating properly, False if not
         """
-        status = False
-        if self.is_cpm == 0:
-            return status
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
-        if not channel or not stub:
-            return status
-        req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=self.fantray_idx)
-        ret, response = nokia_common.try_grpc(stub.GetFanStatus,
-                                              platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return status
-
-        status_msg = response.fan_status
-        # Empty, Init, SpinUp, Online are possible states
-        if status_msg.fantray_status == 'Online':
-            status = True
-
-        return status
+        self._get_fan_info()
+        return self.status
 
     def get_direction(self):
         """
@@ -151,23 +136,8 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
-        if self.is_cpm == 0:
-            return Fan.FAN_DIRECTION_EXHAUST
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
-        if not channel or not stub:
-            return Fan.FAN_DIRECTION_EXHAUST
-        ret, response = nokia_common.try_grpc(stub.GetFanDirection,
-                                              platform_ndk_pb2.ReqFanTrayOpsPb())
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return Fan.FAN_DIRECTION_EXHAUST
-
-        if response.fan_direction == platform_ndk_pb2.FanDirectionType.FAN_AIRFLOW_BACK_TO_FRONT:
-            return Fan.FAN_DIRECTION_INTAKE
-
-        return Fan.FAN_DIRECTION_EXHAUST
+        self._get_fan_info()
+        return self.direction
 
     def get_speed(self):
         """
