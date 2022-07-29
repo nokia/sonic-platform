@@ -56,7 +56,7 @@ class asic_thermal(object):
         self.config_db[asic_id] = ConfigDBConnector(use_unix_socket_path=True, namespace=namespace)
         self.config_db[asic_id].connect()
 
-        self.poll_interval[asic_id] = 0
+        self.poll_interval[asic_id] = ASIC_SENSOR_DEFAULT_POLL_INTERVAL
      return
 
   def get_platform_and_hwsku(self):
