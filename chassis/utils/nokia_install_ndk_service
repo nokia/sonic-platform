@@ -39,23 +39,23 @@ if [ -e /lib/systemd/system/nokia-asic-thermal.service ]; then
    asicthermal=1
 fi
 
-if [ -e /lib/systemd/system/nokia-xcvr-resync.service ]; then
-   source /host/machine.conf
-   ASIC_CONF="/usr/share/sonic/device/${onie_platform}/asic.conf"
-   if [ -e $ASIC_CONF ]; then
-      source $ASIC_CONF
-      num_asic=0
-      while [ $num_asic -lt $NUM_ASIC ]
-      do
-         sed -i "/^Description=.*/a After=syncd@$num_asic.service" /lib/systemd/system/nokia-xcvr-resync.service
-	 ((num_asic++))
-      done
-   fi
-   systemctl enable nokia-xcvr-resync.service
-   sfpreset=1
-fi
+# if [ -e /lib/systemd/system/nokia-xcvr-resync.service ]; then
+#   source /host/machine.conf
+#   ASIC_CONF="/usr/share/sonic/device/${onie_platform}/asic.conf"
+#   if [ -e $ASIC_CONF ]; then
+#      source $ASIC_CONF
+#      num_asic=0
+#      while [ $num_asic -lt $NUM_ASIC ]
+#      do
+#         sed -i "/^Description=.*/a After=syncd@$num_asic.service" /lib/systemd/system/nokia-xcvr-resync.service
+#	 ((num_asic++))
+#      done
+#   fi
+#   systemctl enable nokia-xcvr-resync.service
+#   sfpreset=1
+# fi
 
-if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]] || [[ $asicthermal -eq 1 ]] || [[$sfpreset -eq 1 ]]; then
+if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]] || [[ $asicthermal -eq 1 ]]; then
     systemctl daemon-reload
 fi
 
@@ -71,12 +71,9 @@ fi
 if [[ $phymgr -eq 1 ]]; then
     systemctl start nokia-phy-mgr.service &
 fi
-if [[ $phymgr -eq 1 ]]; then
-    systemctl start nokia-phy-mgr.service &
-fi
 if [[ $asicthermal -eq 1 ]]; then
     systemctl start nokia-asic-thermal.service &
 fi
-if [[ $sfpreset -eq 1 ]]; then
-    systemctl start nokia-xcvr-resync.service &
-fi
+# if [[ $sfpreset -eq 1 ]]; then
+#    systemctl start nokia-xcvr-resync.service &
+# fi
