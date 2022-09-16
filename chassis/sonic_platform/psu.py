@@ -308,6 +308,36 @@ class Psu(PsuBase):
         self.output_voltage = response.output_voltage
         return round(self.output_voltage, 2)
 
+    def get_input_voltage(self):
+        """
+        Retrieves current PSU voltage input
+
+        Returns:
+            A float number, the input voltage in volts,
+            e.g. 12.1
+        """
+        return 0.0
+
+    def get_input_current(self):
+        """
+        Retrieves present electric current supplied to PSU
+
+        Returns:
+            A float number, electric current in amperes,
+            e.g. 15.4
+        """
+        return 0.0
+
+    def get_input_power(self):
+        """
+        Retrieves current energy supplied to PSU
+
+        Returns:
+            A float number, the power in watts,
+            e.g. 302.6
+        """
+        return 0.0
+
     def get_voltage_high_threshold(self):
         if self.max_voltage != 0.0:
             return self.max_voltage
