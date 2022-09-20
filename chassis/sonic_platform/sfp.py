@@ -15,7 +15,7 @@ try:
     from sonic_py_common.logger import Logger
     from sonic_py_common import device_info
     import time
-    from multiprocessing import Process, Lock
+    from multiprocessing import Process, Lock, RawValue
     import mmap
     import os
     import sys
@@ -75,7 +75,7 @@ class MDIPC_CHAN():
         try:
            self.fd = os.open(self.name, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
            self.mm = mmap.mmap(self.fd, 0)
-           logger.log_error("MDIPC_CHAN: file {} size {} fd {} successfully opened".format(self.name, self.mm.size(), self.fd))
+           logger.log_warning("MDIPC_CHAN: file {} size {} fd {} successfully opened".format(self.name, self.mm.size(), self.fd))
         except os.error:
            logger.log_error("MDIPC_CHAN: file error for {}".format(self.name))
 
@@ -98,9 +98,9 @@ class MDIPC():
     def dump_stats(self):
         pid = os.getpid()
         for chan in MDIPC.channels:
-            logger.log_error("MDIPC ({}) channel {} local: msgs {} success {} fail {} notpresent {} unknown {} minrspwait {} maxrspwait {} timeouts {} already_in_use {}".format(pid, chan.index, chan.stat_num_msgs,
+            logger.log_warning("MDIPC ({}) channel {} local: msgs {} success {} fail {} notpresent {} unknown {} minrspwait {} maxrspwait {} timeouts {} already_in_use {}".format(pid, chan.index, chan.stat_num_msgs,
                 chan.stat_num_success, chan.stat_num_fail, chan.stat_num_notpresent, chan.stat_num_unknown, chan.stat_min_rsp_wait, chan.stat_max_rsp_wait, chan.stat_num_timeouts, chan.stat_already_in_use))
-        logger.log_error("     no_channel_avail {}".format(self.stat_no_channel_avail))
+        logger.log_warning("     no_channel_avail {}".format(self.stat_no_channel_avail))
 
     def obtain_channel(self):
         pid = os.getpid()
@@ -212,15 +212,15 @@ class MDIPC():
         else:
             status = int.from_bytes(msg[32:36],sys.byteorder)
             if (delta_time >=  200000):
-               logger.log_error("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
+               logger.log_warning("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
             
             if (status == MDIPC_RSP_SUCCESS):
                MDIPC.channels[index].stat_num_success += 1
                if (op == MDIPC_READ):
-                   # logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {} ret_data {}".format(op, msgID, hw_port_id, page, offset, num_bytes, bytearray(msg[36:(36+num_bytes)])))
+                   # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {} ret_data {}".format(op, msgID, hw_port_id, page, offset, num_bytes, bytearray(msg[36:(36+num_bytes)])))
                    pass
                else:
-                   # logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
+                   # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                    pass
             elif (status == MDIPC_RSP_FAIL):
                MDIPC.channels[index].stat_num_fail += 1
@@ -230,10 +230,10 @@ class MDIPC():
                MDIPC.channels[index].stat_num_unknown += 1
             if (delta_time < MDIPC.channels[index].stat_min_rsp_wait):
                MDIPC.channels[index].stat_min_rsp_wait = delta_time
-               logger.log_error("**** msg_send ({},{}): msgID {} new minrspwait {}".format(index, pid, msgID, delta_time))
+               logger.log_warning("**** msg_send ({},{}): msgID {} new minrspwait {}".format(index, pid, msgID, delta_time))
             if (delta_time > MDIPC.channels[index].stat_max_rsp_wait):
                MDIPC.channels[index].stat_max_rsp_wait = delta_time
-               logger.log_error("**** msg_send ({},{}): msgID {} new maxrspwait {}".format(index, pid, msgID, delta_time))               
+               logger.log_warning("**** msg_send ({},{}): msgID {} new maxrspwait {}".format(index, pid, msgID, delta_time))
 
         if (op == MDIPC_READ):
              # copy data to prevent continued peering directly into mmap window
@@ -327,15 +327,15 @@ class Sfp(SfpOptoeBase):
         for inst in Sfp.instances:
             if (inst.index == port):
                 inst.page_cache_flush()
-                lastPresence = inst.lastPresence
+                lastPresence = inst.lastPresence.value
                 if (status == '0'):
-                    inst.lastPresence = False
+                    inst.lastPresence.value = False
                 else:
-                    inst.lastPresence = True
+                    inst.lastPresence.value = True
                 logger.log_warning(
-                    "SfpHasBeenTransitioned: invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(inst.index, status, lastPresence, inst.lastPresence))                
+                    "SfpHasBeenTransitioned({}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), inst.index, status, lastPresence, inst.lastPresence.value))
                 return
-        logger.log_warning("SfpHasBeenTransitioned: no match for port index{}".format(port))
+        logger.log_warning("SfpHasBeenTransitioned({}): no match for port index{}".format(os.getpid(), port))
 
     @staticmethod
     def SfpTypeToString(type):
@@ -361,7 +361,7 @@ class Sfp(SfpOptoeBase):
 
         self.index = index
         self._version_info = device_info.get_sonic_version_info()
-        self.lastPresence = None
+        self.lastPresence = RawValue('i', False)
 
         if Sfp.MDIPC_hdl is None:
             Sfp.MDIPC_hdl = MDIPC()
@@ -386,6 +386,7 @@ class Sfp(SfpOptoeBase):
         self.name = self.SfpTypeToString(sfp_type) + '_' + str(index)
         logger.log_debug("Sfp __init__ index {} setting name to {}".format(index, self.name))
         Sfp.instances.append(self)
+        self.get_presence(True)
 
 
     def get_cached_page(self, page):
@@ -569,16 +570,16 @@ class Sfp(SfpOptoeBase):
         status_msg = response.sfp_status
         return status_msg.status
 
-    def get_presence(self):
+    def get_presence(self, first_time=False):
         """
         Retrieves the presence of the sfp
         """
 
-        if (self.lastPresence is not None):
+        if (first_time != True):
             # wait for SFP event subsystem notification of status change after initial get
-            return self.lastPresence
+            return self.lastPresence.value
         else:
-            logger.log_warning("getting MDIPC presence for SFP{}".format(self.index))
+            logger.log_warning("({}) getting MDIPC presence for SFP{}".format(os.getpid(), self.index))
         
         """
         # NDK presence
@@ -607,14 +608,15 @@ class Sfp(SfpOptoeBase):
         """
 
         status, data = Sfp.MDIPC_hdl.msg_send(MDIPC_PRESENCE, self.index, 0, 0, 0)
+        lastPresence = self.lastPresence.value
 
-        if (self.lastPresence != status):
-            logger.log_warning("get_presence status changed for SFP{} from {} to {}".format(self.index, self.lastPresence, status))
-            self.lastPresence = status
+        if (lastPresence != status):
+            logger.log_warning("({}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), self.index, lastPresence, status))
+            self.lastPresence.value = status
             
             self.page_cache_flush()
-            if (self.lastPresence):
-                logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, self.lastPresence))
+            if (status):
+                logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, status))
                 self.cache_page0.cache_page()
 
         if (status):
@@ -627,18 +629,18 @@ class Sfp(SfpOptoeBase):
     """
 
     def get_transceiver_info(self):
-        # logger.log_error("get_transceiver_info INVOKED for SFP{}!".format(self.index))
+        # logger.log_debug("get_transceiver_info INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_override_disable = True
         transceiver_info_dict = super().get_transceiver_info()
         self.cache_override_disable = False
-        # logger.log_error("get_transceiver_info DONE for SFP{}".format(self.index))
+        # logger.log_debug("get_transceiver_info DONE for SFP{}".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_info_dict))
         return transceiver_info_dict
 
     def get_transceiver_bulk_status(self):
-        # logger.log_error("get_transceiver_bulk_status INVOKED for SFP{}!".format(self.index))
+        # logger.log_debug("get_transceiver_bulk_status INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_page2.cache_page()
@@ -646,12 +648,12 @@ class Sfp(SfpOptoeBase):
         self.cache_override_disable = True
         transceiver_bulk_dict = super().get_transceiver_bulk_status()
         self.cache_override_disable = False
-        # logger.log_error("get_transceiver_bulk_status DONE for SFP{}".format(self.index))
+        # logger.log_debug("get_transceiver_bulk_status DONE for SFP{}".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_bulk_dict))
         return transceiver_bulk_dict
 
     def get_transceiver_threshold_info(self):
-        # logger.log_error("get_transceiver_threshold_info INVOKED for SFP{}!".format(self.index))
+        # logger.log_debug("get_transceiver_threshold_info INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_page2.cache_page()
@@ -659,7 +661,7 @@ class Sfp(SfpOptoeBase):
         transceiver_threshold_dict = super().get_transceiver_threshold_info()
         self.page_cache_flush()
         self.cache_override_disable = False
-        # logger.log_error("get_transceiver_threshold_info DONE for SFP{}".format(self.index))
+        # logger.log_debug("get_transceiver_threshold_info DONE for SFP{}".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_threshold_dict))
         return transceiver_threshold_dict
 
@@ -675,7 +677,7 @@ class Sfp(SfpOptoeBase):
            self.cache_page16.cache_page()
            hit = True
         if (hit is True):
-           # logger.log_error("   SFP{} smart_cache cached page {} due to offset {}".format(self.index, page, offset))
+           # logger.log_debug("   SFP{} smart_cache cached page {} due to offset {}".format(self.index, page, offset))
            pass
 
     def override_cache(self, page, offset):
@@ -736,7 +738,7 @@ class Sfp(SfpOptoeBase):
             # raw = bytearray(response.data)
             raw = data
 
-            # logger.log_error("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
+            # logger.log_debug("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
             # logger.log_debug("        raw bytes {}".format(raw))
         else:
             if (page == 0):
@@ -753,11 +755,10 @@ class Sfp(SfpOptoeBase):
 
             raw = bytes(cached_page[cache_offset:(cache_offset + num_bytes)])
             
-            # logger.log_error("read_eeprom cache hit for SFP{} with offset {} and num_bytes {} : computed page {} offset {} cache_offset {} cached_page.len {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, cache_offset, len(cached_page), len(raw)))
+            # logger.log_debug("read_eeprom cache hit for SFP{} with offset {} and num_bytes {} : computed page {} offset {} cache_offset {} cached_page.len {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, cache_offset, len(cached_page), len(raw)))
             # logger.log_debug("        raw bytes {}".format(raw))
 
         return bytearray(raw)
-        # raise NotImplementedError
 
     def write_eeprom(self, offset, num_bytes, write_buffer):
         """
@@ -791,5 +792,5 @@ class Sfp(SfpOptoeBase):
             return False
 
         self.page_cache_flush(page)
-        # logger.log_error("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+        # logger.log_debug("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
         return True
