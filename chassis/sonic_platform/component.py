@@ -14,6 +14,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+NOKIA_MAX_SFM_NO = 8
 
 class Component(ComponentBase):
     """Nokia Platform-specific Component class"""
@@ -137,7 +138,12 @@ class Component(ComponentBase):
             A string containing the component firmware update notification if required.
             By default 'None' value will be used, which indicates that no actions are required
         """
-        return 'Slot will be rebooted after installing firmware'
+        if self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_BIOS:
+           return 'Slot will be rebooted after installing firmware'
+        elif self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_FPGA3:
+           return 'Firmware will be installed in all SFMs and could take few minutes. Please reboot after FW install'
+
+        return "Please reboot after FW install"
 
     def install_firmware(self, image_path):
         """
@@ -149,16 +155,29 @@ class Component(ComponentBase):
         Returns:
             A boolean, True if install was successful, False if not
         """
-        print('install_firmware dev_type:{} name:{}'.format(self.dev_type,self.name))
-        if self.dev_type != platform_ndk_pb2.HW_FIRMWARE_DEVICE_BIOS:
-           print('Firmware install is not supported for {}'.format(self.name))
-           return False
+        if ((self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_FPGA2) or
+           ((self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_FPGA3) and
+               (nokia_common.is_cpm() == False))):
+              print('Firmware install is not supported for {}'.format(self.name))
+              return False
+
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FIRMWARE_SERVICE)
         if not channel or not stub:
             return False
-        ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
+        if self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_FPGA3:
+           for sfm_num in range(1, NOKIA_MAX_SFM_NO+1):
+              ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
+                                platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, sfm_no=sfm_num, image_name = image_path))
+              if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+                 print(response.response_status.error_msg)
+        else:
+          ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
                                 platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, image_name = image_path))
+          if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+             print(response.response_status.error_msg)
+             return
+        print('Firmware install for {} with image {} is completed'.format(self.name,image_path))
         nokia_common.channel_shutdown(channel)
         return ret
 
