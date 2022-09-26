@@ -117,7 +117,7 @@ class MDIPC():
                    break
                 else:
                    msgID = int.from_bytes(chan.mm[4:8],sys.byteorder) 
-                   logger.log_error("obtain_channel({}): got free channel {} with ownerID {} and chan.in_use {}!  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, own, msgID))
+                   logger.log_warning("obtain_channel({}): got free channel {} with ownerID {} and chan.in_use {}  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, hex(own), msgID))
                    if (ownerID == pid):         # another thread already has it
                       chan.stat_already_in_use += 1
                       if (chan.in_use == False):
@@ -127,7 +127,7 @@ class MDIPC():
                          #
                          # keep looking for an available channel for this thread
                       else:
-                         logger.log_error("obtain_channel({}): got free channel {} with matching pid {} already in use {}!  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, own, msgID))
+                         logger.log_error("obtain_channel({}): got free channel {} with matching pid {} already in use {}!  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, hex(own), msgID))
             else:
                 msgID = int.from_bytes(chan.mm[4:8],sys.byteorder)
                 logger.log_debug("obtain_channel({}) {} unavailable : own {} ownerID {} msgID {}".format(pid, chan.index, hex(own), int.from_bytes(chan.mm[8:12],sys.byteorder), msgID))
