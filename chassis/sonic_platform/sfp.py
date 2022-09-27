@@ -577,36 +577,10 @@ class Sfp(SfpOptoeBase):
 
         if (first_time != True):
             # wait for SFP event subsystem notification of status change after initial get
-            return self.lastPresence.value
+            return bool(self.lastPresence.value)
         else:
             logger.log_warning("({}) getting MDIPC presence for SFP{}".format(os.getpid(), self.index))
         
-        """
-        # NDK presence
-        op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_REQ_PRESENCE
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
-        if not channel or not stub:
-            return False
-        ret, response = nokia_common.try_grpc(stub.GetSfpPresence,
-                                              platform_ndk_pb2.ReqSfpOpsPb(type=op_type, hw_port_id_begin=self.index))
-        nokia_common.channel_shutdown(channel)
-        
-        # logger.log_warning("get_presence status for SFP{} is {}".format(self.index, response.sfp_status.status))
-
-        if ret is False:
-            return False
-        status = response.sfp_status.status
-        
-        if (self.lastPresence != status_msg):
-            logger.log_info("get_presence status changed for SFP {} to {}".format(self.index, status_msg))
-            self.lastPresence = status_msg
-            # really only need to do this on transition to present, but since it's not an expensive operation...
-            self.invalidate_page_cache(ALL_PAGES_TYPE)
-
-        return status_msg.status
-        """
-
         status, data = Sfp.MDIPC_hdl.msg_send(MDIPC_PRESENCE, self.index, 0, 0, 0)
         lastPresence = self.lastPresence.value
 
