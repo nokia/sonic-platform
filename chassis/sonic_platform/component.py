@@ -176,10 +176,10 @@ class Component(ComponentBase):
                                 platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, image_name = image_path))
           if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
              print(response.response_status.error_msg)
-             return
+             return False
         print('Firmware install for {} with image {} is completed'.format(self.name,image_path))
         nokia_common.channel_shutdown(channel)
-        return ret
+        return True
 
     def update_firmware(self, image_path):
         """
