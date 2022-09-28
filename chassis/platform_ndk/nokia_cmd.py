@@ -1126,7 +1126,7 @@ def set_asic_temp(name, temp, threshold):
 
 def show_asic_temperature():
     if nokia_common.is_cpm() == 1:
-      print('Command is not supported CPM card')
+      print('Command is not supported in Supervisor card')
       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
@@ -1175,7 +1175,8 @@ def show_asic_temperature():
 def show_midplane_port_counters(port):
     global format_type
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1211,7 +1212,8 @@ def show_midplane_port_counters(port):
 def show_midplane_port_status(port):
     global format_type
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1264,7 +1266,8 @@ def show_midplane_port_status(port):
 def show_midplane_vlan_table(vlan):
     global format_type
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1322,7 +1325,8 @@ def show_midplane_vlan_table(vlan):
 def show_midplane_mac_table(port):
     global format_type
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1363,7 +1367,8 @@ def show_midplane_mac_table(port):
 def show_midplane_link_status_table():
     global format_type
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1401,7 +1406,8 @@ def show_midplane_link_status_table():
 
 def clear_midplane_port_counters():
     if nokia_common.is_cpm() == 0:
-       print('Command is supported only in CPM card')
+       print('Command is supported only in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_MIDPLANE_SERVICE)
     if not channel or not stub:
@@ -1415,7 +1421,8 @@ def clear_midplane_port_counters():
 def show_qfpga_port_status():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1470,7 +1477,8 @@ def show_qfpga_port_status():
 def show_qfpga_port_statistics(port):
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1544,7 +1552,8 @@ def show_qfpga_port_statistics(port):
 def show_qfpga_error_counters():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1626,7 +1635,8 @@ def show_qfpga_error_counters():
 def show_qfpga_vlan_counters():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1696,7 +1706,8 @@ def show_qfpga_vlan_counters():
 def show_qfpga_epipe_config():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1754,7 +1765,8 @@ def show_qfpga_epipe_config():
 def show_qfpga_version():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
@@ -1779,7 +1791,8 @@ def show_qfpga_version():
 def clear_qfpga_stats():
     global format_type
     if nokia_common.is_cpm() == 1:
-       print('Command is not supported in CPM card')
+       print('Command is not supported in Supervisor card')
+       return
 
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_QFPGA_SERVICE)
     if not channel or not stub:
