@@ -19,6 +19,7 @@ try:
     import mmap
     import os
     import sys
+    import inspect
 
 
 except ImportError as e:
@@ -76,6 +77,7 @@ class MDIPC_CHAN():
            self.fd = os.open(self.name, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
            self.mm = mmap.mmap(self.fd, 0)
            logger.log_warning("MDIPC_CHAN: file {} size {} fd {} successfully opened".format(self.name, self.mm.size(), self.fd))
+
         except os.error:
            logger.log_error("MDIPC_CHAN: file error for {}".format(self.name))
 
@@ -90,9 +92,19 @@ class MDIPC():
         for x in range(0, MDIPC_NUM_CHANNELS):
             chan = MDIPC_CHAN(x)
             MDIPC.channels.append(chan)
+
         MDIPC.initialized = True
         self.stat_no_channel_avail = 0
         self.mutex = Lock()
+        caller = inspect.stack(0)
+        if 'post_port_sfp_info_to_db' in str(caller):
+            self.mutex.acquire()
+            for chan in MDIPC.channels:
+                ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
+                if (ownerID != 0):
+                    chan.mm[8:12] = b'\x00\x00\x00\x00'
+                    logger.log_warning("   initialized/flushed MDIPC channel {} : stale ownerID was {}".format(chan.index, ownerID))
+            self.mutex.release()
         logger.log_warning("MDIPC ({}): {} channels initialized".format(pid, MDIPC_NUM_CHANNELS))        
     
     def dump_stats(self):
