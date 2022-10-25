@@ -165,19 +165,22 @@ class Component(ComponentBase):
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FIRMWARE_SERVICE)
         if not channel or not stub:
             return False
+        install_fail = True
         if self.dev_type == platform_ndk_pb2.HW_FIRMWARE_DEVICE_FPGA3:
            for sfm_num in range(1, NOKIA_MAX_SFM_NO+1):
               ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
                                 platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, sfm_no=sfm_num, image_name = image_path))
               if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
                  print(response.response_status.error_msg)
+                 install_fail  = False
         else:
           ret, response = nokia_common.try_grpc(stub.HwFirmwareUpdate,
                                 platform_ndk_pb2.ReqHwFirmwareInfoPb(dev_type=self.dev_type, image_name = image_path))
           if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
              print(response.response_status.error_msg)
              return False
-        print('Firmware install for {} with image {} is completed'.format(self.name,image_path))
+        if install_fail == True:
+           print('Firmware install for {} with image {} is completed'.format(self.name,image_path))
         nokia_common.channel_shutdown(channel)
         return True
 
