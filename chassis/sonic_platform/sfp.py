@@ -24,7 +24,7 @@ try:
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
-logger = Logger("sfp")
+logger = Logger()
 
 READ_TYPE = 0
 KEY_OFFSET = 1
