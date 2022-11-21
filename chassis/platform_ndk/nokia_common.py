@@ -373,3 +373,17 @@ def _power_onoff_SFM(hw_slot, powerOn):
 
     channel_shutdown(channel)
     return True
+
+def _get_sfm_eeprom_info_list():
+    """
+    Get all sfm eeprom info into a list.
+    """
+    channel, stub = channel_setup(NOKIA_GRPC_UTIL_SERVICE)
+    if not channel or not stub:
+        return
+
+    req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_EEPROM
+    response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
+    channel_shutdown(channel)
+    return response.sfm_eeprom.eeprom_info
+

@@ -94,6 +94,10 @@ class Chassis(ChassisBase):
 
         # system eeprom
         self._eeprom = None
+        
+        # sfm eeprom
+        self.sfm_eeprom_initialized = False
+        self._sfm_eeprom_list = []
 
     def init_all(self):
         self._get_module_list()
@@ -191,6 +195,18 @@ class Chassis(ChassisBase):
 
         return self.cpm_instance
 
+    def _get_module_sfm_eeprom(self, sfm_num):
+        if self.sfm_eeprom_initialized == False:
+            self._sfm_eeprom_list = nokia_common._get_sfm_eeprom_info_list()
+            self.sfm_eeprom_initialized = True
+        i = 0
+        while i < len(self._sfm_eeprom_list):
+            eeprom_info = self._sfm_eeprom_list[i]
+            if eeprom_info.sfm_num == sfm_num:
+                return eeprom_info
+            i += 1
+        return None
+
     def get_supervisor_slot(self):
         # external slot name
         hw_slot = self._get_supervisor_hw_slot()
@@ -228,14 +244,14 @@ class Chassis(ChassisBase):
             supervisor = Module(index,
                                 ModuleBase.MODULE_TYPE_SUPERVISOR+str(index),
                                 ModuleBase.MODULE_TYPE_SUPERVISOR,
-                                self._get_supervisor_hw_slot(), self.chassis_stub)
+                                self._get_supervisor_hw_slot(), self.chassis_stub, None)
             supervisor.set_maximum_consumed_power(self.supervisor_power)
 
             index = 1
             module = Module(index,
                             ModuleBase.MODULE_TYPE_LINE+str(self._get_my_hw_slot()-1),
                             ModuleBase.MODULE_TYPE_LINE,
-                            self._get_my_hw_slot(), self.chassis_stub)
+                            self._get_my_hw_slot(), self.chassis_stub, None)
             module.set_maximum_consumed_power(self.line_card_power)
 
             self._module_list.append(supervisor)
@@ -267,7 +283,7 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_SUPERVISOR+str(j),
                                         ModuleBase.MODULE_TYPE_SUPERVISOR,
                                         self._get_supervisor_hw_slot(),
-                                        self.chassis_stub)
+                                        self.chassis_stub, None)
                         module.set_maximum_consumed_power(self.supervisor_power)
                         self._module_list.append(module)
 
@@ -277,7 +293,7 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_LINE+str(j),
                                         ModuleBase.MODULE_TYPE_LINE,
                                         hw_property.slot[j],
-                                        self.chassis_stub)
+                                        self.chassis_stub, None)
                         module.set_maximum_consumed_power(self.line_card_power)
                         self._module_list.append(module)
 
@@ -287,7 +303,8 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_FABRIC+str(j),
                                         ModuleBase.MODULE_TYPE_FABRIC,
                                         hw_property.slot[j],
-                                        self.chassis_stub)
+                                        self.chassis_stub, 
+                                        self._get_module_sfm_eeprom(j+1))
                         module.set_maximum_consumed_power(self.fabric_card_power)
                         self._module_list.append(module)
 

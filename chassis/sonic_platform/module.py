@@ -30,7 +30,7 @@ DESCRIPTION_MAPPING = {
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
 
-    def __init__(self, module_index, module_name, module_type, module_slot, stub):
+    def __init__(self, module_index, module_name, module_type, module_slot, stub, module_eeprom=None):
         super(Module, self).__init__()
         self.module_index = module_index
         self.module_name = module_name
@@ -41,9 +41,28 @@ class Module(ModuleBase):
         self.midplane_status = nokia_common.NOKIA_INVALID_IP
         self.max_consumed_power = 0.0
         self.eeprom = None
+        self.module_eeprom = None
         if nokia_common._get_my_slot() == module_slot:
+            # my own slot
             self.eeprom = Eeprom()
+        elif module_type == ModuleBase.MODULE_TYPE_FABRIC:
+            self.module_eeprom = module_eeprom
 
+    def _format_module_eeprom_info(self):
+        """
+        Format the module eeprom (such as SFM) for the  get_eeprom_info API
+        """
+        if self.module_eeprom is not None:
+            eeprom_tlv_dict = dict()
+            eeprom_tlv_dict["0x21"] = str(self.module_eeprom.name)
+            eeprom_tlv_dict["0x22"] = str(self.module_eeprom.eeprom_part)
+            eeprom_tlv_dict["0x23"] = str(self.module_eeprom.eeprom_serial)
+            eeprom_tlv_dict["0x25"] = str(self.module_eeprom.eeprom_date)
+            eeprom_tlv_dict["0x27"] = str(self.module_eeprom.eeprom_assembly_num)
+            eeprom_tlv_dict["0x2D"] = "Nokia"
+            return eeprom_tlv_dict
+        return None
+        
     def get_name(self):
         """
         Retrieves the name of the device
@@ -278,11 +297,15 @@ class Module(ModuleBase):
     def get_model(self):
         if self.eeprom is not None:
             return self.eeprom.get_part_number()
+        elif self.module_eeprom is not None:
+            return self.module_eeprom.eeprom_part
         return None
 
     def get_serial(self):
         if self.eeprom is not None:
             return self.eeprom.get_serial_number()
+        elif self.module_eeprom is not None:
+            return self.module_eeprom.eeprom_serial
         return None
 
     def get_base_mac(self):
@@ -293,6 +316,8 @@ class Module(ModuleBase):
     def get_system_eeprom_info(self):
         if self.eeprom is not None:
             return self.eeprom.get_system_eeprom_info()
+        elif self.module_eeprom is not None:
+            return self._format_module_eeprom_info()
         return None
 
     def get_all_asics(self):
