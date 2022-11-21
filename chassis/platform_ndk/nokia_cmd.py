@@ -135,6 +135,8 @@ def show_led():
     port_idx = platform_ndk_pb2.ReqLedIndexPb(start_idx=port_start,
                                               end_idx=port_end)
     response = stub.ShowLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type, led_idx=port_idx))
+    nokia_common.channel_shutdown(channel)
+
     if len(response.led_show.show_info) == 0:
         print('Port/LED Output not available on this card')
         return
@@ -169,6 +171,7 @@ def show_psu():
 
     arg1 = platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0)
     ret, response = nokia_common.try_grpc(stub.ShowPsuInfo, arg1)
+    nokia_common.channel_shutdown(channel)
 
     if ret is False:
         print('PSU request unsuccessful on this card')
@@ -215,6 +218,7 @@ def show_psu_detail():
 
     response = stub.ShowPsuInfo(platform_ndk_pb2.ReqPsuInfoPb(psu_idx=0))
     if len(response.psu_info.psu_device) == 0:
+        nokia_common.channel_shutdown(channel)
         print('PSU Output not available on this card')
         return
 
@@ -243,6 +247,8 @@ def show_psu_detail():
             item_list.append(item)
         i += 1
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
@@ -264,6 +270,9 @@ def show_fan():
 
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=0)
     response = stub.ShowFanInfo(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx))
+
+    nokia_common.channel_shutdown(channel)
+
     if len(response.fan_show.fan_device) == 0:
         print('Fan output not available on this card')
         return
@@ -310,6 +319,7 @@ def show_fan_detail():
     num_fans = fan_msg.num_fantrays
 
     if num_fans == 0:
+        nokia_common.channel_shutdown(channel)
         print('Fan detail output not available on this card')
         return
 
@@ -374,6 +384,8 @@ def show_fan_detail():
         item.append(color)
         item_list.append(item)
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
         json_list = []
         for item in item_list:
@@ -394,6 +406,8 @@ def show_temp():
 
     response = stub.ShowThermalInfo(platform_ndk_pb2.ReqTempParamsPb())
 
+    nokia_common.channel_shutdown(channel)
+    
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
@@ -454,6 +468,7 @@ def show_platform():
     response = stub.GetChassisStatus(platform_ndk_pb2.ReqModuleInfoPb())
 
     if format_type == 'json-format':
+        nokia_common.channel_shutdown(channel)
         json_response = MessageToJson(response)
         print(json_response)
         return
@@ -477,6 +492,8 @@ def show_platform():
         item_list.append(item)
         i += 1
 
+    nokia_common.channel_shutdown(channel)
+
     print('PLATFORM INFO TABLE')
     print_table(field, item_list)
     return
@@ -488,6 +505,8 @@ def show_firmware():
         return
 
     response = stub.HwFirmwareGetComponents(platform_ndk_pb2.ReqHwFirmwareInfoPb())
+
+    nokia_common.channel_shutdown(channel)
 
     if len(response.firmware_info.component) == 0:
         print('Firmware Info not available on this card')
@@ -526,6 +545,8 @@ def show_sfm_summary():
 
     req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_SUMMARY
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
+
+    nokia_common.channel_shutdown(channel)
 
     if len(response.sfm_summary.sfm_info) == 0:
         print('SFM summary not available on this card')
@@ -575,6 +596,8 @@ def show_sfm_eeprom():
 
     req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_EEPROM
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
+
+    nokia_common.channel_shutdown(channel)
 
     if len(response.sfm_eeprom.eeprom_info) == 0:
         print('SFM Eeprom not available')
@@ -629,6 +652,8 @@ def show_sfm_imm_links(imm_slot):
     req_etype = platform_ndk_pb2.ReqSfmOpsType.SFM_OPS_SHOW_IMMLINKS
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype, imm_slot=imm_slot))
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
@@ -677,6 +702,9 @@ def show_system_led():
 
     led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_ALL
     response = stub.ShowLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type))
+
+    nokia_common.channel_shutdown(channel)
+
     if len(response.led_show.show_info) == 0:
         print('LED Output not available on this card')
         return
@@ -736,6 +764,9 @@ def show_chassis():
         return
 
     response = stub.GetChassisProperties(platform_ndk_pb2.ReqModuleInfoPb())
+
+    nokia_common.channel_shutdown(channel)
+
     if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_INVALID_REQ:
         print('{}'.format(response.response_status.error_msg))
         return
@@ -777,6 +808,8 @@ def show_power():
 
     response = stub.GetModuleMaxPower(platform_ndk_pb2.ReqModuleInfoPb())
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
@@ -807,6 +840,8 @@ def show_midplane_status(hw_slot):
 
     response = stub.IsMidplaneReachable(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot))
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
         json_response = MessageToJson(response)
         print(json_response)
@@ -822,6 +857,8 @@ def show_logging():
         return
 
     response = stub.ShowLogAll(platform_ndk_pb2.ReqLogSettingPb())
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
         json_response = MessageToJson(response)
@@ -874,6 +911,9 @@ def show_ndk_eeprom():
     print_table(field, item_list)
 
     response = stub.GetChassisEeprom(platform_ndk_pb2.ReqEepromInfoPb())
+
+    nokia_common.channel_shutdown(channel)
+
     if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_INVALID_REQ:
         print('{}'.format(response.response_status.error_msg))
         return
@@ -984,6 +1024,8 @@ def show_fabric_pcieinfo(hw_slot):
 
     response = stub.GetFabricPcieInfo(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot))
 
+    nokia_common.channel_shutdown(channel)
+
     if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_RESOURCE_NOT_FOUND:
         print('{}'.format(response.response_status.error_msg))
         return
@@ -1017,7 +1059,7 @@ def request_devmgr_admintech(filepath):
         return
 
     stub.ReqAdminTech(platform_ndk_pb2.ReqAdminTechPb(admintech_path=filepath))
-
+    nokia_common.channel_shutdown(channel)
 
 def request_ndk_admintech():
     process = subprocess.call(['/usr/local/bin/nokia_ndk_techsupport'])
@@ -1029,7 +1071,7 @@ def set_temp_offset(offset):
         return
 
     stub.SetThermalOffset(platform_ndk_pb2.ReqTempParamsPb(temp_offset=offset))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_fan_algo_disable(disable):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
@@ -1039,7 +1081,7 @@ def set_fan_algo_disable(disable):
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     req_fan_algo = platform_ndk_pb2.SetFanTrayAlgorithmPb(fantray_algo_disable=disable)
     stub.DisableFanAlgorithm(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx, fan_algo=req_fan_algo))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_fan_speed(speed):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
@@ -1049,7 +1091,7 @@ def set_fan_speed(speed):
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=1)
     stub.SetFanTargetSpeed(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx,
                                                             fantray_speed=speed))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_fantray_led(index, color):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_FAN_SERVICE)
@@ -1059,7 +1101,7 @@ def set_fantray_led(index, color):
     req_idx = platform_ndk_pb2.ReqFanTrayIndexPb(fantray_idx=index)
     _led_info = nokia_common.led_color_to_info(color)
     stub.SetFanLedStatus(platform_ndk_pb2.ReqFanTrayOpsPb(idx=req_idx, led_info=_led_info))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_led(type_str, color):
     if type_str == 'port':
@@ -1086,7 +1128,7 @@ def set_led(type_str, color):
 
     _led_info = nokia_common.led_color_to_info(color)
     stub.SetLed(platform_ndk_pb2.ReqLedInfoPb(led_type=led_type, led_info=_led_info))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_log_level_module(level, module):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
@@ -1101,7 +1143,7 @@ def set_log_level_module(level, module):
         _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_SET_MODULE
         _log_info = platform_ndk_pb2.ReqLogInfoPb(level_current=level, module=module)
         stub.ReqLogSetModule(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type, log_info=_log_info))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_log_restore_default():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
@@ -1110,7 +1152,7 @@ def set_log_restore_default():
 
     _log_type = platform_ndk_pb2.ReqLogType.REQ_LOG_RESET_ALL
     stub.ReqLogResetAll(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type))
-
+    nokia_common.channel_shutdown(channel)
 
 def set_asic_temp(name, temp, threshold):
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_THERMAL_SERVICE)
@@ -1123,6 +1165,7 @@ def set_asic_temp(name, temp, threshold):
     asic_devices.append(asic_temp_entry)
     asic_temp_all = platform_ndk_pb2.AsicTempPb(temp_device=asic_devices)
     stub.SetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb(asic_temp=asic_temp_all))
+    nokia_common.channel_shutdown(channel)
 
 def show_asic_temperature():
     if nokia_common.is_cpm() == 1:
@@ -1134,6 +1177,8 @@ def show_asic_temperature():
        return
 
     response = stub.GetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb())
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1185,6 +1230,8 @@ def show_midplane_port_counters(port):
     req_type = platform_ndk_pb2.ethMgrPortCounterRequest.ETH_MGR_GET_COUNTERS
     response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type, _port_name=port))
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1220,6 +1267,8 @@ def show_midplane_port_status(port):
         return
 
     response = stub.ReqMidplanePortStatus(platform_ndk_pb2.ReqMidplanePortStatusInfoPb(_port_name=port))
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1279,6 +1328,8 @@ def show_midplane_vlan_table(vlan):
        vlan_id = int(vlan)
 
     response = stub.ReqMidplaneVlanTable(platform_ndk_pb2.ReqMidplaneVlanTablePb(_vlan_id=vlan_id))
+    
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1334,6 +1385,8 @@ def show_midplane_mac_table(port):
 
     response = stub.ReqMidplaneMacTable(platform_ndk_pb2.ReqMidplaneMacTablePb(_port_name=port))
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1376,6 +1429,8 @@ def show_midplane_link_status_table():
 
     response = stub.ReqMidplaneLinkStatusTracker(platform_ndk_pb2.ReqMidplanePortStatusInfoPb())
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1415,6 +1470,9 @@ def clear_midplane_port_counters():
 
     req_type = platform_ndk_pb2.ethMgrPortCounterRequest.ETH_MGR_CLEAR_COUNTERS
     response = stub.ReqMidplanePortCounters(platform_ndk_pb2.ReqMidplanePortCountersInfoPb(_req_type=req_type))
+
+    nokia_common.channel_shutdown(channel)
+
     if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
        print('Clearing Port counters failed')
 
@@ -1429,6 +1487,8 @@ def show_qfpga_port_status():
         return
 
     response = stub.ReqQfpgaPortSummary(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1490,6 +1550,8 @@ def show_qfpga_port_statistics(port):
        return
 
     response = stub.ReqQfpgaPortStatsSummary(platform_ndk_pb2.ReqQfpgaInfoPb(_port = port_name))
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1560,6 +1622,8 @@ def show_qfpga_error_counters():
         return
 
     response = stub.ReqQfpgaErrorCounters(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    nokia_common.channel_shutdown(channel)
 
     if format_type == 'json-format':
       json_response = MessageToJson(response)
@@ -1644,6 +1708,8 @@ def show_qfpga_vlan_counters():
 
     response = stub.ReqQfpgaVlanCounters(platform_ndk_pb2.ReqQfpgaInfoPb())
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1715,6 +1781,8 @@ def show_qfpga_epipe_config():
 
     response = stub.ReqQfpgaEpipeConfig(platform_ndk_pb2.ReqQfpgaInfoPb())
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1774,6 +1842,8 @@ def show_qfpga_version():
 
     response = stub.ReqQfpgaVersion(platform_ndk_pb2.ReqQfpgaInfoPb())
 
+    nokia_common.channel_shutdown(channel)
+
     if format_type == 'json-format':
       json_response = MessageToJson(response)
       print(json_response)
@@ -1799,6 +1869,9 @@ def clear_qfpga_stats():
        return
 
     response = stub.ReqQfpgaClearStats(platform_ndk_pb2.ReqQfpgaInfoPb())
+
+    nokia_common.channel_shutdown(channel)
+
     if response._response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
        print('Clearing Qfpga Stats failed')
     return
@@ -2085,6 +2158,9 @@ def main():
             format_type = d['json-format']
             show_psu()
             show_psu_detail()
+        elif args.showcmd == 'fp-status':
+            format_type = d['json-format']
+            show_led()
         elif args.showcmd == 'sensors':
             format_type = d['json-format']
             show_temp()
