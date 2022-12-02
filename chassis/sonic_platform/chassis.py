@@ -676,8 +676,8 @@ class Chassis(ChassisBase):
             self.sfp_event_initialized = True
 
         # timeout = 0
-        if timeout < 2000:
-            timeout = 2000
+        if timeout < 1000:
+            timeout = 1000
         port_dict = {}
         self.sfp_event_list.check_sfp_status(port_dict, timeout)
         return True, {'sfp': port_dict}

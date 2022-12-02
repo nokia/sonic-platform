@@ -15,7 +15,7 @@ try:
     from sonic_py_common.logger import Logger
     from sonic_py_common import device_info
     import time
-    from multiprocessing import Process, Lock, RawValue
+    from multiprocessing import Process, Lock, RawValue, RawArray
     import mmap
     import os
     import sys
@@ -226,11 +226,13 @@ class MDIPC():
             if (delta_time >=  200000):
                logger.log_warning("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
             
+            ret_data = None
             if (status == MDIPC_RSP_SUCCESS):
                MDIPC.channels[index].stat_num_success += 1
                if (op == MDIPC_READ):
                    # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {} ret_data {}".format(op, msgID, hw_port_id, page, offset, num_bytes, bytearray(msg[36:(36+num_bytes)])))
-                   pass
+                   # copy data to prevent continued peering directly into mmap window
+                   ret_data = bytearray(msg[36:(36+num_bytes)])
                else:
                    # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                    pass
@@ -247,11 +249,6 @@ class MDIPC():
                MDIPC.channels[index].stat_max_rsp_wait = delta_time
                logger.log_warning("**** msg_send ({},{}): msgID {} new maxrspwait {}".format(index, pid, msgID, delta_time))
 
-        if (op == MDIPC_READ):
-             # copy data to prevent continued peering directly into mmap window
-            ret_data = bytearray(msg[36:(36+num_bytes)])
-        else:
-            ret_data = None
         self.free_channel(index)
         return status, ret_data
 
@@ -332,6 +329,8 @@ class Sfp(SfpOptoeBase):
     instances = []
     MDIPC_hdl = None
     MDIPC_Initialized = False
+    # hardwire for max 100 ports per IMM
+    presence = RawArray('I', 100)
 
     # used by sfp_event to synchronize presence info
     @staticmethod
@@ -339,13 +338,15 @@ class Sfp(SfpOptoeBase):
         for inst in Sfp.instances:
             if (inst.index == port):
                 inst.page_cache_flush()
-                lastPresence = inst.lastPresence.value
+                lastPresence = Sfp.presence[inst.index]
+
                 if (status == '0'):
-                    inst.lastPresence.value = False
+                    Sfp.presence[inst.index] = False
                 else:
-                    inst.lastPresence.value = True
+                    Sfp.presence[inst.index] = True
+
                 logger.log_warning(
-                    "SfpHasBeenTransitioned({}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), inst.index, status, lastPresence, inst.lastPresence.value))
+                    "SfpHasBeenTransitioned({}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), inst.index, status, lastPresence, Sfp.presence[inst.index]))
                 return
         logger.log_warning("SfpHasBeenTransitioned({}): no match for port index{}".format(os.getpid(), port))
 
@@ -373,7 +374,7 @@ class Sfp(SfpOptoeBase):
 
         self.index = index
         self._version_info = device_info.get_sonic_version_info()
-        self.lastPresence = RawValue('i', False)
+        self.lastPresence = False
 
         if Sfp.MDIPC_hdl is None:
             Sfp.MDIPC_hdl = MDIPC()
@@ -400,6 +401,33 @@ class Sfp(SfpOptoeBase):
         Sfp.instances.append(self)
         self.get_presence(True)
 
+    def get_presence(self, first_time=False):
+        """
+        Retrieves the presence of the sfp
+        """
+
+        if (first_time != True):
+            # wait for SFP event subsystem notification of status change after initial get
+            return bool(Sfp.presence[self.index])
+        else:
+            logger.log_warning("({}) getting MDIPC presence for SFP{}".format(os.getpid(), self.index))
+
+        status, data = Sfp.MDIPC_hdl.msg_send(MDIPC_PRESENCE, self.index, 0, 0, 0)
+        lastPresence = Sfp.presence[self.index]
+
+        if (lastPresence != status):
+            logger.log_warning("({}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), self.index, lastPresence, status))
+            Sfp.presence[self.index] = status
+
+            self.page_cache_flush()
+            if (status):
+                logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, status))
+                self.cache_page0.cache_page()
+
+        if (status):
+            return True
+        else:
+            return False
 
     def get_cached_page(self, page):
         for inst in self.page_cache:
@@ -582,33 +610,6 @@ class Sfp(SfpOptoeBase):
         status_msg = response.sfp_status
         return status_msg.status
 
-    def get_presence(self, first_time=False):
-        """
-        Retrieves the presence of the sfp
-        """
-
-        if (first_time != True):
-            # wait for SFP event subsystem notification of status change after initial get
-            return bool(self.lastPresence.value)
-        else:
-            logger.log_warning("({}) getting MDIPC presence for SFP{}".format(os.getpid(), self.index))
-        
-        status, data = Sfp.MDIPC_hdl.msg_send(MDIPC_PRESENCE, self.index, 0, 0, 0)
-        lastPresence = self.lastPresence.value
-
-        if (lastPresence != status):
-            logger.log_warning("({}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), self.index, lastPresence, status))
-            self.lastPresence.value = status
-            
-            self.page_cache_flush()
-            if (status):
-                logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, status))
-                self.cache_page0.cache_page()
-
-        if (status):
-            return True
-        else:
-            return False
 
     """
     Direct control (optoe) SFP refactored api_factory compliance below
@@ -716,12 +717,10 @@ class Sfp(SfpOptoeBase):
             if (ret != MDIPC_RSP_SUCCESS):
                 logger.log_error("read_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
                 return None
-
-            if (data is None):
+            elif (data is None):
                 logger.log_error("read_eeprom failed (response data None) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
                 return None
 
-            # raw = bytearray(response.data)
             raw = data
 
             # logger.log_debug("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
