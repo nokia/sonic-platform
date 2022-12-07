@@ -16,6 +16,7 @@ try:
     from sonic_py_common import device_info
     import time
     from multiprocessing import Process, Lock, RawValue, RawArray
+    import signal
     import mmap
     import os
     import sys
@@ -84,6 +85,7 @@ class MDIPC_CHAN():
 class MDIPC():
     channels = []
     initialized = False
+
     def __init__(self):
         pid = os.getpid()
         if MDIPC.initialized is True:
@@ -105,6 +107,13 @@ class MDIPC():
                     chan.mm[8:12] = b'\x00\x00\x00\x00'
                     logger.log_warning("   initialized/flushed MDIPC channel {} : stale ownerID was {}".format(chan.index, ownerID))
             self.mutex.release()
+
+        self.sighandlers = [None] * signal.SIGSYS
+        self.sighandlers[signal.SIGABRT] = signal.signal(signal.SIGABRT, self.cleanup_channels)
+        self.sighandlers[signal.SIGINT] = signal.signal(signal.SIGINT, self.cleanup_channels)
+        self.sighandlers[signal.SIGQUIT] = signal.signal(signal.SIGQUIT, self.cleanup_channels)
+        self.sighandlers[signal.SIGTERM] = signal.signal(signal.SIGTERM, self.cleanup_channels)
+
         logger.log_warning("MDIPC ({}): {} channels initialized".format(pid, MDIPC_NUM_CHANNELS))        
     
     def dump_stats(self):
@@ -154,6 +163,20 @@ class MDIPC():
         MDIPC.channels[index].mm[8:12] = ownerID.to_bytes(4, sys.byteorder)           # ownerID: up for process grabs again
         MDIPC.channels[index].in_use = False               # no local threads using it either
 
+    def cleanup_channels(self, signum, frame):
+        pid = os.getpid()
+        self.mutex.acquire()
+        for chan in MDIPC.channels:
+            own = int.from_bytes(chan.mm[0:4],sys.byteorder)
+            msgID = int.from_bytes(chan.mm[4:8],sys.byteorder)
+            ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
+            if (ownerID == pid):
+               self.free_channel(chan.index)
+               logger.log_error("termination handler({},{}): cleaning up channel {} with in-flight msgID {} and own {}".format(pid, signum, chan.index, msgID, hex(own)))
+        self.mutex.release()
+        # signal.signal(signum, self.sighandlers[signum])
+        sys.exit()
+
     def msg_send(self, op, hw_port_id, page, offset, num_bytes, data=None):
 
         start_time = int(time.monotonic_ns() / 1000)
@@ -173,8 +196,8 @@ class MDIPC():
         msg[20:24] = page.to_bytes(4, sys.byteorder)
         msg[24:28] = offset.to_bytes(4, sys.byteorder)
         if (num_bytes > 128):        
-            logger.log_error("msg_send ({},{}): op {} requested with num_bytes {} truncated to 128!".format(index, pid, num_bytes))
-            logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
+            logger.log_error("msg_send ({},{}):  request with num_bytes {} truncated to 128!".format(index, pid, num_bytes))
+            logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             num_bytes = 128
         msg[28:32] = num_bytes.to_bytes(4, sys.byteorder)
         msg[32:36] = msgID.to_bytes(4, sys.byteorder)       # status validation check
@@ -182,7 +205,7 @@ class MDIPC():
         if (op == MDIPC_WRITE):
             if (data is None):
                logger.log_error("msg_send ({},{}): MDIPC_WRITE op requested but no data provided!".format(index, pid))
-               logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
+               logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                self.free_channel(index)
                return MDIPC_RSP_FAIL, None
             msg[36:(36+num_bytes)] = data
@@ -192,7 +215,7 @@ class MDIPC():
             pass
         else:
             logger.log_error("msg_send ({},{}): unknown op {} requested!".format(index, pid, op))
-            logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
+            logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             self.free_channel(index)
             return MDIPC_RSP_FAIL, None
 
@@ -210,7 +233,7 @@ class MDIPC():
             if (msg[0:4] == MDIPC_OWN_NOS.to_bytes(4, sys.byteorder)):
                break
             sleep_iters+=1
-            if (sleep_iters > 2500):
+            if (sleep_iters > 3000):
                timed_out = True       
 
         done_time = int(time.monotonic_ns() / 1000)
@@ -329,6 +352,7 @@ class Sfp(SfpOptoeBase):
     instances = []
     MDIPC_hdl = None
     MDIPC_Initialized = False
+    precache = False
     # hardwire for max 100 ports per IMM
     presence = RawArray('I', 100)
 
@@ -370,7 +394,7 @@ class Sfp(SfpOptoeBase):
         SfpOptoeBase.__init__(self)
         self.sfpi_obj = None
         self.sfpd_obj = None
-        self.sfp_type = None
+        self.sfp_type = sfp_type
 
         self.index = index
         self._version_info = device_info.get_sonic_version_info()
@@ -379,6 +403,11 @@ class Sfp(SfpOptoeBase):
         if Sfp.MDIPC_hdl is None:
             Sfp.MDIPC_hdl = MDIPC()
             Sfp.MDIPC_Initialized = True
+
+            caller = inspect.stack(0)
+            # logger.log_error(" SFP index {} call stack is: {}".format(index, caller))
+            if 'post_port_sfp_info_to_db' in str(caller):
+                Sfp.precache = True
 
         self.page_cache = []
         self.cache_page0 = CachePage(index, 0, 256)
@@ -420,7 +449,7 @@ class Sfp(SfpOptoeBase):
             Sfp.presence[self.index] = status
 
             self.page_cache_flush()
-            if (status):
+            if (status) and (Sfp.precache):
                 logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, status))
                 self.cache_page0.cache_page()
 
