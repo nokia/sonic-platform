@@ -18,7 +18,9 @@ try:
     from sonic_platform.component import Component
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.eeprom import Eeprom
+    from sonic_py_common import daemon_base
     from sonic_py_common.logger import Logger
+    from swsscommon import swsscommon
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
 
@@ -26,6 +28,9 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 logger = Logger("Chassis")
 
+NOKIA_MODULE_EEPROM_INFO_TABLE = 'NOKIA_MODULE_EEPROM_INFO_TABLE'
+NOKIA_LINECARD_INFO_KEY_TEMPLATE = 'LINE-CARD'
+NOKIA_MODULE_EEPROM_INFO_FIELD = 'eeprom_info'
 
 class Chassis(ChassisBase):
     """
@@ -244,14 +249,14 @@ class Chassis(ChassisBase):
             supervisor = Module(index,
                                 ModuleBase.MODULE_TYPE_SUPERVISOR+str(index),
                                 ModuleBase.MODULE_TYPE_SUPERVISOR,
-                                self._get_supervisor_hw_slot(), self.chassis_stub, None)
+                                self._get_supervisor_hw_slot(), self.is_slot_cpm(), self.chassis_stub, None)
             supervisor.set_maximum_consumed_power(self.supervisor_power)
 
             index = 1
             module = Module(index,
                             ModuleBase.MODULE_TYPE_LINE+str(self._get_my_hw_slot()-1),
                             ModuleBase.MODULE_TYPE_LINE,
-                            self._get_my_hw_slot(), self.chassis_stub, None)
+                            self._get_my_hw_slot(), self.is_slot_cpm(), self.chassis_stub, None)
             module.set_maximum_consumed_power(self.line_card_power)
 
             self._module_list.append(supervisor)
@@ -283,7 +288,7 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_SUPERVISOR+str(j),
                                         ModuleBase.MODULE_TYPE_SUPERVISOR,
                                         self._get_supervisor_hw_slot(),
-                                        self.chassis_stub, None)
+                                        self.is_slot_cpm(), self.chassis_stub, None)
                         module.set_maximum_consumed_power(self.supervisor_power)
                         self._module_list.append(module)
 
@@ -293,7 +298,7 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_LINE+str(j),
                                         ModuleBase.MODULE_TYPE_LINE,
                                         hw_property.slot[j],
-                                        self.chassis_stub, None)
+                                        self.is_slot_cpm(), self.chassis_stub, None)
                         module.set_maximum_consumed_power(self.line_card_power)
                         self._module_list.append(module)
 
@@ -303,7 +308,7 @@ class Chassis(ChassisBase):
                                         ModuleBase.MODULE_TYPE_FABRIC+str(j),
                                         ModuleBase.MODULE_TYPE_FABRIC,
                                         hw_property.slot[j],
-                                        self.chassis_stub, 
+                                        self.is_slot_cpm(), self.chassis_stub,
                                         self._get_module_sfm_eeprom(j+1))
                         module.set_maximum_consumed_power(self.fabric_card_power)
                         self._module_list.append(module)
@@ -797,11 +802,21 @@ class Chassis(ChassisBase):
     def get_eeprom(self):
         """
         Retrieves the Sys Eeprom instance for the chassis.
+        Also store the EEPROM info to chassis_state_db if it is a linecard
         Returns :
             The instance of the Sys Eeprom
         """
         if self._eeprom is None:
             self._eeprom = Eeprom()
+            if self.is_modular_chassis() and not self.is_slot_cpm():
+                chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
+                eeprom_info_table = swsscommon.Table(chassis_state_db,
+                                            NOKIA_MODULE_EEPROM_INFO_TABLE)
+                linecard_key = "%s%s" % (NOKIA_LINECARD_INFO_KEY_TEMPLATE, str(self._get_my_hw_slot()-1))
+                eeprom_dict = self._eeprom.get_system_eeprom_info()
+                linecard_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_EEPROM_INFO_FIELD, str(eeprom_dict))])
+                eeprom_info_table.set(linecard_key, linecard_fvs)
+
         return self._eeprom
 
     # Midplane

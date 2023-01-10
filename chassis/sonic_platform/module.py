@@ -12,6 +12,8 @@ try:
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
     from sonic_platform.eeprom import Eeprom
+    from sonic_py_common import daemon_base
+    from swsscommon import swsscommon
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -25,12 +27,15 @@ DESCRIPTION_MAPPING = {
     "cpm2-ixr-e": "Nokia-IXR7250E-SUP-10",
     "cpm4-ixr": "Nokia-IXR7250E-SUP-10"
 }
-
+NOKIA_MODULE_EEPROM_INFO_TABLE = 'NOKIA_MODULE_EEPROM_INFO_TABLE'
+EEPROM_PART = '0x22'
+EEPROM_SERIAL = '0x23'
+EEPROM_BASE_MAC = '0x24'
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
 
-    def __init__(self, module_index, module_name, module_type, module_slot, stub, module_eeprom=None):
+    def __init__(self, module_index, module_name, module_type, module_slot, is_cpm, stub, module_eeprom=None):
         super(Module, self).__init__()
         self.module_index = module_index
         self.module_name = module_name
@@ -40,27 +45,50 @@ class Module(ModuleBase):
         self.oper_status = ModuleBase.MODULE_STATUS_EMPTY
         self.midplane_status = nokia_common.NOKIA_INVALID_IP
         self.max_consumed_power = 0.0
+        self._is_cpm = is_cpm
         self.eeprom = None
-        self.module_eeprom = None
+        self.sfm_module_eeprom = None
         if nokia_common._get_my_slot() == module_slot:
             # my own slot
             self.eeprom = Eeprom()
         elif module_type == ModuleBase.MODULE_TYPE_FABRIC:
-            self.module_eeprom = module_eeprom
+            self.sfm_module_eeprom = module_eeprom
 
-    def _format_module_eeprom_info(self):
+    def _format_sfm_eeprom_info(self):
         """
         Format the module eeprom (such as SFM) for the  get_eeprom_info API
         """
-        if self.module_eeprom is not None:
+        if self.sfm_module_eeprom is not None:
             eeprom_tlv_dict = dict()
-            eeprom_tlv_dict["0x21"] = str(self.module_eeprom.name)
-            eeprom_tlv_dict["0x22"] = str(self.module_eeprom.eeprom_part)
-            eeprom_tlv_dict["0x23"] = str(self.module_eeprom.eeprom_serial)
-            eeprom_tlv_dict["0x25"] = str(self.module_eeprom.eeprom_date)
-            eeprom_tlv_dict["0x27"] = str(self.module_eeprom.eeprom_assembly_num)
+            eeprom_tlv_dict["0x21"] = str(self.sfm_module_eeprom.name)
+            eeprom_tlv_dict["0x22"] = str(self.sfm_module_eeprom.eeprom_part)
+            eeprom_tlv_dict["0x23"] = str(self.sfm_module_eeprom.eeprom_serial)
+            eeprom_tlv_dict["0x25"] = str(self.sfm_module_eeprom.eeprom_date)
+            eeprom_tlv_dict["0x27"] = str(self.sfm_module_eeprom.eeprom_assembly_num)
             eeprom_tlv_dict["0x2D"] = "Nokia"
             return eeprom_tlv_dict
+        return None
+
+    def _get_linecard_eeprom_info(self):
+        """
+        Get line card eeprom info from the CHASSIS_STATE_DB. That is stored by the Linecard
+        example:
+            "NOKIA_MODULE_EEPROM_INFO_TABLE|LINE-CARD3": {
+                 "expireat": 1673036132.1282635,
+                 "ttl": -0.001,
+                 "type": "hash",
+                 "value": {
+                 "eeprom_info": "{'0x24': '40:7C:7D:BB:27:21', '0x23': 'EAG2-02-143'}"
+           }
+        """
+        if self.get_presence():
+            chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
+            nokia_lc_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_EEPROM_INFO_TABLE)
+            key=self.get_name()
+            status, fvs = nokia_lc_tbl.get(key)
+            if status:
+                eeprom_info= dict(fvs)
+                return eval(eeprom_info['eeprom_info'])
         return None
         
     def get_name(self):
@@ -297,27 +325,46 @@ class Module(ModuleBase):
     def get_model(self):
         if self.eeprom is not None:
             return self.eeprom.get_part_number()
-        elif self.module_eeprom is not None:
-            return self.module_eeprom.eeprom_part
+        elif self.sfm_module_eeprom is not None:
+            return self.sfm_module_eeprom.eeprom_part
+        elif self.get_type() == self.MODULE_TYPE_LINE:
+            eeprom_info = self._get_linecard_eeprom_info()
+            if eeprom_info is not None:
+                if EEPROM_PART in eeprom_info:
+                    return eeprom_info[EEPROM_PART]
         return None
 
     def get_serial(self):
         if self.eeprom is not None:
             return self.eeprom.get_serial_number()
-        elif self.module_eeprom is not None:
-            return self.module_eeprom.eeprom_serial
+        elif self.sfm_module_eeprom is not None:
+            return self.sfm_module_eeprom.eeprom_serial
+        elif self.get_type() == self.MODULE_TYPE_LINE:
+            eeprom_info = self._get_linecard_eeprom_info()
+            if eeprom_info is not None:
+                if EEPROM_SERIAL in eeprom_info:
+                    return eeprom_info[EEPROM_SERIAL]
         return None
 
     def get_base_mac(self):
         if self.eeprom is not None:
             return self.eeprom.get_base_mac()
+        elif self.get_type() == self.MODULE_TYPE_LINE:
+            eeprom_info = self._get_linecard_eeprom_info()
+            if eeprom_info is not None:
+                if EEPROM_BASE_MAC in eeprom_info:
+                    return eeprom_info[EEPROM_BASE_MAC]
         return None
 
     def get_system_eeprom_info(self):
         if self.eeprom is not None:
             return self.eeprom.get_system_eeprom_info()
-        elif self.module_eeprom is not None:
-            return self._format_module_eeprom_info()
+        elif self._is_cpm:
+            if self.get_type() == self.MODULE_TYPE_FABRIC:
+                if self.sfm_module_eeprom is not None:
+                    return self._format_sfm_eeprom_info()
+            elif self.get_type() == self.MODULE_TYPE_LINE:
+                return self._get_linecard_eeprom_info()
         return None
 
     def get_all_asics(self):
