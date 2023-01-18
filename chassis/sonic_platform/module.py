@@ -136,9 +136,7 @@ class Module(ModuleBase):
             description = DESCRIPTION_MAPPING[response.name]
             if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
                 if nokia_common.get_chassis_type() == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
-                    description = "Nokia-IXR7250-SUP-6"
-                else:
-                    description = "Nokia-IXR7250-SUP-10"
+                    description = "Nokia-IXR7250E-SUP-6"
         return description
 
     def _get_hw_slot(self):
