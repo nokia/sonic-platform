@@ -69,7 +69,7 @@ class Module(ModuleBase):
             return eeprom_tlv_dict
         return None
 
-    def _get_linecard_eeprom_info(self):
+    def _get_module_eeprom_info(self):
         """
         Get line card eeprom info from the CHASSIS_STATE_DB. That is stored by the Linecard
         example:
@@ -325,8 +325,8 @@ class Module(ModuleBase):
             return self.eeprom.get_part_number()
         elif self.sfm_module_eeprom is not None:
             return self.sfm_module_eeprom.eeprom_part
-        elif self.get_type() == self.MODULE_TYPE_LINE:
-            eeprom_info = self._get_linecard_eeprom_info()
+        elif self.get_type() == self.MODULE_TYPE_LINE or self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            eeprom_info = self._get_module_eeprom_info()
             if eeprom_info is not None:
                 if EEPROM_PART in eeprom_info:
                     return eeprom_info[EEPROM_PART]
@@ -337,8 +337,8 @@ class Module(ModuleBase):
             return self.eeprom.get_serial_number()
         elif self.sfm_module_eeprom is not None:
             return self.sfm_module_eeprom.eeprom_serial
-        elif self.get_type() == self.MODULE_TYPE_LINE:
-            eeprom_info = self._get_linecard_eeprom_info()
+        elif self.get_type() == self.MODULE_TYPE_LINE or self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            eeprom_info = self._get_module_eeprom_info()
             if eeprom_info is not None:
                 if EEPROM_SERIAL in eeprom_info:
                     return eeprom_info[EEPROM_SERIAL]
@@ -347,8 +347,8 @@ class Module(ModuleBase):
     def get_base_mac(self):
         if self.eeprom is not None:
             return self.eeprom.get_base_mac()
-        elif self.get_type() == self.MODULE_TYPE_LINE:
-            eeprom_info = self._get_linecard_eeprom_info()
+        elif self.get_type() == self.MODULE_TYPE_LINE or self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            eeprom_info = self._get_module_eeprom_info()
             if eeprom_info is not None:
                 if EEPROM_BASE_MAC in eeprom_info:
                     return eeprom_info[EEPROM_BASE_MAC]
@@ -362,7 +362,9 @@ class Module(ModuleBase):
                 if self.sfm_module_eeprom is not None:
                     return self._format_sfm_eeprom_info()
             elif self.get_type() == self.MODULE_TYPE_LINE:
-                return self._get_linecard_eeprom_info()
+                return self._get_module_eeprom_info()
+        elif self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            return self._get_module_eeprom_info()
         return None
 
     def get_all_asics(self):

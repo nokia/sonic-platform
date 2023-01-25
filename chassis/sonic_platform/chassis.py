@@ -30,6 +30,7 @@ logger = Logger("Chassis")
 
 NOKIA_MODULE_EEPROM_INFO_TABLE = 'NOKIA_MODULE_EEPROM_INFO_TABLE'
 NOKIA_LINECARD_INFO_KEY_TEMPLATE = 'LINE-CARD'
+NOKIA_SUPERVISOR_INFO_KEY_TEMPLATE = 'SUPERVISOR'
 NOKIA_MODULE_EEPROM_INFO_FIELD = 'eeprom_info'
 
 class Chassis(ChassisBase):
@@ -808,14 +809,17 @@ class Chassis(ChassisBase):
         """
         if self._eeprom is None:
             self._eeprom = Eeprom()
-            if self.is_modular_chassis() and not self.is_slot_cpm():
+            if self.is_modular_chassis():
                 chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
                 eeprom_info_table = swsscommon.Table(chassis_state_db,
                                             NOKIA_MODULE_EEPROM_INFO_TABLE)
-                linecard_key = "%s%s" % (NOKIA_LINECARD_INFO_KEY_TEMPLATE, str(self._get_my_hw_slot()-1))
+                if not self.is_slot_cpm():
+                    module_key = "%s%s" % (NOKIA_LINECARD_INFO_KEY_TEMPLATE, str(self._get_my_hw_slot()-1))
+                else:
+                    module_key = "%s%s" % (NOKIA_SUPERVISOR_INFO_KEY_TEMPLATE, str(self._get_my_hw_slot()))
                 eeprom_dict = self._eeprom.get_system_eeprom_info()
-                linecard_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_EEPROM_INFO_FIELD, str(eeprom_dict))])
-                eeprom_info_table.set(linecard_key, linecard_fvs)
+                module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_EEPROM_INFO_FIELD, str(eeprom_dict))])
+                eeprom_info_table.set(module_key, module_fvs)
 
         return self._eeprom
 
