@@ -247,7 +247,8 @@ class MDIPC():
         else:
             status = int.from_bytes(msg[32:36],sys.byteorder)
             if (delta_time >=  200000):
-               logger.log_warning("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
+               pass
+               # logger.log_warning("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
             
             ret_data = None
             if (status == MDIPC_RSP_SUCCESS):
