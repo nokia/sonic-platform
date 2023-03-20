@@ -8,6 +8,7 @@
 #
 
 try:
+    import time
     from sonic_platform_base.psu_base import PsuBase
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
@@ -39,7 +40,54 @@ class Psu(PsuBase):
         self.output_current = 0.0
         self.output_voltage = 0.0
         self.output_power = 0.0
+        self.input_current = 0.0
+        self.input_voltage = 0.0
+        self.input_power = 0.0
+        self.max_supplied_power = 0.0
+        self.presence = False
         self.status = False
+        self.timestamp = 0
+
+    def _get_psu_bulk_info(self):
+        if self.is_cpm == 0:
+            return False
+
+        current_time = time.time()
+        if current_time > self.timestamp and current_time - self.timestamp <= 3:
+            return True
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
+        if not channel or not stub:
+            return status
+        ret, response = nokia_common.try_grpc(stub.GetPsuStatusInfo,
+                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            return False
+
+        status = response.status_info.psu_presence
+        # Reset if PSU presence is False
+        if status is False:
+            self.reset()
+        else:
+            self.presence = response.status_info.psu_presence
+            self.status = response.status_info.psu_status
+            self.output_current = round(response.status_info.output_current, 2)
+            self.output_voltage = round(response.status_info.output_voltage, 2)
+            self.output_power = round(response.status_info.output_power, 2)
+            self.ambient_temperature = response.status_info.ambient_temp
+            self.min_voltage = response.status_info.min_voltage
+            self.max_voltage = response.status_info.max_voltage
+            self.max_temperature = response.status_info.max_temperature
+            self.max_supplied_power = round(response.status_info.supplied_power, 2)
+            self.input_current = round(response.status_info.input_current, 2)
+            self.input_voltage = round(response.status_info.input_voltage, 2)
+            self.input_power = round(response.status_info.input_power, 2)
+
+        current_time = time.time()
+        self.timestamp = current_time
+        return True
 
     def get_name(self):
         """
@@ -59,11 +107,11 @@ class Psu(PsuBase):
         if self.is_cpm == 0:
             return self.not_available_error
 
+        if self.model != 'Unknown':
+           return self.model
+
         if self.get_presence() is False:
             return self.not_available_error
-
-        if self.model != 'Unknown':
-            return self.model
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
         if not channel or not stub:
@@ -117,27 +165,10 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is present, False if not
         """
-        status = False
-        if self.is_cpm == 0:
-            return status
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return status
-        ret, response = nokia_common.try_grpc(stub.GetPsuPresence,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return status
-
-        status = response.psu_presence
-
-        # Reset if PSU presence is False
-        if status is False:
-            self.reset()
-
-        return status
+        if self._get_psu_bulk_info() is False:
+            return False
+        else:
+            return self.presence
 
     def get_status(self):
         """
@@ -146,27 +177,10 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is operating properly, False if not
         """
-        self.status = False
-        if self.is_cpm == 0:
+        if self._get_psu_bulk_info() is False:
+            return False
+        else:
             return self.status
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.status
-        ret, response = nokia_common.try_grpc(stub.GetPsuStatus,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.status
-
-        self.status = response.psu_status
-
-        # Reset if PSU presence is False
-        if self.status is False:
-            self.reset()
-
-        return self.status
 
     def get_powergood_status(self):
         """
@@ -218,20 +232,7 @@ class Psu(PsuBase):
         return []
 
     def get_temperature(self):
-        if self._get_cached_status() is False:
-            return self.ambient_temperature
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.ambient_temperature
-        ret, response = nokia_common.try_grpc(stub.GetPsuTemperature,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.ambient_temperature
-
-        self.ambient_temperature = response.ambient_temp
+        self._get_psu_bulk_info()
         return self.ambient_temperature
 
     def get_temperature_high_threshold(self):
@@ -241,72 +242,23 @@ class Psu(PsuBase):
         if self.max_temperature != 0.0:
             return self.max_temperature
 
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.max_temperature
-        ret, response = nokia_common.try_grpc(stub.GetPsuMaxTemperature,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.max_temperature
-
-        self.min_voltage = response.fault_info.min_voltage
-        self.max_voltage = response.fault_info.max_voltage
-        self.max_temperature = response.fault_info.max_temperature
-
+        self._get_psu_bulk_info()
         return self.max_temperature
 
     def get_current(self):
-        if self._get_cached_status() is False:
-            return self.output_current
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.output_current
-        ret, response = nokia_common.try_grpc(stub.GetPsuOutputCurrent,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.output_current
-
-        self.output_current = response.output_current
-        return round(self.output_current, 2)
+        self._get_psu_bulk_info()
+        return self.output_current
 
     def get_power(self):
-        if self._get_cached_status() is False:
-            return self.output_power
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.output_power
-        ret, response = nokia_common.try_grpc(stub.GetPsuOutputPower,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.output_power
-
-        self.output_power = response.output_power
-        return round(self.output_power, 2)
+        """
+        Get PSU bulk info includes return output_power
+        """
+        self._get_psu_bulk_info()
+        return self.output_power
 
     def get_voltage(self):
-        if self._get_cached_status() is False:
-            return self.output_voltage
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.output_voltage
-        ret, response = nokia_common.try_grpc(stub.GetPsuOutputVoltage,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.output_voltage
-
-        self.output_voltage = response.output_voltage
-        return round(self.output_voltage, 2)
+        self._get_psu_bulk_info()
+        return self.output_voltage
 
     def get_input_voltage(self):
         """
@@ -316,7 +268,8 @@ class Psu(PsuBase):
             A float number, the input voltage in volts,
             e.g. 12.1
         """
-        return 0.0
+        self._get_psu_bulk_info()
+        return self.input_voltage
 
     def get_input_current(self):
         """
@@ -326,7 +279,8 @@ class Psu(PsuBase):
             A float number, electric current in amperes,
             e.g. 15.4
         """
-        return 0.0
+        self._get_psu_bulk_info()
+        return self.input_current
 
     def get_input_power(self):
         """
@@ -336,7 +290,8 @@ class Psu(PsuBase):
             A float number, the power in watts,
             e.g. 302.6
         """
-        return 0.0
+        self._get_psu_bulk_info()
+        return self.input_power
 
     def get_voltage_high_threshold(self):
         if self.max_voltage != 0.0:
@@ -345,20 +300,7 @@ class Psu(PsuBase):
         if self._get_cached_status() is False:
             return self.max_voltage
 
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.max_voltage
-        ret, response = nokia_common.try_grpc(stub.GetPsuMaxTemperature,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.max_voltage
-
-        self.min_voltage = response.fault_info.min_voltage
-        self.max_voltage = response.fault_info.max_voltage
-        self.max_temperature = response.fault_info.max_temperature
-
+        self._get_psu_bulk_info()
         return self.max_voltage
 
     def get_voltage_low_threshold(self):
@@ -368,43 +310,14 @@ class Psu(PsuBase):
         if self._get_cached_status() is False:
             return self.min_voltage
 
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.min_voltage
-        ret, response = nokia_common.try_grpc(stub.GetPsuMaxTemperature,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.min_voltage
-
-        self.min_voltage = response.fault_info.min_voltage
-        self.max_voltage = response.fault_info.max_voltage
-        self.max_temperature = response.fault_info.max_temperature
-
+        self._get_psu_bulk_info()
         return self.min_voltage
 
     def get_maximum_supplied_power(self):
         """
         Retrieves the maximum output power in watts of a power supply unit (PSU)
         """
-        if self.is_cpm == 0:
-            return 0.0
-
-        if self._get_cached_status() is False:
-            return self.max_supplied_power
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
-        if not channel or not stub:
-            return self.max_supplied_power
-        ret, response = nokia_common.try_grpc(stub.GetPsuMaximumPower,
-                                              platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.max_supplied_power
-
-        self.max_supplied_power = response.supplied_power
+        self._get_psu_bulk_info()
         return self.max_supplied_power
 
     @classmethod

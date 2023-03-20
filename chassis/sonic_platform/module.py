@@ -14,6 +14,7 @@ try:
     from sonic_platform.eeprom import Eeprom
     from sonic_py_common import daemon_base
     from swsscommon import swsscommon
+    import time
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -53,11 +54,13 @@ class Module(ModuleBase):
             self.eeprom = Eeprom()
         elif module_type == ModuleBase.MODULE_TYPE_FABRIC:
             self.sfm_module_eeprom = module_eeprom
+        self.timestamp = 0
 
     def _format_sfm_eeprom_info(self):
         """
         Format the module eeprom (such as SFM) for the  get_eeprom_info API
         """
+
         if self.sfm_module_eeprom is not None:
             eeprom_tlv_dict = dict()
             eeprom_tlv_dict["0x21"] = str(self.sfm_module_eeprom.name)
@@ -90,7 +93,7 @@ class Module(ModuleBase):
                 eeprom_info= dict(fvs)
                 return eval(eeprom_info['eeprom_info'])
         return None
-        
+
     def get_name(self):
         """
         Retrieves the name of the device
@@ -173,6 +176,10 @@ class Module(ModuleBase):
         Returns:
             string: The status-string of the module
         """
+        current_time = time.time()
+        if current_time > self.timestamp and current_time - self.timestamp <= 3:
+            return self.oper_status
+
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
         if not channel or not stub:
             return self.oper_status
@@ -185,6 +192,7 @@ class Module(ModuleBase):
         if ret is False:
             return self.oper_status
 
+        self.timestamp = current_time
         self.oper_status = nokia_common.hw_module_status_name(response.status)
         return self.oper_status
 
