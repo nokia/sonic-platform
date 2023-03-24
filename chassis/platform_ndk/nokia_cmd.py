@@ -12,6 +12,7 @@ import json
 from google.protobuf.json_format import MessageToJson
 import subprocess
 import time
+import os
 
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
@@ -941,6 +942,22 @@ def show_ndk_eeprom():
     print_table(field, item_list)
     return
 
+def show_ndk_version():
+    ndk_version_file = "/etc/opt/srlinux/ndk-version"
+    print("NDK Version:")
+    if os.path.isfile(ndk_version_file):
+        with open(ndk_version_file) as f:
+            for line in f.readlines():
+                print("{}".format(line))
+    else:
+        print("File {} not found".format(ndk_version_file))
+    print("NDK Build Info:")
+    # Process state
+    process = subprocess.Popen(['/opt/srlinux/bin/sr_platform_ndk_cli', '-c', 'Cli::GetVersionJson'],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    outstr = stdout.decode('ascii')
+    print(outstr)
 
 def show_ndk_status():
     import datetime
@@ -2016,6 +2033,9 @@ def main():
     show_ndkstatus_parser = showsubparsers.add_parser('ndk-status', help='show ndk-status info')
     show_ndkstatus_parser.add_argument('json-format', nargs='?', help='show ndk-status <json-format>')
 
+    # show ndk-version
+    show_ndkversion_parser = showsubparsers.add_parser('ndk-version', help='show ndk-version info')
+
     # show sfm-summary
     show_sfmsum_parser = showsubparsers.add_parser('sfm-summary', help='show sfm-summary info')
     show_sfmsum_parser.add_argument('json-format', nargs='?', help='show sfm-summary <json-format>')
@@ -2207,6 +2227,8 @@ def main():
         elif args.showcmd == 'ndk-status':
             format_type = d['json-format']
             show_ndk_status()
+        elif args.showcmd == 'ndk-version':
+            show_ndk_version()
         elif args.showcmd == 'sfm-summary':
             format_type = d['json-format']
             show_sfm_summary()
