@@ -21,7 +21,7 @@ from sonic_py_common import daemon_base
 
 # from sfp.Sfp import SfpHasBeenTransitioned
 
-logger = Logger("sfp_event")
+logger = Logger("")
 
 MAX_NOKIA_SFP_EVENT_SLEEP_TIME = 5
 TRANSCEIVER_INFO_TABLE = 'TRANSCEIVER_INFO'
@@ -70,11 +70,10 @@ class sfp_event:
             num_ports, self.port_begin, self.port_end, self.platform, self.hwsku))
 
     def initialize(self):
-        self.port_status_list = []
+        self.port_status_list = [False] * (self.num_ports+1)
 
-        # Get Transceiver status
-        self.port_status_list = self._get_transceiver_status()
-        self.debug_print_port_list(self.port_status_list)
+        # self.port_status_list = self._get_transceiver_status()
+        # self.debug_print_port_list(self.port_status_list)
 
     def deinitialize(self):
         if self.handle is None:
@@ -90,7 +89,7 @@ class sfp_event:
             port_idx = (self.port_begin + i)
             port_val = port_list[i]
             port_str = port_str+'{'+str(port_idx)+','+str(port_val)+'}, '
-        logger.log_info("SFP-event with presence list = {}".format(port_str))
+        logger.log_warning("SFP-event with presence list = {}".format(port_str))
 
     # Returns platform and hwsku
     def get_platform_and_hwsku(self):
@@ -221,7 +220,7 @@ class sfp_event:
                         else:
                             port_change[i+1] = '0'
 
-                        logger.log_info(
+                        logger.log_warning(
                             "sfp_event.check_sfp_status: port{} status changed to {} ".format(i+1, port_change[i+1]))
                         Sfp.SfpHasBeenTransitioned(i+1, port_change[i+1])
 

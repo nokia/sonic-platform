@@ -15,7 +15,9 @@ try:
     from sonic_py_common.logger import Logger
     from sonic_py_common import device_info
     import time
-    from multiprocessing import Process, Lock, RawValue, RawArray
+    import fcntl
+    import threading
+    from multiprocessing import RawValue, RawArray
     import signal
     import mmap
     import os
@@ -70,8 +72,9 @@ class MDIPC_CHAN():
         self.stat_num_fail      = 0
         self.stat_num_notpresent = 0
         self.stat_num_unknown    = 0
-        self.stat_min_rsp_wait   = -1
+        self.stat_min_rsp_wait   = 999999
         self.stat_max_rsp_wait   = 0
+        self.stat_long_rsp       = 0
         self.stat_num_timeouts   = 0
         
         try:
@@ -81,15 +84,24 @@ class MDIPC_CHAN():
 
         except os.error:
            logger.log_error("MDIPC_CHAN: file error for {}".format(self.name))
+           self.mm = None
+           self.fd = None
+           if (chan == 0):
+              sys.exit("MDIPC_CHAN channel 0 doesn't exist")
+
+    def get_fd(chan_index):
+        return self.fd
 
 class MDIPC():
     channels = []
     initialized = False
+    lock_held = False
 
     def __init__(self):
         pid = os.getpid()
+        tid = threading.get_native_id()
         if MDIPC.initialized is True:
-            logger.log_warning("MDIPC ({}): {} channels already initialized".format(pid, MDIPC_NUM_CHANNELS)) 
+            logger.log_warning("MDIPC ({} {}): {} channels already initialized".format(pid, tid, MDIPC_NUM_CHANNELS))
             return
         for x in range(0, MDIPC_NUM_CHANNELS):
             chan = MDIPC_CHAN(x)
@@ -97,83 +109,146 @@ class MDIPC():
 
         MDIPC.initialized = True
         self.stat_no_channel_avail = 0
-        self.mutex = Lock()
+        self.Tmutex = threading.RLock()
         caller = inspect.stack(0)
         if 'post_port_sfp_info_to_db' in str(caller):
-            self.mutex.acquire()
+            self.Tmutex.acquire()
+            self.Plock_acquire()
             for chan in MDIPC.channels:
+                own = int.from_bytes(chan.mm[0:4],sys.byteorder)
+                if (own != MDIPC_OWN_NOS):
+                    # wait for channel to free up...
+                    timed_out = False
+                    sleep_time = .01           # 10ms
+                    sleep_iters = 0
+                    while (timed_out != True):
+                        time.sleep(sleep_time)
+                        sleep_iters+=1
+                        own = int.from_bytes(chan.mm[0:4],sys.byteorder)
+                        if (own == MDIPC_OWN_NOS):
+                           ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
+                           msgID = int.from_bytes(chan.mm[4:8], sys.byteorder)
+                           logger.log_warning("MDIPC init channel {} became available after {} sleep_iters: ownerID {} msgID {}".format(chan.index, sleep_iters, ownerID, msgID))
+                           break
+                        if (sleep_iters > 100):
+                           timed_out = True
+                           own = int.from_bytes(chan.mm[0:4],sys.byteorder)
+                           ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
+                           msgID = int.from_bytes(chan.mm[4:8], sys.byteorder)
+                           logger.log_error("MDIPC init timed out waiting for channel {} to become available : own {} ownerID {} msgID {} : skipping chan".format(chan.index, own, ownerID, msgID))
+                    if (timed_out ==  True):
+                        break   # continue on with next channel
+
                 ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
-                if (ownerID != 0):
+                msgID = int.from_bytes(chan.mm[4:8], sys.byteorder)
+                if (ownerID != 0) or (msgID != 0):
+                    chan.mm[4:8] = b'\x00\x00\x00\x00'
                     chan.mm[8:12] = b'\x00\x00\x00\x00'
-                    logger.log_warning("   initialized/flushed MDIPC channel {} : stale ownerID was {}".format(chan.index, ownerID))
-            self.mutex.release()
+                    logger.log_warning("    flushed MDIPC channel {} : stale ownerID/msgID was {} {}".format(chan.index, ownerID, msgID))
+            self.Plock_release()
+            self.Tmutex.release()
+            logger.log_warning("MDIPC ({} {}):  initialized/flushed {} Xcvrd MDIPC channels".format(pid, tid, MDIPC_NUM_CHANNELS))
+        else:
+            logger.log_warning("MDIPC ({} {}): {} channels initialized".format(pid, tid, MDIPC_NUM_CHANNELS))
 
         self.sighandlers = [None] * signal.SIGSYS
         self.sighandlers[signal.SIGABRT] = signal.signal(signal.SIGABRT, self.cleanup_channels)
         self.sighandlers[signal.SIGINT] = signal.signal(signal.SIGINT, self.cleanup_channels)
         self.sighandlers[signal.SIGQUIT] = signal.signal(signal.SIGQUIT, self.cleanup_channels)
         self.sighandlers[signal.SIGTERM] = signal.signal(signal.SIGTERM, self.cleanup_channels)
+        self.sighandlers[signal.SIGUSR1] = signal.signal(signal.SIGUSR1, self.dump_stats_signal)
 
-        logger.log_warning("MDIPC ({}): {} channels initialized".format(pid, MDIPC_NUM_CHANNELS))        
-    
+    def __del__(self):
+        pid = os.getpid()
+        tid = threading.get_native_id()
+        self.dump_stats()
+        logger.log_warning("MDIPC destruction ({} {})".format(pid, tid))
+
     def dump_stats(self):
         pid = os.getpid()
+        tid = threading.get_native_id()
         for chan in MDIPC.channels:
-            logger.log_warning("MDIPC ({}) channel {} local: msgs {} success {} fail {} notpresent {} unknown {} minrspwait {} maxrspwait {} timeouts {} already_in_use {}".format(pid, chan.index, chan.stat_num_msgs,
-                chan.stat_num_success, chan.stat_num_fail, chan.stat_num_notpresent, chan.stat_num_unknown, chan.stat_min_rsp_wait, chan.stat_max_rsp_wait, chan.stat_num_timeouts, chan.stat_already_in_use))
-        logger.log_warning("     no_channel_avail {}".format(self.stat_no_channel_avail))
+            min_rsp_wait = chan.stat_min_rsp_wait
+            if (min_rsp_wait == 999999):
+                min_rsp_wait = -1 
+            logger.log_warning("MDIPC ({} {}) channel {} local: msgs {} success {} fail {} notpresent {} unknown {} minrspwait {} maxrspwait {} long_rsp {} timeouts {} already_in_use {}".format(pid, tid, chan.index, chan.stat_num_msgs,
+                chan.stat_num_success, chan.stat_num_fail, chan.stat_num_notpresent, chan.stat_num_unknown, min_rsp_wait, chan.stat_max_rsp_wait, chan.stat_long_rsp, chan.stat_num_timeouts, chan.stat_already_in_use))
+        logger.log_warning("MDIPC ({} {}) no_channel_avail {} lock_held {}".format(pid, tid, self.stat_no_channel_avail, self.lock_held))
+
+    def dump_stats_signal(self, signum, frame):
+        logger.log_warning("MDIPC got USR1 signal")
+        self.dump_stats()
+        if (self.lock_held == True):
+            self.Plock_release()
+
+    def Plock_acquire(self):
+        fcntl.flock(MDIPC.channels[0].fd, fcntl.LOCK_EX)
+        self.lock_held = True
+
+    def Plock_release(self):
+        fcntl.flock(MDIPC.channels[0].fd, fcntl.LOCK_UN)
+        self.lock_held = False
 
     def obtain_channel(self):
         pid = os.getpid()
+        tid = threading.get_native_id()
         index = None
-        self.mutex.acquire()
+        self.Tmutex.acquire()        # thread protection
+        self.Plock_acquire()         # process protection
         for chan in MDIPC.channels:
             own = int.from_bytes(chan.mm[0:4],sys.byteorder)
             if (own == MDIPC_OWN_NOS):
-                # process protection
                 ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
                 if (ownerID == 0):
-                   chan.mm[8:12] = pid.to_bytes(4, sys.byteorder)
+                   if (chan.in_use == True):
+                      msgID = int.from_bytes(chan.mm[4:8],sys.byteorder)
+                      chan.stat_already_in_use += 1
+                      logger.log_error("obtain_channel({} {}): got chan.in_use while allocating chan {} with last msgID {} : count {}".format(pid, tid, chan.index, msgID, chan.stat_already_in_use))
+                   chan.mm[8:12] = tid.to_bytes(4, sys.byteorder)
+                   chan.in_use = True
                    index = chan.index
                    break
                 else:
                    msgID = int.from_bytes(chan.mm[4:8],sys.byteorder) 
-                   logger.log_warning("obtain_channel({}): got free channel {} with ownerID {} and chan.in_use {}  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, hex(own), msgID))
-                   if (ownerID == pid):         # another thread already has it
-                      chan.stat_already_in_use += 1
-                      if (chan.in_use == False):
-                         chan.in_use = True
-                         # index = chan.index
-                         # break
-                         #
-                         # keep looking for an available channel for this thread
-                      else:
-                         logger.log_error("obtain_channel({}): got free channel {} with matching pid {} already in use {}!  own {} msgID {}".format(pid, chan.index, ownerID, chan.in_use, hex(own), msgID))
+                   logger.log_info("obtain_channel({} {}): got free channel {} with ownerID {} and chan.in_use {}  own {} msgID {}".format(pid, tid, chan.index, ownerID, chan.in_use, hex(own), msgID))
+                   # keep looking for an available channel for this thread
             else:
                 msgID = int.from_bytes(chan.mm[4:8],sys.byteorder)
-                logger.log_debug("obtain_channel({}) {} unavailable : own {} ownerID {} msgID {}".format(pid, chan.index, hex(own), int.from_bytes(chan.mm[8:12],sys.byteorder), msgID))
-        self.mutex.release()
+                logger.log_debug("obtain_channel({} {}) {} unavailable : own {} ownerID {} msgID {}".format(pid, tid, chan.index, hex(own), int.from_bytes(chan.mm[8:12],sys.byteorder), msgID))
+        self.Plock_release()
+        self.Tmutex.release()
         return index
 
     def free_channel(self, index, stat = None):
+        tid = threading.get_native_id()
         if (stat != None):
             # todo:  update client stats kept within the shared channel
            pass
+        ownerID = int.from_bytes(MDIPC.channels[index].mm[8:12],sys.byteorder)
+        if (ownerID != tid):
+           own = int.from_bytes(MDIPC.channels[index].mm[0:4],sys.byteorder)
+           msgID = int.from_bytes(MDIPC.channels[index].mm[4:8],sys.byteorder)
+           logger.log_error("free_channel({} {}) chan {} has bogus ownerID {} with msgID {} and own {}".format(pid, tid, index, ownerID, msgID, hex(own)))
         ownerID = 0
-        MDIPC.channels[index].mm[8:12] = ownerID.to_bytes(4, sys.byteorder)           # ownerID: up for process grabs again
-        MDIPC.channels[index].in_use = False               # no local threads using it either
+        MDIPC.channels[index].in_use = False
+        MDIPC.channels[index].mm[8:12] = ownerID.to_bytes(4, sys.byteorder)           # chan up for grabs again
 
     def cleanup_channels(self, signum, frame):
         pid = os.getpid()
-        self.mutex.acquire()
+        tid = threading.get_native_id()
+        self.Tmutex.acquire()
+        self.Plock_acquire()
         for chan in MDIPC.channels:
             own = int.from_bytes(chan.mm[0:4],sys.byteorder)
             msgID = int.from_bytes(chan.mm[4:8],sys.byteorder)
             ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
-            if (ownerID == pid):
+            if (ownerID == tid):
                self.free_channel(chan.index)
-               logger.log_error("termination handler({},{}): cleaning up channel {} with in-flight msgID {} and own {}".format(pid, signum, chan.index, msgID, hex(own)))
-        self.mutex.release()
+               logger.log_error("MDIPC termination handler({} {},{}): cleaning up channel {} with in-flight msgID {} and own {}".format(pid, tid, signum, chan.index, msgID, hex(own)))
+        self.Plock_release()
+        self.Tmutex.release()
+        self.dump_stats()
+        logger.log_error("MDIPC termination handler({} {},{}): cleaned up".format(pid, tid, signum))
         # signal.signal(signum, self.sighandlers[signum])
         sys.exit()
 
@@ -183,20 +258,21 @@ class MDIPC():
         index = self.obtain_channel()
         if (index is None):
             self.stat_no_channel_avail += 1
-            logger.log_error("msg_send ({}): no free channel available!".format(os.getpid()))
+            logger.log_error("msg_send ({} {}): no free channel available!".format(os.getpid(), threading.get_native_id()))
             return MDIPC_RSP_FAIL, None
 
         msg = memoryview(MDIPC.channels[index].mm)
         msgID = int.from_bytes(msg[4:8],sys.byteorder) + 1
         msg[4:8] = msgID.to_bytes(4, sys.byteorder)
         pid = os.getpid()
-        msg[8:12] = pid.to_bytes(4, sys.byteorder)
+        tid = threading.get_native_id()
+        msg[8:12] = tid.to_bytes(4, sys.byteorder)
         msg[12:16] = hw_port_id.to_bytes(4, sys.byteorder)
         msg[16:20] = op.to_bytes(4, sys.byteorder)
         msg[20:24] = page.to_bytes(4, sys.byteorder)
         msg[24:28] = offset.to_bytes(4, sys.byteorder)
         if (num_bytes > 128):        
-            logger.log_error("msg_send ({},{}):  request with num_bytes {} truncated to 128!".format(index, pid, num_bytes))
+            logger.log_error("msg_send ({},{} {}):  request with num_bytes {} truncated to 128!".format(index, pid, tid, num_bytes))
             logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             num_bytes = 128
         msg[28:32] = num_bytes.to_bytes(4, sys.byteorder)
@@ -204,7 +280,7 @@ class MDIPC():
 
         if (op == MDIPC_WRITE):
             if (data is None):
-               logger.log_error("msg_send ({},{}): MDIPC_WRITE op requested but no data provided!".format(index, pid))
+               logger.log_error("msg_send ({},{} {}): MDIPC_WRITE op requested but no data provided!".format(index, pid, tid))
                logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                self.free_channel(index)
                return MDIPC_RSP_FAIL, None
@@ -214,7 +290,7 @@ class MDIPC():
         elif (op == MDIPC_PRESENCE):
             pass
         else:
-            logger.log_error("msg_send ({},{}): unknown op {} requested!".format(index, pid, op))
+            logger.log_error("msg_send ({},{} {}): unknown op {} requested!".format(index, pid, tid, op))
             logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             self.free_channel(index)
             return MDIPC_RSP_FAIL, None
@@ -240,18 +316,18 @@ class MDIPC():
         delta_time = done_time - handoff_time
         if (timed_out == True):
             MDIPC.channels[index].stat_num_timeouts += 1
-            logger.log_error("msg_send ({},{}): timeout ({}/{})! own {} : starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, sleep_iters, MDIPC.channels[index].stat_num_timeouts, hex(int.from_bytes(msg[0:4],sys.byteorder)), start_time, handoff_time, done_time, delta_time))
+            logger.log_error("msg_send ({},{} {}): timeout ({}/{})! own {} : starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, tid, sleep_iters, MDIPC.channels[index].stat_num_timeouts, hex(int.from_bytes(msg[0:4],sys.byteorder)), start_time, handoff_time, done_time, delta_time))
             logger.log_error("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             self.free_channel(index)
             return MDIPC_RSP_FAIL, None
         else:
             status = int.from_bytes(msg[32:36],sys.byteorder)
             if (delta_time >=  200000):
-               pass
-               # logger.log_warning("msg_send ({},{}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
+               MDIPC.channels[index].stat_long_rsp += 1
+               # logger.log_warning("msg_send ({},{} {}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, tid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
             
             ret_data = None
-            if (status == MDIPC_RSP_SUCCESS):
+            if (status == MDIPC_RSP_SUCCESS):         # this also catches 'not present' responses to MDIPC_PRESENCE ops
                MDIPC.channels[index].stat_num_success += 1
                if (op == MDIPC_READ):
                    # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {} ret_data {}".format(op, msgID, hw_port_id, page, offset, num_bytes, bytearray(msg[36:(36+num_bytes)])))
@@ -261,17 +337,20 @@ class MDIPC():
                    # logger.log_debug("          op {} msgID {} index {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                    pass
             elif (status == MDIPC_RSP_FAIL):
-               MDIPC.channels[index].stat_num_fail += 1
+               if (op != MDIPC_PRESENCE):
+                  MDIPC.channels[index].stat_num_fail += 1
+               else:
+                  MDIPC.channels[index].stat_num_success += 1       # this catches 'present' responses to MDIPC_PRESENCE ops
             elif (status == MDIPC_RSP_NOTPRESENT):
-               MDIPC.channels[index].stat_num_notpresent += 1
+               MDIPC.channels[index].stat_num_notpresent += 1       # only for read/write ops that result in NOTPRESENT
             else:
                MDIPC.channels[index].stat_num_unknown += 1
-            if (delta_time < MDIPC.channels[index].stat_min_rsp_wait):
+            if (delta_time < MDIPC.channels[index].stat_min_rsp_wait) and (op != MDIPC_PRESENCE):
                MDIPC.channels[index].stat_min_rsp_wait = delta_time
-               logger.log_warning("**** msg_send ({},{}): msgID {} new minrspwait {}".format(index, pid, msgID, delta_time))
+               logger.log_debug("**** msg_send ({},{} {}): op {} msgID {} new minrspwait {}".format(index, pid, tid, op, msgID, delta_time))
             if (delta_time > MDIPC.channels[index].stat_max_rsp_wait):
                MDIPC.channels[index].stat_max_rsp_wait = delta_time
-               logger.log_warning("**** msg_send ({},{}): msgID {} new maxrspwait {}".format(index, pid, msgID, delta_time))
+               logger.log_debug("**** msg_send ({},{} {}): op {} msgID {} new maxrspwait {}".format(index, pid, tid, op, msgID, delta_time))
 
         self.free_channel(index)
         return status, ret_data
@@ -356,6 +435,7 @@ class Sfp(SfpOptoeBase):
     precache = False
     # hardwire for max 100 ports per IMM
     presence = RawArray('I', 100)
+    sfp_event_live = RawValue('I', 0)
 
     # used by sfp_event to synchronize presence info
     @staticmethod
@@ -371,9 +451,12 @@ class Sfp(SfpOptoeBase):
                     Sfp.presence[inst.index] = True
 
                 logger.log_warning(
-                    "SfpHasBeenTransitioned({}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), inst.index, status, lastPresence, Sfp.presence[inst.index]))
+                    "SfpHasBeenTransitioned({} {}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), threading.get_native_id(), inst.index, status, lastPresence, Sfp.presence[inst.index]))
+                if (Sfp.sfp_event_live != True):
+                   logger.log_warning("SfpHasBeenTransitioned: sfp_event mechanism has gone live...")
+                   Sfp.sfp_event_live = True
                 return
-        logger.log_warning("SfpHasBeenTransitioned({}): no match for port index{}".format(os.getpid(), port))
+        logger.log_warning("SfpHasBeenTransitioned({} {}): no match for port index{}".format(os.getpid(), threading.get_native_id(), port))
 
     @staticmethod
     def SfpTypeToString(type):
@@ -429,24 +512,23 @@ class Sfp(SfpOptoeBase):
         self.name = self.SfpTypeToString(sfp_type) + '_' + str(index)
         logger.log_debug("Sfp __init__ index {} setting name to {}".format(index, self.name))
         Sfp.instances.append(self)
-        self.get_presence(True)
+        self.get_presence()
 
-    def get_presence(self, first_time=False):
+    def get_presence(self):
         """
         Retrieves the presence of the sfp
         """
-
-        if (first_time != True):
-            # wait for SFP event subsystem notification of status change after initial get
+        if (Sfp.sfp_event_live == True):
+            # rely on SFP event subsystem notification of status change once it is running
             return bool(Sfp.presence[self.index])
         else:
-            logger.log_warning("({}) getting MDIPC presence for SFP{}".format(os.getpid(), self.index))
+            logger.log_debug("({} {}) getting MDIPC presence for SFP{}".format(os.getpid(), threading.get_native_id(), self.index))
 
         status, data = Sfp.MDIPC_hdl.msg_send(MDIPC_PRESENCE, self.index, 0, 0, 0)
         lastPresence = Sfp.presence[self.index]
 
         if (lastPresence != status):
-            logger.log_warning("({}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), self.index, lastPresence, status))
+            logger.log_warning("MDIPC ({} {}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), threading.get_native_id(), self.index, lastPresence, status))
             Sfp.presence[self.index] = status
 
             self.page_cache_flush()
@@ -741,15 +823,24 @@ class Sfp(SfpOptoeBase):
                 # logger.log_warning("read_eeprom for SFP{} hit cached_page {}, but overriding due to offset {} num_bytes {}".format(self.index, page, page_offset, num_bytes))
                 cached_page = None            
 
+        # if page0 cache has somehow expired and this request spans 128 byte boundary then refill page0 cache
+        if (cached_page is None) and (page == 0) and ((page_offset + num_bytes) > 128):
+            self.cache_page0.cache_page(CACHE_FRESHEN)
+            cached_page = self.get_cached_page(page)
+
         if (cached_page is None):
             ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.index, page, page_offset, num_bytes)
 
             if (ret != MDIPC_RSP_SUCCESS):
                 logger.log_error("read_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
-                return None
+                raw = bytes(num_bytes)
+                return bytearray(raw)
+                # return None
             elif (data is None):
                 logger.log_error("read_eeprom failed (response data None) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
-                return None
+                raw = bytes(num_bytes)
+                return bytearray(raw)
+                # return None
 
             raw = data
 
