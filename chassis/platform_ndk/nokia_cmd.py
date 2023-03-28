@@ -1184,6 +1184,59 @@ def set_asic_temp(name, temp, threshold):
     stub.SetThermalAsicInfo(platform_ndk_pb2.ReqTempParamsPb(asic_temp=asic_temp_all))
     nokia_common.channel_shutdown(channel)
 
+def modify_startup_debug(key_str, new_stringval):
+    startup_debug="/etc/opt/srlinux/startup_debug.json"
+    tmp_startup_debug="/tmp/startup_debug.json"
+    data = None
+    with open(startup_debug, "r") as stream:
+        data = json.load(stream)
+    if data:
+        for _, item in data.items():
+            for info in item:
+                if info['key'] == key_str:
+                    info['stringval'] = new_stringval
+
+        with open(tmp_startup_debug,"w+") as f:
+            f.write(json.dumps(data, sort_keys=True, indent=4))
+            f.write('\n')
+
+        process = subprocess.Popen(["sudo", "mv", tmp_startup_debug, startup_debug])
+        process.wait()
+        return True
+
+    return False
+
+
+def set_ndk_monitor_action(action):
+    startup_debug="/etc/opt/srlinux/startup_debug.json"
+    tmp_startup_debug="/tmp/startup_debug.json"
+    action_str = action
+    if action == 'default':
+        if nokia_common.is_cpm() == 1:
+            action_str = 'warn'
+        else:
+            action_str = 'reboot'
+
+    if modify_startup_debug("monitor_action", action_str):
+        # display to and allow users to view it
+        with open(startup_debug, "r") as stream:
+            new_data = json.load(stream)
+            print(json.dumps(new_data, indent=4))
+        print("====== Modification is done. Reboot to take effect ======")
+
+def set_ndk_log_level(level):
+    startup_debug="/etc/opt/srlinux/startup_debug.json"
+    tmp_startup_debug="/tmp/startup_debug.json"
+    level_str = level
+    if level == 'default':
+        level_str = "error"
+    if modify_startup_debug("sonic_log_level", level_str):
+        # display to allow users to view it
+        with open(startup_debug, "r") as stream:
+            new_data = json.load(stream)
+            print(json.dumps(new_data, indent=4))
+        print("====== Modification is done. Reboot to take effect ======")
+
 def show_asic_temperature():
     if nokia_common.is_cpm() == 1:
       print('Command is not supported in Supervisor card')
@@ -2142,6 +2195,12 @@ def main():
     #set xcvr-resync disable
     set_xcvr_resync_disable_parser = set_xcvr_resync_sub_parser.add_parser('disable', help='Disable xcvr-resync')
 
+    set_ndk_monitor_action_parser = setsubparsers.add_parser('ndk-monitor-action', help='Change the NDK monitor_action value (warn or reboot) in starup_debug.json file')
+    set_ndk_monitor_action_parser.add_argument('action', nargs='?', help='Choices: warn, reboot or default')
+
+    set_ndk_log_level_parser = setsubparsers.add_parser('ndk-log-level', help='Change the NDK sonic_log_level value in starup_debug.json file')
+    set_ndk_log_level_parser.add_argument('level', nargs='?', help='Choices: trace. debug, info, notice, warning, error, critical or default')
+
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
     reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
@@ -2307,6 +2366,18 @@ def main():
               set_xcvr_resync_feature(True)
             elif args.xcvrresynccmd == 'disable':
               set_xcvr_resync_feature(False)
+        elif args.setcmd == 'ndk-monitor-action':
+            action_list = ['warn','reboot','default']
+            if d['action'] not in action_list:
+                set_ndk_monitor_action_parser.print_help()
+            else:
+                set_ndk_monitor_action(d['action'])
+        elif args.setcmd == 'ndk-log-level':
+            level_list = ['trace', 'debug', 'info', 'notice', 'warning', 'error', 'critical', 'default']
+            if d['level'] not in level_list:
+                set_ndk_log_level_parser.print_help()
+            else:
+                set_ndk_log_level(d['level'])
         else:
             set_parser.print_help()
     elif args.cmd == 'request':
