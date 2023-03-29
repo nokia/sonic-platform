@@ -2267,7 +2267,8 @@ def main():
             format_type = d['json-format']
             show_syseeprom()
         elif args.showcmd == 'midplane':
-            format_type = d['json-format']
+            if 'json-format' in d:
+                format_type = d['json-format']
             if args.midplanecmd == 'status':
               show_midplane_status(int(d['hw-slot']))
             elif args.midplanecmd == 'port-counters':
@@ -2280,6 +2281,8 @@ def main():
               show_midplane_mac_table(d['hw_slot'])
             elif args.midplanecmd == 'link-status-flap':
               show_midplane_link_status_table()
+            else:
+                show_midplane_parser.print_help()
         elif args.showcmd == 'ndk-eeprom':
             format_type = d['json-format']
             show_ndk_eeprom()
