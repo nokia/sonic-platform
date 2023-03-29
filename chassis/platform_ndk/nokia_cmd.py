@@ -2304,19 +2304,22 @@ def main():
             format_type = d['json-format']
             show_asic_temperature()
         elif args.showcmd == 'qfpga':
-            format_type = d['json-format']
+            if 'json-format' in d:
+                format_type = d['json-format']
             if args.qfpgacmd == 'port-status':
-              show_qfpga_port_status()
+                show_qfpga_port_status()
             elif args.qfpgacmd == 'port-statistics':
-              show_qfpga_port_statistics(d['port_desc'])
+                show_qfpga_port_statistics(d['port_desc'])
             elif args.qfpgacmd == 'error-counters':
-              show_qfpga_error_counters()
+                show_qfpga_error_counters()
             elif args.qfpgacmd == 'vlan-counters':
-              show_qfpga_vlan_counters()
+                show_qfpga_vlan_counters()
             elif args.qfpgacmd == 'epipe-config':
-              show_qfpga_epipe_config()
+                show_qfpga_epipe_config()
             elif args.qfpgacmd == 'version':
-              show_qfpga_version()
+                show_qfpga_version()
+            else:
+                show_qfpga_parser.print_help()
         else:
             show_parser.print_help()
     elif args.cmd == 'set':
