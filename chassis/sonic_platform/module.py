@@ -43,8 +43,6 @@ class Module(ModuleBase):
         self.module_type = module_type
         self.hw_slot = module_slot
         self.chassis_stub = stub
-        self.oper_status = ModuleBase.MODULE_STATUS_EMPTY
-        self.midplane_status = nokia_common.NOKIA_INVALID_IP
         self.max_consumed_power = 0.0
         self._is_cpm = is_cpm
         self.eeprom = None
@@ -55,6 +53,15 @@ class Module(ModuleBase):
         elif module_type == ModuleBase.MODULE_TYPE_FABRIC:
             self.sfm_module_eeprom = module_eeprom
         self.timestamp = 0
+        self.midplane = ""
+        self.midplane_status = False
+        self.reset()
+
+    def reset(self):
+        self.asic_list = []
+        self.oper_status = ModuleBase.MODULE_STATUS_EMPTY
+        self.chassis_type =  platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
+        self.description = "Unavailable"
 
     def _format_sfm_eeprom_info(self):
         """
@@ -94,6 +101,55 @@ class Module(ModuleBase):
                 return eval(eeprom_info['eeprom_info'])
         return None
 
+    def _get_module_bulk_info(self):
+        """
+        Get module bulk info and cache it for 5 seconds to optimize the chassisd update which is in
+        10 seconds intervak periodical query
+        """
+        # No need to grpc call for supervisor card once it has been updated once
+        if self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            if self.oper_status == ModuleBase.MODULE_STATUS_ONLINE:
+                return True
+
+        current_time = time.time()
+        if current_time > self.timestamp and current_time - self.timestamp <= 5:
+            return True
+
+        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
+        if not channel or not stub:
+            return False
+        platform_module_type = self.get_platform_type()
+        ret, response = nokia_common.try_grpc(
+            stub.GetModuleBulkInfo,
+            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
+        nokia_common.channel_shutdown(channel)
+
+        if ret is False:
+            return False
+
+        module_info = response.module_info
+        self.oper_status = nokia_common.hw_module_status_name(module_info.status)
+        self.midplane_ip = module_info.midplane_ip
+        self.midplane_status = module_info.midplane_status
+        if self.oper_status == ModuleBase.MODULE_STATUS_EMPTY:
+            self.reset()
+        else:
+            self.chassis_type = module_info.chassis_type
+            self.description = module_info.name
+            if module_info.name in DESCRIPTION_MAPPING:
+                self.description = DESCRIPTION_MAPPING[module_info.name]
+                if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
+                    if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
+                        self.description = "Nokia-IXR7250E-SUP-6"
+            if module_info.num_asic != 0:
+                i = 0
+                while i < len(module_info.pcie_info.asic_entry):
+                    asic_info = module_info.pcie_info.asic_entry[i]
+                    self.asic_list.append((str(asic_info.asic_idx), str(asic_info.asic_pcie_id)))
+                    i += 1
+        self.timestamp = current_time
+        return True
+
     def get_name(self):
         """
         Retrieves the name of the device
@@ -122,25 +178,8 @@ class Module(ModuleBase):
         Returns:
             string: The description of the module
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-        if not channel or not stub:
-            return 'Unavailable'
-        platform_module_type = self.get_platform_type()
-        ret, response = nokia_common.try_grpc(
-            stub.GetModuleName,
-            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return 'Unavailable'
-
-        description = response.name
-        if response.name in DESCRIPTION_MAPPING:
-            description = DESCRIPTION_MAPPING[response.name]
-            if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
-                if nokia_common.get_chassis_type() == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
-                    description = "Nokia-IXR7250E-SUP-6"
-        return description
+        self._get_module_bulk_info()
+        return self.description
 
     def _get_hw_slot(self):
         """
@@ -176,24 +215,7 @@ class Module(ModuleBase):
         Returns:
             string: The status-string of the module
         """
-        current_time = time.time()
-        if current_time > self.timestamp and current_time - self.timestamp <= 3:
-            return self.oper_status
-
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-        if not channel or not stub:
-            return self.oper_status
-        platform_module_type = self.get_platform_type()
-        ret, response = nokia_common.try_grpc(
-            stub.GetModuleStatus,
-            platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.oper_status
-
-        self.timestamp = current_time
-        self.oper_status = nokia_common.hw_module_status_name(response.status)
+        self._get_module_bulk_info()
         return self.oper_status
 
     def get_position_in_parent(self):
@@ -303,30 +325,12 @@ class Module(ModuleBase):
         """
         Retrieves the midplane IP-address of the module in a modular chassis
         """
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-        if not channel or not stub:
-            return self.midplane_ip
-        ret, response = nokia_common.try_grpc(stub.GetMidplaneIP,
-                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return self.midplane_ip
-
-        self.midplane_ip = response.midplane_ip
-        return response.midplane_ip
+        self._get_module_bulk_info()
+        return self.midplane_ip
 
     def is_midplane_reachable(self):
-        channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-        if not channel or not stub:
-            return False
-        ret, response = nokia_common.try_grpc(stub.IsMidplaneReachable,
-                                              platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
-        nokia_common.channel_shutdown(channel)
-
-        if ret is False:
-            return False
-        return response.midplane_status
+        self._get_module_bulk_info()
+        return self.midplane_status
 
     def get_model(self):
         if self.eeprom is not None:
@@ -376,25 +380,5 @@ class Module(ModuleBase):
         return None
 
     def get_all_asics(self):
-        asic_list = []
-        if self.get_name().startswith(ModuleBase.MODULE_TYPE_FABRIC):
-            channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
-            if not channel or not stub:
-                return asic_list
-            ret, response = nokia_common.try_grpc(stub.GetFabricPcieInfo,
-                                                  platform_ndk_pb2.ReqModuleInfoPb(hw_slot=self._get_hw_slot()))
-            nokia_common.channel_shutdown(channel)
-
-            if ret is False:
-                return asic_list
-
-            if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_RESOURCE_NOT_FOUND:
-                return asic_list
-
-            i = 0
-            while i < len(response.pcie_info.asic_entry):
-                asic_info = response.pcie_info.asic_entry[i]
-                asic_list.append((str(asic_info.asic_idx), str(asic_info.asic_pcie_id)))
-                i += 1
-
-        return asic_list
+        self._get_module_bulk_info()
+        return self.asic_list
