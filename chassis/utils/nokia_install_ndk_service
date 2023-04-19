@@ -5,6 +5,13 @@ qfpgamgr=0
 ethmgr=0
 phymgr=0
 asicthermal=0
+
+source /host/machine.conf
+net_driver_link="/usr/share/sonic/device/${onie_platform}/89-net-by-driver.link"
+if [ -e $net_driver_link ]; then
+    cp $net_driver_link  /etc/systemd/network/.
+fi
+
 if [ -e /lib/systemd/system/nokia-sr-device-mgr.service ]; then
     systemctl enable nokia-sr-device-mgr.service
     devicemgr=1
@@ -24,7 +31,6 @@ if [ -e /lib/systemd/system/nokia-phy-mgr.service ]; then
 fi
 
 if [ -e /lib/systemd/system/nokia-asic-thermal.service ]; then
-   source /host/machine.conf
    ASIC_CONF="/usr/share/sonic/device/${onie_platform}/asic.conf"
    if [ -e $ASIC_CONF ]; then
       source $ASIC_CONF
