@@ -51,8 +51,6 @@ class Chassis(ChassisBase):
 
     def __init__(self):
         ChassisBase.__init__(self)
-
-        self.revision = 'Unknown'
         # logger.set_min_log_priority_info()
 
         # Chassis specific slot numbering
@@ -853,7 +851,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision value of device
         """
-        return self.revision
+        return self.get_system_eeprom_info().get("0x26","N/A")
 
     # Test suitest
     def test_suite_chassis(self):
