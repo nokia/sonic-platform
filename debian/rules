@@ -40,10 +40,10 @@ build:
 	if [ -e /sonic/target/debs/$(BLDENV)/ndk_*_amd64.deb ]; then \
 		dpkg -x /sonic/target/debs/$(BLDENV)/ndk_*_amd64.deb debian/sonic-platform-nokia-chassis; \
 		cp debian/sonic-platform-nokia-chassis/opt/srlinux/bin/platform_ndk_pb2* chassis/platform_ndk/; \
-	fi
-	if [ -e /sonic/target/debs/$(BLDENV)/ethtool_*_amd64.deb ]; then \
-		dpkg -x /sonic/target/debs/$(BLDENV)/ethtool_*_amd64.deb  /tmp; \
-		cp /tmp/sbin/ethtool debian/sonic-platform-nokia-chassis/opt/srlinux/bin; \
+		if [ -e /sonic/target/debs/$(BLDENV)/ethtool_*_amd64.deb ]; then \
+			dpkg -x /sonic/target/debs/$(BLDENV)/ethtool_*_amd64.deb  /tmp; \
+			cp /tmp/sbin/ethtool debian/sonic-platform-nokia-chassis/opt/srlinux/bin; \
+		fi \
 	fi
 
 	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
