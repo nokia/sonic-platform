@@ -377,11 +377,12 @@ class CachePage():
         self.cache_page_valid = False
         return False
 
-    def cache_page(self, mode=CACHE_NORMAL):
+    def cache_page(self, mode=CACHE_NORMAL, verbose=False):
         if (self.cache_page_fresh() == True):
             if (mode == CACHE_FRESHEN):
                 self.cache_page_ts = time.time()
-                logger.log_debug("*** SFP{} freshened cached page {} new TS {}".format(self.sfp_index, self.page_num, self.cache_page_ts))
+                if (verbose):
+                    logger.log_warning("*** SFP{} freshened cached page {} new TS {}".format(self.sfp_index, self.page_num, self.cache_page_ts))
             return True
 
         offset = 128
@@ -416,7 +417,9 @@ class CachePage():
 
         if (self.page_num != 0):
             self.cache_page_data = data
-        # logger.log_error("*** SFP{} cached page {} num_bytes {} cache_page.len {}".format(self.sfp_index, self.page_num, num_bytes, len(self.cache_page_data)))
+
+        if (verbose):
+            logger.log_warning("### SFP{} cached page {} num_bytes {} cache_page.len {}".format(self.sfp_index, self.page_num, num_bytes, len(self.cache_page_data)))
 
         return True
 
@@ -433,6 +436,7 @@ class Sfp(SfpOptoeBase):
     MDIPC_hdl = None
     MDIPC_Initialized = False
     precache = False
+    debug = False
     # hardwire for max 100 ports per IMM
     presence = RawArray('I', 100)
     sfp_event_live = RawValue('I', 0)
@@ -440,6 +444,10 @@ class Sfp(SfpOptoeBase):
     # used by sfp_event to synchronize presence info
     @staticmethod
     def SfpHasBeenTransitioned(port, status):
+        if (Sfp.sfp_event_live != True):
+           logger.log_warning("SfpHasBeenTransitioned({} {}): sfp_event mechanism has gone live...".format(os.getpid(), threading.get_native_id()))
+           Sfp.sfp_event_live = True
+
         for inst in Sfp.instances:
             if (inst.index == port):
                 inst.page_cache_flush()
@@ -449,12 +457,13 @@ class Sfp(SfpOptoeBase):
                     Sfp.presence[inst.index] = False
                 else:
                     Sfp.presence[inst.index] = True
+                    if (lastPresence == False):
+                       inst._xcvr_api = None
+                       inst.get_xcvr_api()
+                       logger.log_warning("SfpHasBeenTransitioned: Sfp index{} xcvr_api reinitialized".format(inst.index))
 
                 logger.log_warning(
                     "SfpHasBeenTransitioned({} {}): invalidating_page_cache for Sfp index{} : status is {} lastPresence {}:{}".format(os.getpid(), threading.get_native_id(), inst.index, status, lastPresence, Sfp.presence[inst.index]))
-                if (Sfp.sfp_event_live != True):
-                   logger.log_warning("SfpHasBeenTransitioned: sfp_event mechanism has gone live...")
-                   Sfp.sfp_event_live = True
                 return
         logger.log_warning("SfpHasBeenTransitioned({} {}): no match for port index{}".format(os.getpid(), threading.get_native_id(), port))
 
@@ -492,7 +501,14 @@ class Sfp(SfpOptoeBase):
             # logger.log_error(" SFP index {} call stack is: {}".format(index, caller))
             if 'post_port_sfp_info_to_db' in str(caller):
                 Sfp.precache = True
+                # Sfp.debug = True
 
+        self.debug = False
+        """        
+        if (index==xx):
+           self.debug = True
+        """
+        
         self.page_cache = []
         self.cache_page0 = CachePage(index, 0, 256)
         self.page_cache.append(self.cache_page0)
@@ -500,10 +516,26 @@ class Sfp(SfpOptoeBase):
         self.page_cache.append(self.cache_page1)
         self.cache_page2 = CachePage(index, 2, 128)
         self.page_cache.append(self.cache_page2)
+        self.cache_page4 = CachePage(index, 4, 128)
+        self.page_cache.append(self.cache_page4)
         self.cache_page16 = CachePage(index, 16, 128)
         self.page_cache.append(self.cache_page16)
         self.cache_page17 = CachePage(index, 17, 128)
         self.page_cache.append(self.cache_page17)
+        self.cache_page18 = CachePage(index, 18, 128)
+        self.page_cache.append(self.cache_page18)
+        self.cache_page36 = CachePage(index, 36, 128)
+        self.page_cache.append(self.cache_page36)
+        self.cache_page37 = CachePage(index, 37, 128)
+        self.page_cache.append(self.cache_page37)
+        self.cache_page40 = CachePage(index, 40, 128)
+        self.page_cache.append(self.cache_page40)
+        self.cache_page41 = CachePage(index, 41, 128)
+        self.page_cache.append(self.cache_page41)
+        self.cache_page52 = CachePage(index, 52, 128)
+        self.page_cache.append(self.cache_page52)
+        self.cache_page53 = CachePage(index, 53, 128)
+        self.page_cache.append(self.cache_page53)
         self.cache_override_disable = False
 
         self.stub = stub
@@ -546,14 +578,20 @@ class Sfp(SfpOptoeBase):
             if (inst.page_num == page):
                 if (inst.cache_page_fresh() == True):
                    return inst.cache_page_data
-        # logger.log_debug("*** SFP{}: no page {} available in cache".format(self.index, page))
+                else:
+                   if (self.debug):
+                      logger.log_warning("*** SFP{}: page {} exists but not valid".format(self.index, page))
+                   return None
+        if (self.debug):
+           logger.log_warning("*** SFP{}: no page {} available in cache".format(self.index, page))
         return None
 
     def page_cache_flush(self, page = -1):
         for inst in self.page_cache:
             if (page == -1) or (inst.page_num == page):
                 inst.cache_page_valid = False
-                # logger.log_debug("*** SFP{}: flushing page {} from cache".format(self.index, page))
+                if (self.debug):
+                    logger.log_warning("*** SFP{}: flushing page {} from cache".format(self.index, inst.page_num))
 
     def get_name(self):
         """
@@ -726,20 +764,46 @@ class Sfp(SfpOptoeBase):
     """
     Direct control (optoe) SFP refactored api_factory compliance below
     """
+    def get_transceiver_status(self):
+        tmpval = self.debug
+        self.debug = False
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_status INVOKED for SFP{}!".format(self.index))
+        self.cache_page0.cache_page()
+        self.cache_page1.cache_page()
+        self.cache_page17.cache_page()
+        self.cache_override_disable = True
+        transceiver_info_dict = super().get_transceiver_status()
+        self.cache_override_disable = False
+
+        self.debug = tmpval
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_status DONE for SFP{}!".format(self.index))
+        # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_info_dict))
+        return transceiver_info_dict
 
     def get_transceiver_info(self):
-        # logger.log_debug("get_transceiver_info INVOKED for SFP{}!".format(self.index))
+        tmpval = self.debug    
+        self.debug = False
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_info INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_override_disable = True
         transceiver_info_dict = super().get_transceiver_info()
         self.cache_override_disable = False
-        # logger.log_debug("get_transceiver_info DONE for SFP{}".format(self.index))
+        
+        self.debug = tmpval
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_info DONE for SFP{}!".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_info_dict))
         return transceiver_info_dict
 
     def get_transceiver_bulk_status(self):
-        # logger.log_debug("get_transceiver_bulk_status INVOKED for SFP{}!".format(self.index))
+        tmpval = self.debug
+        self.debug = False
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_bulk_status INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_page2.cache_page()
@@ -747,36 +811,60 @@ class Sfp(SfpOptoeBase):
         self.cache_override_disable = True
         transceiver_bulk_dict = super().get_transceiver_bulk_status()
         self.cache_override_disable = False
-        # logger.log_debug("get_transceiver_bulk_status DONE for SFP{}".format(self.index))
+        
+        self.debug = tmpval
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_bulk_status DONE for SFP{}!".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_bulk_dict))
         return transceiver_bulk_dict
 
     def get_transceiver_threshold_info(self):
-        # logger.log_debug("get_transceiver_threshold_info INVOKED for SFP{}!".format(self.index))
+        tmpval = self.debug
+        self.debug = False
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_threshold_info INVOKED for SFP{}!".format(self.index))
         self.cache_page0.cache_page()
         self.cache_page1.cache_page()
         self.cache_page2.cache_page()
         self.cache_override_disable = True
         transceiver_threshold_dict = super().get_transceiver_threshold_info()
-        self.page_cache_flush()
+        
+        self.debug = tmpval
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_threshold_info DONE for SFP{}!".format(self.index))
+        # self.page_cache_flush()
         self.cache_override_disable = False
-        # logger.log_debug("get_transceiver_threshold_info DONE for SFP{}".format(self.index))
         # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_threshold_dict))
         return transceiver_threshold_dict
+
+    def get_transceiver_pm(self):
+        tmpval = self.debug
+        self.debug = False
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_pm INVOKED for SFP{}!".format(self.index))
+        self.cache_override_disable = True
+        transceiver_info_dict = super().get_transceiver_pm()
+        self.cache_override_disable = False
+        
+        self.debug = tmpval
+        if (Sfp.debug) or (self.debug):
+            logger.log_warning("get_transceiver_pm DONE for SFP{}!".format(self.index))
+        # logger.log_debug("      SFP{} returned {}".format(self.index, transceiver_info_dict))
+        return transceiver_info_dict
 
     def smart_cache(self, page, offset):
         hit = False
         if (page == 0) and ((offset == 85) or (offset == 86) or (offset == 2)):
-           self.cache_page0.cache_page()
+           self.cache_page0.cache_page(CACHE_NORMAL, self.debug)
            hit = True
-        if (page == 1) and (offset == 176):
-           self.cache_page1.cache_page()
-           hit = True           
-        if (page == 16) and (offset == 145):
-           self.cache_page16.cache_page()
-           hit = True
+        if (page > 0):
+           for inst in self.page_cache:
+               if (inst.page_num == page):
+                  inst.cache_page(CACHE_NORMAL, self.debug)
+                  hit = True
         if (hit is True):
-           # logger.log_debug("   SFP{} smart_cache cached page {} due to offset {}".format(self.index, page, offset))
+           if (self.debug):
+               logger.log_warning("***   SFP{} smart_cache attempted to cache page {} due to offset {}".format(self.index, page, offset))
            pass
 
     def override_cache(self, page, offset):
@@ -820,7 +908,8 @@ class Sfp(SfpOptoeBase):
         cached_page = self.get_cached_page(page)
         if (cached_page is not None) and (self.cache_override_disable is not True):
             if (self.override_cache(page,page_offset) is True):
-                # logger.log_warning("read_eeprom for SFP{} hit cached_page {}, but overriding due to offset {} num_bytes {}".format(self.index, page, page_offset, num_bytes))
+                if (self.debug):
+                    logger.log_warning("read_eeprom for SFP{} hit cached_page {}, but overriding due to offset {} num_bytes {}".format(self.index, page, page_offset, num_bytes))
                 cached_page = None            
 
         # if page0 cache has somehow expired and this request spans 128 byte boundary then refill page0 cache
@@ -844,8 +933,9 @@ class Sfp(SfpOptoeBase):
 
             raw = data
 
-            # logger.log_debug("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
-            # logger.log_debug("        raw bytes {}".format(raw))
+            if (self.debug):
+               logger.log_warning("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
+               logger.log_debug("        raw bytes {}".format(raw))
         else:
             if (page == 0):
                 cache_offset = page_offset
@@ -861,8 +951,9 @@ class Sfp(SfpOptoeBase):
 
             raw = bytes(cached_page[cache_offset:(cache_offset + num_bytes)])
             
-            # logger.log_debug("read_eeprom cache hit for SFP{} with offset {} and num_bytes {} : computed page {} offset {} cache_offset {} cached_page.len {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, cache_offset, len(cached_page), len(raw)))
-            # logger.log_debug("        raw bytes {}".format(raw))
+            if (self.debug):
+                logger.log_warning("read_eeprom cache hit for SFP{} with offset {} and num_bytes {} : computed page {} offset {} cache_offset {} cached_page.len {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, cache_offset, len(cached_page), len(raw)))
+                logger.log_debug("        raw bytes {}".format(raw))
 
         return bytearray(raw)
 
@@ -898,5 +989,7 @@ class Sfp(SfpOptoeBase):
             return False
 
         self.page_cache_flush(page)
-        # logger.log_debug("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+
+        if (self.debug):
+            logger.log_warning("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
         return True
