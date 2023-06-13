@@ -143,6 +143,7 @@ class Module(ModuleBase):
                         self.description = "Nokia-IXR7250E-SUP-6"
             if module_info.num_asic != 0:
                 i = 0
+                self.asic_list = []
                 while i < len(module_info.pcie_info.asic_entry):
                     asic_info = module_info.pcie_info.asic_entry[i]
                     self.asic_list.append((str(asic_info.asic_idx), str(asic_info.asic_pcie_id)))
