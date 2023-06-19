@@ -92,6 +92,7 @@ class Chassis(ChassisBase):
         # SFP
         self.sfp_module_initialized = False
         self.sfp_event_initialized = False
+        self.Tmutex = threading.RLock()
 
         # Watchdog
         if self._watchdog is None:
@@ -615,14 +616,18 @@ class Chassis(ChassisBase):
         from sonic_platform.sfp import Sfp
 
         if not nokia_common.is_cpm():
+            # prevent Xcvrd threads from simultaneous access
+            self.Tmutex.acquire()
             if self.sfp_module_initialized:
                 logger.log_error("SFPs are already initialized! stub {}".format(self.sfp_stub))
+                self.Tmutex.release()
                 return
 
             op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
             channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_XCVR_SERVICE)
             if not channel or not stub:
                 logger.log_error("Failure retrieving channel, stub in initialize_sfp")
+                self.Tmutex.release()
                 return False
 
             ret, response = nokia_common.try_grpc(stub.GetSfpNumAndType,
@@ -630,6 +635,7 @@ class Chassis(ChassisBase):
             nokia_common.channel_shutdown(channel)
             if ret is False:
                 logger.log_error("Failure on GetSfpNumAndType in initialize_sfp")
+                self.Tmutex.release()
                 return False
 
             msg = response.sfp_num_type
@@ -661,6 +667,7 @@ class Chassis(ChassisBase):
 
             self.sfp_module_initialized = True
             logger.log_warning("SFPs are now initialized... stub {}".format(self.sfp_stub))
+            self.Tmutex.release()
         else:
             self.sfp_module_initialized = True
             logger.log_info("CPM has no SFPs... skipping initialization")
