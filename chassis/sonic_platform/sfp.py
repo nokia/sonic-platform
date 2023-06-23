@@ -89,7 +89,7 @@ class MDIPC_CHAN():
            logger.log_error("MDIPC_CHAN: file error for {}".format(self.name))
            self.mm = None
            self.fd = None
-           if (chan == 0):
+           if (chan_index == 0):
               sys.exit("MDIPC_CHAN channel 0 doesn't exist")
 
     def get_fd(chan_index):
@@ -347,7 +347,7 @@ CACHE_NORMAL  = 0
 CACHE_FRESHEN = 1
 
 class CachePage():
-    def __init__(self, sfp_index, page, size, expiration = 5):
+    def __init__(self, sfp_index, page, size, expiration = 2):
         self.sfp_index          = sfp_index
         self.page_num           = page
         self.cache_page_data    = bytes([0] * size)
@@ -538,6 +538,7 @@ class Sfp(SfpOptoeBase):
 
         Sfp.initialized[index] = True
         self.debug = False
+
         """        
         if (index==xx):
            self.debug = True
@@ -868,8 +869,10 @@ class Sfp(SfpOptoeBase):
         else:
            logger.log_error("###   SFP{} smart_cache page {} offset {} out of range!".format(self.index, page, offset))
 
-    def override_cache(self, page, offset):
+    def override_cache(self, page, offset, num_bytes):
         if (page == 0) and ((offset >= 3) and (offset <= 84)):
+            return True
+        elif (page == 17) and (offset == 128):
             return True
         return False   
 
@@ -908,7 +911,7 @@ class Sfp(SfpOptoeBase):
         self.smart_cache(page, page_offset)
         cached_page = self.get_cached_page(page)
         if (cached_page is not None) and (self.cache_override_disable is not True):
-            if (self.override_cache(page,page_offset) is True):
+            if (self.override_cache(page,page_offset,num_bytes) is True):
                 if (self.debug):
                     logger.log_warning("read_eeprom for SFP{} hit cached_page {}, but overriding due to offset {} num_bytes {}".format(self.index, page, page_offset, num_bytes))
                 cached_page = None            
