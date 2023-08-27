@@ -203,6 +203,7 @@ class MDIPC():
         return index
 
     def free_channel(self, index, stat = None):
+        pid = os.getpid()
         tid = threading.get_native_id()
         if (stat != None):
             # todo:  update client stats kept within the shared channel
