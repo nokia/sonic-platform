@@ -47,7 +47,7 @@ DIRECT_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_DIRECT
 # Module Direct IPC attributes
 # MDIPC_BASE_NAME = '/dev/shm/MDIPC'
 MDIPC_BASE_NAME = '/var/run/redis/MDIPC'
-MDIPC_NUM_CHANNELS = 4
+MDIPC_NUM_CHANNELS = 6
 
 MDIPC_OWN_NDK = 0x5A5A3C3C
 MDIPC_OWN_NOS = 0X43211234
@@ -258,7 +258,7 @@ class MDIPC():
         msg[16:20] = op.to_bytes(4, sys.byteorder)
         msg[20:24] = page.to_bytes(4, sys.byteorder)
         msg[24:28] = offset.to_bytes(4, sys.byteorder)
-        if (num_bytes > 128):        
+        if (num_bytes > 128) and (page < 160):
             logger.log_error("msg_send ({},{} {}):  request with num_bytes {} truncated to 128!".format(index, pid, tid, num_bytes))
             logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
             num_bytes = 128
@@ -558,6 +558,9 @@ class Sfp(SfpOptoeBase):
         logger.log_debug("Sfp __init__ index {} setting name to {}".format(index, self.name))
         Sfp.instances.append(self)
         # self.get_presence()
+
+    def get_eeprom_path(self):
+        return 'dummy'
 
     def get_presence(self):
         """
@@ -866,6 +869,10 @@ class Sfp(SfpOptoeBase):
            if (num != page):
               logger.log_error("page_cache[{}] instance shows unmatched page {} : possible corruption {}".format(page, num))
               sys.exit("smart_cache exception")
+           if (page == 3) or (page == 5) or (page == 18) or (page == 23) or (page == 44) or (page >= 159):
+              if (Sfp.debug) or (self.debug):
+                 logger.log_warning("###   SFP{} smart_cache skipping page {} offset {}".format(self.index, page, offset))
+              return
            self.page_cache[page].cache_page(CACHE_NORMAL, self.debug)
         else:
            logger.log_error("###   SFP{} smart_cache page {} offset {} out of range!".format(self.index, page, offset))
@@ -875,6 +882,7 @@ class Sfp(SfpOptoeBase):
             return True
         elif (page == 17) and (offset == 128):
             return True
+
         return False   
 
 
@@ -915,7 +923,7 @@ class Sfp(SfpOptoeBase):
             if (self.override_cache(page,page_offset,num_bytes) is True):
                 if (self.debug):
                     logger.log_warning("read_eeprom for SFP{} hit cached_page {}, but overriding due to offset {} num_bytes {}".format(self.index, page, page_offset, num_bytes))
-                cached_page = None            
+                cached_page = None
 
         if (cached_page is None):
             ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.index, page, page_offset, num_bytes)
@@ -935,7 +943,7 @@ class Sfp(SfpOptoeBase):
 
             if (self.debug):
                logger.log_warning("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
-               logger.log_debug("        raw bytes {}".format(raw))
+               logger.log_warning("        raw bytes {}".format(bytes(raw)))
         else:
             if (page == 0):
                 cache_offset = page_offset
@@ -953,7 +961,7 @@ class Sfp(SfpOptoeBase):
             
             if (self.debug):
                 logger.log_warning("read_eeprom cache hit for SFP{} with offset {} and num_bytes {} : computed page {} offset {} cache_offset {} cached_page.len {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, cache_offset, len(cached_page), len(raw)))
-                logger.log_debug("        raw bytes {}".format(raw))
+                logger.log_warning("        raw bytes {}".format(bytes(raw)))
 
         return bytearray(raw)
 
@@ -993,4 +1001,7 @@ class Sfp(SfpOptoeBase):
 
         if (self.debug or Sfp.debug):
             logger.log_warning("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+            if (page == 159):
+                logger.log_warning("     data:    {}".format(bytes(write_buffer)))
+
         return True
