@@ -917,6 +917,12 @@ class Sfp(SfpOptoeBase):
             page = (offset//128) - 1
             page_offset = (offset%128) + 128
 
+        if (num_bytes == 0):
+            if (self.debug):
+               logger.log_warning("read_eeprom got bad request for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
+            raw = bytes(0)
+            return bytearray(raw)
+
         self.smart_cache(page, page_offset)
         cached_page = self.get_cached_page(page)
         if (cached_page is not None) and (self.cache_override_disable is not True):
