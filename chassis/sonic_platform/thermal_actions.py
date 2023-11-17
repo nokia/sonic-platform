@@ -29,6 +29,8 @@ class PublishThermalAlgoAction(ThermalPolicyActionBase):
         else:
             return
 
+        return
+
         if ThermalInfo.INFO_NAME in thermal_info_dict:
             thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
 
