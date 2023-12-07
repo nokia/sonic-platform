@@ -922,6 +922,7 @@ class Sfp(SfpOptoeBase):
                logger.log_warning("read_eeprom got bad request for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
             raw = bytes(0)
             return bytearray(raw)
+            # return None
 
         self.smart_cache(page, page_offset)
         cached_page = self.get_cached_page(page)
@@ -937,13 +938,13 @@ class Sfp(SfpOptoeBase):
             if (ret != MDIPC_RSP_SUCCESS):
                 logger.log_error("read_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
                 raw = bytes(0)
-                return bytearray(raw)
-                # return None
+                # return bytearray(raw)
+                return None
             elif (data is None):
                 logger.log_error("read_eeprom failed (response data None) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
                 raw = bytes(0)
-                return bytearray(raw)
-                # return None
+                # return bytearray(raw)
+                return None
 
             raw = data
 
