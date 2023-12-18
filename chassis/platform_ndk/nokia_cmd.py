@@ -977,6 +977,7 @@ def show_ndk_status():
 
     if is_cpm:
         proc_list = ['nokia-sr-device-mgr', 'nokia-eth-mgr', 'nokia-watchdog']
+
     else:
         proc_list = ['nokia-sr-device-mgr', 'nokia-ndk-qfpga-mgr', 'nokia-watchdog', 'nokia-phy-mgr']
     item_list = []
@@ -1011,6 +1012,14 @@ def show_ndk_status():
         uptime = (current_time_utc - start_time_utc)
         item.append(pretty_time_delta(uptime.seconds))
 
+        if is_cpm is True and proc_item == "nokia-sr-device-mgr":
+            if os.path.isfile("/etc/opt/srlinux/ungraceful_detect"):
+                item.append("ungraceful")
+            else:
+                item.append("graceful")
+        else:
+            item.append("N/A")
+
         # Add it to the item list
         item_list.append(item)
 
@@ -1020,6 +1029,7 @@ def show_ndk_status():
     field.append('PID     ')
     field.append('RestartCount')
     field.append('Uptime/Exittime   ')
+    field.append('RebootStatus')
 
     if format_type == 'json-format':
         json_list = []
@@ -1161,6 +1171,9 @@ def set_log_level_module(level, module):
         _log_info = platform_ndk_pb2.ReqLogInfoPb(level_current=level, module=module)
         stub.ReqLogSetModule(platform_ndk_pb2.ReqLogSettingPb(log_type=_log_type, log_info=_log_info))
     nokia_common.channel_shutdown(channel)
+
+def set_reboot_linecard(slot):
+    nokia_common.reboot_imm(slot)
 
 def set_log_restore_default():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
@@ -2187,6 +2200,11 @@ def main():
     set_startupsfm_parser = setsubparsers.add_parser('startup-sfm', help='startup a sfm and related asic services (swss and syncd)')
     set_startupsfm_parser.add_argument('sfm-num', metavar='sfm-num', type=int, help='SFM slot number starts from 1')
 
+    # set reboot-linecard
+    set_reboot_linecard_parser = setsubparsers.add_parser('reboot-linecard', help='Reboot linecard from Supervisor')
+    set_reboot_linecard_parser.add_argument('slot', type=int, help='Linecard slot number starts from 1 to 8')
+    set_reboot_linecard_parser.add_argument('force', nargs='?', type=str, help='Continue without prompt for confirmation')
+    
     # Enable/Disable xcvr-resync
     set_xcvr_resync_parser = setsubparsers.add_parser('xcvr-resync', help='set xcvr-resync')
     set_xcvr_resync_sub_parser = set_xcvr_resync_parser.add_subparsers(help='set xcvr-resync options', dest="xcvrresynccmd")
@@ -2384,6 +2402,18 @@ def main():
                 set_ndk_log_level_parser.print_help()
             else:
                 set_ndk_log_level(d['level'])
+        elif args.setcmd == 'reboot-linecard':
+            if not nokia_common.is_cpm():
+                print('Command is only supported on Supervisor card')
+                return
+            slot = d['slot']
+            force = d['force']
+            if force != 'force':
+                ans = input("Reboot linecard slot {}. Continue [y/n]?:".format(slot))
+                if ans.strip().upper() != "Y":
+                    print("Operation abort!")
+                    return
+            set_reboot_linecard(slot)        
         else:
             set_parser.print_help()
     elif args.cmd == 'request':
