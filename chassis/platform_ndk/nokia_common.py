@@ -355,19 +355,19 @@ def _reboot_IMMs_via_midplane(imm_slot, reboot_type_=None):
     return rv
 
 def _reboot_IMMs(reboot_type=None):
-    for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):
+    for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):        
         ret = _reboot_IMMs_via_midplane(imm_slot, reboot_type)
         if ret == False:
             _cpm_reboot_IMMs(imm_slot)
     return True
 
-def reboot_imm(slot):
-    if slot < 0 or slot > NOKIA_MAX_IMM_SLOTS:
-        print("Error: Invalid slot number. Linecard slot starts from 1 to 8")
+def _reboot_imm(slot):
+    if slot < 1 or slot > NOKIA_MAX_IMM_SLOTS:
         return
     ret = _reboot_IMMs_via_midplane(slot)
     if ret == False:
-        _cpm_reboot_IMMs(slot)
+        ret = _cpm_reboot_IMMs(slot)
+    return ret
 
 def _power_onoff_SFM(hw_slot, powerOn):
     channel, stub = channel_setup(NOKIA_GRPC_CHASSIS_SERVICE)

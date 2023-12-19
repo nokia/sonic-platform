@@ -340,7 +340,7 @@ class Chassis(ChassisBase):
 
         if ret is False:
             return module_index
-
+        num_fabric_cards = 0    
         for property_index in range(len(response.chassis_property.hw_property)):
             hw_property = response.chassis_property.hw_property[property_index]
 
@@ -349,8 +349,8 @@ class Chassis(ChassisBase):
                 num_control_cards = 1
             elif hw_property.module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_LINE:
                 num_line_cards = hw_property.max_num
-            # elif hw_property.module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_FABRIC:
-            #    num_fabric_cards = hw_property.max_num
+            elif hw_property.module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_FABRIC:
+                num_fabric_cards = hw_property.max_num
 
         if module_name.startswith(ModuleBase.MODULE_TYPE_SUPERVISOR):
             module_index = 0
@@ -359,12 +359,15 @@ class Chassis(ChassisBase):
             parse_nums = re.findall(r'\d+', module_name)
             module_number = int(parse_nums[0])
             module_index = num_control_cards + int(module_number)
+            if module_index > num_control_cards + num_line_cards:
+                module_index = -1
         elif module_name.startswith(ModuleBase.MODULE_TYPE_FABRIC):
             import re
             parse_nums = re.findall(r'\d+', module_name)
             module_number = int(parse_nums[0])
             module_index = num_control_cards + num_line_cards + int(module_number)
-
+            if module_index > num_control_cards + num_line_cards + num_fabric_cards:
+                module_index = -1
         return module_index
 
     def get_num_modules(self):

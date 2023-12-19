@@ -16,7 +16,9 @@ import os
 
 from platform_ndk import nokia_common
 from platform_ndk import platform_ndk_pb2
+from sonic_py_common.logger import Logger
 
+logger=Logger("nokia_cmd")
 
 eeprom_default_dict = {
     "0x21": "Product Name",
@@ -1173,7 +1175,8 @@ def set_log_level_module(level, module):
     nokia_common.channel_shutdown(channel)
 
 def set_reboot_linecard(slot):
-    nokia_common.reboot_imm(slot)
+    logger.log_warning("nokia_cmd reboots linecard slot {}".format(slot))
+    nokia_common._reboot_imm(slot)
 
 def set_log_restore_default():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
@@ -1963,7 +1966,7 @@ def set_shutdown_sfm(num):
     if num not in sfm_hw_slot_mapping:
         print("Invalid SFM number {}. Valid range is (1..8)".format(num))
         return
-
+    logger.log_warning("nokia_cmd shutdown SFM-{}".format(num))    
     asic_list = sfm_asic_dict[num]
     for asic in asic_list:
         print("Shutdown swss@{} and syncd@{} services".format(asic, asic))
@@ -1983,7 +1986,7 @@ def set_startup_sfm(num):
     if num not in sfm_hw_slot_mapping:
         print("Invalid SFM number {}. Valid range is (1..8)".format(num))
         return
-
+    logger.log_warning("nokia_cmd startup SFM-{}".format(num))     
     print("Power up SFM-{} module ...".format(num))
     hw_slot = sfm_hw_slot_mapping[num]
     nokia_common._power_onoff_SFM(hw_slot,True)
@@ -2407,12 +2410,16 @@ def main():
                 print('Command is only supported on Supervisor card')
                 return
             slot = d['slot']
+            if slot < 1 or slot > 8:
+                print("Error: Invalid slot number. Linecard slot number starts from 1 to 8")
+                return
             force = d['force']
             if force != 'force':
                 ans = input("Reboot linecard slot {}. Continue [y/n]?:".format(slot))
                 if ans.strip().upper() != "Y":
                     print("Operation abort!")
                     return
+            
             set_reboot_linecard(slot)        
         else:
             set_parser.print_help()

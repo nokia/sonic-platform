@@ -15,9 +15,12 @@ try:
     from sonic_py_common import daemon_base
     from swsscommon import swsscommon
     import time
+    from sonic_py_common.logger import Logger
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+logger = Logger()
 
 DESCRIPTION_MAPPING = {
     "imm32-100g-qsfp28+4-400g-qsfpdd": "Nokia-IXR7250-32x100G-4x400G",
@@ -248,11 +251,17 @@ class Module(ModuleBase):
         if self.get_type() == self.MODULE_TYPE_FABRIC:
             return False
 
-        # Allow only reboot of self
+        # Allow only reboot of self and reboot Linecard from Supervisor
+        if self._is_cpm and self.get_type() == self.MODULE_TYPE_LINE:
+            logger.log_warning('Supervisor reboots linecard slot {}'.format(self.hw_slot))
+            nokia_common._reboot_imm(self.hw_slot)
+            return True
+
         if nokia_common._get_my_slot() != self._get_hw_slot():
             return False
 
         if self.get_type() == self.MODULE_TYPE_SUPERVISOR:
+            logger.log_warning('Supervisor reboots all linecards')
             nokia_common._reboot_IMMs("PMON_API")
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
