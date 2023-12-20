@@ -869,7 +869,7 @@ class Sfp(SfpOptoeBase):
            if (num != page):
               logger.log_error("page_cache[{}] instance shows unmatched page {} : possible corruption {}".format(page, num))
               sys.exit("smart_cache exception")
-           if (page == 3) or (page == 5) or (page == 18) or (page == 23) or (page == 44) or (page >= 159):
+           if (page == 3) or (page == 5) or ((page >= 16) and (page <= 18)) or (page == 23) or (page == 44) or (page >= 159):
               if (Sfp.debug) or (self.debug):
                  logger.log_warning("###   SFP{} smart_cache skipping page {} offset {}".format(self.index, page, offset))
               return
@@ -949,7 +949,7 @@ class Sfp(SfpOptoeBase):
             raw = data
 
             if (self.debug):
-               logger.log_warning("read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
+               logger.log_warning("### read_eeprom for SFP{} with offset {} and num_bytes {} : computed page {} offset {} raw.len {}".format(self.index, offset, num_bytes, page, page_offset, len(raw)))
                logger.log_warning("        raw bytes {}".format(bytes(raw)))
         else:
             if (page == 0):
@@ -1000,7 +1000,7 @@ class Sfp(SfpOptoeBase):
         ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_WRITE, self.index, page, page_offset, num_bytes, bytes(write_buffer))
 
         if (ret != MDIPC_RSP_SUCCESS):
-            logger.log_warning("Failed write_eeprom with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+            logger.log_warning("write_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
             return False
 
         # self.page_cache_flush(page)
