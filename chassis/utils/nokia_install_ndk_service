@@ -61,6 +61,23 @@ fi
 #   sfpreset=1
 # fi
 
+if [ -e /lib/systemd/system/voq-startup-tsa-tsb.service ]; then
+   ASIC_CONF="/usr/share/sonic/device/${onie_platform}/asic.conf"
+   if [ -e $ASIC_CONF ]; then
+      source $ASIC_CONF
+      num_asic=0
+      while [ $num_asic -lt $NUM_ASIC ]
+      do
+         sed -i "/^Description=.*/a Requires=database@$num_asic.service" /lib/systemd/system/voq-startup-tsa-tsb.service
+         sed -i "/^Description=.*/a After=database@$num_asic.service" /lib/systemd/system/voq-startup-tsa-tsb.service
+         ((num_asic++))
+      done
+   fi
+   systemctl enable voq-startup-tsa-tsb.service
+   tsa_tsb=1
+fi
+
+
 if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]] || [[ $asicthermal -eq 1 ]]; then
     systemctl daemon-reload
 fi
@@ -83,3 +100,6 @@ fi
 # if [[ $sfpreset -eq 1 ]]; then
 #    systemctl start nokia-xcvr-resync.service &
 # fi
+if [[ $tsa_tsb -eq 1 ]]; then
+    systemctl start voq-startup-tsa-tsb.service &
+fi
