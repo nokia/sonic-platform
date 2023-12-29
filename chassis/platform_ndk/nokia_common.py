@@ -394,4 +394,25 @@ def _get_sfm_eeprom_info_list():
     response = stub.ReqSfmInfo(platform_ndk_pb2.ReqSfmInfoPb(type=req_etype))
     channel_shutdown(channel)
     return response.sfm_eeprom.eeprom_info
+    
+def _tx_disable_all_sfps():
+    op_type = platform_ndk_pb2.ReqSfpOpsType.SFP_OPS_NORMAL
+    
+    channel, stub = channel_setup(NOKIA_GRPC_XCVR_SERVICE)
+    if not channel or not stub:
+        return False
+    ret, response = try_grpc(stub.ReqSfpTxDisable,
+                             platform_ndk_pb2.ReqSfpOpsPb(type=op_type,
+                                                          hw_port_id_begin=0xffff,
+                                                          val=False))
+    channel_shutdown(channel)
 
+    if ret is False:
+        print("Fail to send to disable all SFPs tx")
+        return False
+    status = response.sfp_status.status
+    if status == 0:
+        return True
+    else:
+        return False
+        
