@@ -413,7 +413,7 @@ class CachePage():
 
         if (self.page_num == 0):
             if (ret != MDIPC_RSP_SUCCESS) or (data is None):
-                logger.log_warning("*** SFP{} cache page0 failed 1st chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
+                logger.log_info("*** SFP{} cache page0 failed 1st chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
                 self.pending = 0
                 return False
             temp_cache = data
@@ -422,14 +422,14 @@ class CachePage():
             ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.sfp_index, self.page_num, offset, num_bytes)
 
             if (ret != MDIPC_RSP_SUCCESS) or (data is None):
-                logger.log_warning("*** SFP{} cache page0 failed 2nd chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
+                logger.log_info("*** SFP{} cache page0 failed 2nd chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
                 self.pending = 0
                 return False
 
             self.cache_page_data = temp_cache + data
 
         if (ret != MDIPC_RSP_SUCCESS) or (data is None):
-            logger.log_warning("*** SFP{} cache page {} failed for offset {} num_bytes {} ret {}".format(self.sfp_index, self.page_num, offset, num_bytes, ret))
+            logger.log_info("*** SFP{} cache page {} failed for offset {} num_bytes {} ret {}".format(self.sfp_index, self.page_num, offset, num_bytes, ret))
             self.pending = 0
             return False
 
@@ -936,12 +936,12 @@ class Sfp(SfpOptoeBase):
             ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.index, page, page_offset, num_bytes)
 
             if (ret != MDIPC_RSP_SUCCESS):
-                logger.log_warning("read_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+                logger.log_info("read_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
                 raw = bytes(0)
                 # return bytearray(raw)
                 return None
             elif (data is None):
-                logger.log_warning("read_eeprom failed (response data None) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
+                logger.log_info("read_eeprom failed (response data None) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(self.index, offset, num_bytes, page, page_offset))
                 raw = bytes(0)
                 # return bytearray(raw)
                 return None
@@ -1000,7 +1000,7 @@ class Sfp(SfpOptoeBase):
         ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_WRITE, self.index, page, page_offset, num_bytes, bytes(write_buffer))
 
         if (ret != MDIPC_RSP_SUCCESS):
-            logger.log_warning("write_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+            logger.log_info("write_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
             return False
 
         # self.page_cache_flush(page)
