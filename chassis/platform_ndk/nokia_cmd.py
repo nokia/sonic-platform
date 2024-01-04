@@ -2001,20 +2001,6 @@ def set_startup_sfm(num):
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         outstr = stdout.decode('ascii')
-
-def set_xcvr_resync_feature(enable):
-    if enable == True:
-        print("Start the nokia-xcvr-resync.service")
-        process = subprocess.Popen(['sudo', 'systemctl', 'start', 'nokia-xcvr-resync.service'],
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        outstr = stdout.decode('ascii')
-    else:
-        print("Stop the nokia-xcvr-resync.service")
-        process = subprocess.Popen(['sudo', 'systemctl', 'stop', 'nokia-xcvr-resync.service'],
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        outstr = stdout.decode('ascii')
     return
 
 def main():
@@ -2208,14 +2194,6 @@ def main():
     set_reboot_linecard_parser.add_argument('slot', type=int, help='Linecard slot number starts from 1 to 8')
     set_reboot_linecard_parser.add_argument('force', nargs='?', type=str, help='Continue without prompt for confirmation')
     
-    # Enable/Disable xcvr-resync
-    set_xcvr_resync_parser = setsubparsers.add_parser('xcvr-resync', help='set xcvr-resync')
-    set_xcvr_resync_sub_parser = set_xcvr_resync_parser.add_subparsers(help='set xcvr-resync options', dest="xcvrresynccmd")
-    #set xcvr-resync enable
-    set_xcvr_resync_enable_parser = set_xcvr_resync_sub_parser.add_parser('enable', help='Enable xcvr-resync')
-    #set xcvr-resync disable
-    set_xcvr_resync_disable_parser = set_xcvr_resync_sub_parser.add_parser('disable', help='Disable xcvr-resync')
-
     set_ndk_monitor_action_parser = setsubparsers.add_parser('ndk-monitor-action', help='Change the NDK monitor_action value (warn or reboot) in starup_debug.json file')
     set_ndk_monitor_action_parser.add_argument('action', nargs='?', help='Choices: warn, reboot or default')
 
@@ -2385,14 +2363,6 @@ def main():
                 print('Command is only supported on Supervisor card')
                 return
             set_startup_sfm(d['sfm-num'])
-        elif args.setcmd == 'xcvr-resync':
-            if nokia_common.is_cpm():
-              print('Command is not supported in Supervisor card')
-              return
-            if args.xcvrresynccmd == 'enable':
-              set_xcvr_resync_feature(True)
-            elif args.xcvrresynccmd == 'disable':
-              set_xcvr_resync_feature(False)
         elif args.setcmd == 'ndk-monitor-action':
             action_list = ['warn','reboot','default']
             if d['action'] not in action_list:
