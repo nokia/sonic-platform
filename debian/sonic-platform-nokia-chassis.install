@@ -13,5 +13,3 @@ common/utils/nokia-asic-thermal.py opt/srlinux/bin
 common/service/nokia-asic-thermal.service lib/systemd/system
 common/utils/nokia-xcvr-resync.py opt/srlinux/bin
 common/service/nokia-xcvr-resync.service lib/systemd/system
-common/utils/voq-startup-tsa-tsb.py usr/local/bin
-common/service/voq-startup-tsa-tsb.service lib/systemd/system
