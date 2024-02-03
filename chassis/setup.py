@@ -16,7 +16,7 @@ setup(
         'sonic_platform',
     ],
     setup_requires = [
-        'grpcio==1.26.0',
+        'grpcio',
         'pytest-runner',
         'wheel'
     ],
