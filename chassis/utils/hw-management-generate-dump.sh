@@ -66,6 +66,73 @@ abort() {
 }
 
 ###############################################################################
+# Runs a comamnd and saves its output to the incrementally built file and tar
+# Command gets timedout if it runs for more than TIMEOUT_MIN minutes.
+# Globals:
+#  LOGDIR
+#  BASE
+#  MKDIR
+#  TAR
+#  TARFILE
+#  DUMPDIR
+#  V
+#  RM
+#  NOOP
+# Arguments:
+#  cmd: The command to run. Make sure that arguments with spaces have quotes
+#  filename: the filename to save the output as in $BASE/dump
+#  save_stderr: (OPTIONAL) true or false. Should the stderr output be saved
+# Returns:
+#  None
+###############################################################################
+save_tar_cmd() {
+    local start_t=$(date +%s%3N)
+    local end_t=0
+    local cmd="$1"
+    local filename=$2
+    local filepath="${LOGDIR}/$filename"
+    local do_tar_append=${3:-false}
+    local do_gzip=${4:-false}
+    local save_stderr=${5:-true}
+    local tarpath="${BASE}/dump/$filename"
+    local timeout_cmd="timeout --foreground ${TIMEOUT_MIN}m"
+    local redirect="&>>"
+    
+    [ ! -d $LOGDIR ] && $MKDIR $V -p $LOGDIR
+
+    if ! $save_stderr
+    then
+        redirect=">>"
+    fi
+
+    # eval required here to re-evaluate the $cmd properly at runtime
+    # This is required if $cmd has quoted strings that should be bunched
+    # as one argument, e.g. vtysh -c "COMMAND HERE" needs to have
+    # "COMMAND HERE" bunched together as 1 arg to vtysh -c
+    if $NOOP; then
+        echo "${timeout_cmd} $cmd $redirect '$filepath'"
+    else
+        echo "################################################################################" >> $filepath 
+        echo "# [Command]: $cmd  ### `date +%Y-%m-%d_%H:%M:%S`" >> $filepath
+        echo "################################################################################" >> $filepath 
+        eval "${timeout_cmd} $cmd" "$redirect" "$filepath"
+        if [ $? -ne 0 ]; then
+            echo "Command: $cmd timedout after ${TIMEOUT_MIN} minutes."
+        fi
+    fi
+    end_t=$(date +%s%3N)
+    echo "[ save_tar_cmd:$cmd ] : $(($end_t-$start_t)) msec" >> $TECHSUPPORT_TIME_INFO
+    
+    if $do_tar_append; then
+        start_t=$(date +%s%3N)    
+        ($TAR $V -rhf $TARFILE -C $DUMPDIR "$tarpath" \
+             || abort "${ERROR_PROCFS_SAVE_FAILED}" "tar append operation failed. Aborting to prevent data loss.") \
+            && $RM $V -f "$filepath"
+        end_t=$(date +%s%3N)
+        echo "[ save_file:$filepath ] : $(($end_t-$start_t)) msec" >> $TECHSUPPORT_TIME_INFO
+    fi
+}
+###############################################################################
 # Runs a comamnd and saves its output to the incrementally built tar.
 # Command gets timedout if it runs for more than TIMEOUT_MIN minutes.
 # Globals:
@@ -130,6 +197,7 @@ save_cmd() {
             fi
         fi
     fi
+    
     ($TAR $V -rhf $TARFILE -C $DUMPDIR "$tarpath" \
         || abort "${ERROR_TAR_FAILED}" "tar append operation failed. Aborting to prevent data loss.") \
         && $RM $V -rf "$filepath"
@@ -191,6 +259,82 @@ save_file() {
     end_t=$(date +%s%3N)
     echo "[ save_file:$orig_path] : $(($end_t-$start_t)) msec"  >> $TECHSUPPORT_TIME_INFO
 }
+save_ndk_general_info() {
+    echo "Capture NDK general info"
+    NDK_GENERAL=ndk.general.txt
+    save_tar_cmd "nokia_cmd show ndk-version"  "${NDK_GENERAL}"  
+    save_tar_cmd "nokia_cmd show ndk-status"   "${NDK_GENERAL}"
+    save_tar_cmd "nokia_cmd show platform"     "${NDK_GENERAL}"
+    if [ $IS_SUP -eq 1 ]; then
+        save_tar_cmd "nokia_cmd show power"    "${NDK_GENERAL}"
+    fi
+    save_tar_cmd "nokia_cmd show firmware"     "${NDK_GENERAL}" true
+}
+save_ndk_sensors_info() {
+    echo "Capture NDK sensors info"
+    NDK_SENSORS=ndk.sensors.txt
+    if [ $IS_SUP -eq 0 ]; then
+        save_tar_cmd "nokia_cmd show sensors"           "${NDK_SENSORS}"
+        save_tar_cmd "nokia_cmd show asic-temperature"  "${NDK_SENSORS}"  true
+    else
+        save_tar_cmd "nokia_cmd show sensors"  "${NDK_SENSORS}" true
+    fi
+}
+save_ndk_psus_info() {
+    if [ $IS_SUP -eq 1 ]; then 
+        echo "Capture NDK PSUs info"
+        NDK_PSUS=ndk.psus.txt
+        save_tar_cmd "nokia_cmd show psus"  "${NDK_PSUS}" true
+    fi
+}
+save_ndk_system_leds_info() {
+    echo "Capture NDK system leds info"
+    NDK_SYSTEM_LEDS=ndk.system_leds.txt
+    save_tar_cmd "nokia_cmd show system-leds" "${NDK_SYSTEM_LEDS}" true
+}
+save_ndk_syseeprom_info() {
+    echo "Capture NDK syseeprom info"
+    NDK_SYSEEPROM=ndk.eeprom.txt
+    if [ $IS_SUP -eq 1 ]; then
+        save_tar_cmd "nokia_cmd show syseeprom"  "${NDK_SYSEEPROM}"
+        save_tar_cmd "nokia_cmd show ndk-eeprom" "${NDK_SYSEEPROM}" true
+    else
+        save_tar_cmd "nokia_cmd show syseeprom"  "${NDK_SYSEEPROM}" true
+    fi
+}
+save_ndk_midplane_info() {
+    if [ $IS_SUP -eq 1 ]; then
+        echo "Capture midplane info"
+        NDK_MIDPLANE=ndk.midplane.txt
+        save_tar_cmd "nokia_cmd show midplane port-status"    "${NDK_MIDPLANE}"
+        save_tar_cmd "nokia_cmd show midplane port-counters"  "${NDK_MIDPLANE}"
+        save_tar_cmd "nokia_cmd show midplane vlan-table"     "${NDK_MIDPLANE}"
+        save_tar_cmd "nokia_cmd show midplane mac-table"      "${NDK_MIDPLANE}"
+        save_tar_cmd "nokia_cmd show midplane link-status-flap" "${NDK_MIDPLANE}"
+        save_tar_cmd "sudo ethtool xe0"    "${NDK_MIDPLANE}"
+        save_tar_cmd "sudo ethtool mgmt1"  "${NDK_MIDPLANE}" true
+    fi
+}
+save_ndk_sfm_info() {
+    if [ $IS_SUP -eq 1 ]; then
+        echo "Capture NDK SFMs info"
+        NDK_SFM=ndk.sfm.txt
+        save_tar_cmd "nokia_cmd show sfm-summary"  "${NDK_SFM}"
+        save_tar_cmd "nokia_cmd show sfm-eeprom"   "${NDK_SFM}" true
+    fi
+}
+save_ndk_sfp_info() {
+    if [ $IS_SUP -eq 0 ]; then
+        echo "Capture SFPs info"
+        NDK_SFP=ndk.sfp.txt
+        save_tar_cmd "nokia_cmd show fp-status"  "${NDK_SFP}" true
+    fi
+}
+save_ndk_kernel_intf_info() {
+    echo "Capture Kernel Intfs"
+    NDK_INTFS=ndk.interfaces.txt
+    save_tar_cmd "ip link show" "${NDK_INTFS}" true
+}
 
 save_platform_info() {
     save_cmd "cat /host/machine.conf" "machine.conf"
@@ -203,31 +347,36 @@ save_platform_info() {
     save_cmd "lsusb -v" "lsusb"
     save_cmd "sysctl -a" "sysctl"
 }
-
 save_ndk_devicemgr_info() {
     echo "Capture ndk devicemgr info"
     # Admintech
     NDK_ADMINTECH=devmgr.admintech
-    $NOKIA_NDK_CLI -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
+    nokia_cmd request devmgr-admintech /tmp/$NDK_ADMINTECH
     save_file /tmp/$NDK_ADMINTECH* dump false true
+    rm -f /tmp/$NDK_ADMINTECH*
 }
-
 save_ndk_qfpgamgr_info() {
     if [ $IS_SUP -eq 0 ]; then
         echo "Capture ndk qfpgamgr info"
         # Admintech
-        NDK_ADMINTECH=qfpgamgr.admintech
-        $NOKIA_NDK_CLI --port $NOKIA_QFPGA_GRPC_PORT -c "AdminTech::Save /tmp/$NDK_ADMINTECH"
-        save_file /tmp/$NDK_ADMINTECH* dump false true
+        NDK_ADMINTECH=qfpgamgr.admintech.txt
+        save_tar_cmd "nokia_cmd show qfpga version"         "${NDK_ADMINTECH}"
+        save_tar_cmd "nokia_cmd show qfpga port-status"     "${NDK_ADMINTECH}"
+        save_tar_cmd "nokia_cmd show qfpga vlan-counters"   "${NDK_ADMINTECH}"
+        save_tar_cmd "nokia_cmd show qfpga port-statistics" "${NDK_ADMINTECH}"
+        save_tar_cmd "nokia_cmd show qfpga error-counters"  "${NDK_ADMINTECH}" true
     fi
 }
-
-save_ndk_ethmgr_info() {
-    if [ $IS_SUP -eq 1 ]; then
-        echo "Capture ndk ethmgr info"
+save_syslog_file() {
+    echo "Copy syslog file"
+    log_dir=log
+    if [ -f /var/log/syslog.1 ]; then
+        save_file /var/log/syslog.1 $log_dir false true
+    fi
+    if [ -f /var/log/syslog ]; then
+        save_file /var/log/syslog $log_dir false true
     fi
 }
-
 save_ndk_cores() {
     echo "Copy ndk coredump files"
     core_dir=core
@@ -250,7 +399,8 @@ main() {
 
     $MKDIR $V -p $TARDIR
     $RM $V -f $TARDIR/sonic_dump
-
+    ls $TARDIR
+    
     # Start populating timing data
     echo $BASE > $TECHSUPPORT_TIME_INFO
     start_t=$(date +%s%3N)
@@ -262,17 +412,30 @@ main() {
     else
         IS_SUP=0
     fi
-
+    
+    save_ndk_general_info
+    save_ndk_syseeprom_info
+    save_ndk_sensors_info    
+    save_ndk_psus_info
+    save_ndk_system_leds_info
+    save_ndk_sfp_info
+    save_ndk_midplane_info
+    save_ndk_sfm_info
+    save_ndk_kernel_intf_info
     save_platform_info
     save_file /usr/share/sonic/device/${onie_platform}/platform_ndk.json dump false true
     save_ndk_devicemgr_info
     save_ndk_qfpgamgr_info
-    save_ndk_ethmgr_info
     save_ndk_cores
-
+    save_syslog_file
+    
     # clean up working tar dir before compressing
     $RM $V -rf $TARDIR
 
+    end_t=$(date +%s%3N)
+    echo "Total time: $(($end_t-$start_t)) msec" >> $TECHSUPPORT_TIME_INFO
+    save_file $TECHSUPPORT_TIME_INFO "" false true
+    
     if $DO_COMPRESS; then
         $GZIP $V $TARFILE
         if [ $? -eq 0 ]; then
@@ -286,6 +449,7 @@ main() {
         mv ${TARFILE} /tmp/hw-mgmt-dump.tar
         echo "platform specific dump is in /tmp/hw-mgmt-dump.tar"
     fi
+    
 
 }
 main
