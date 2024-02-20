@@ -738,10 +738,6 @@ def show_syseeprom():
     import sonic_platform.platform
     chassis = sonic_platform.platform.Platform().get_chassis()
     eeprom = chassis.get_system_eeprom_info()
-    if format_type == 'json-format':
-        ret = json.dumps(eeprom, indent=True)
-        print(ret)
-        return
 
     field = []
     field.append('      Field Name      ')
@@ -757,9 +753,18 @@ def show_syseeprom():
         item_list.append(item)
 
     print("SYSTEM EEPROM TABLE")
-    print_table(field, item_list)
-    return
-
+    if format_type == 'json-format':
+        json_list = []
+        json_field = []
+        json_field.append('Field Name')
+        json_field.append('Type')
+        json_field.append('Value')
+        for item in item_list:
+            dict_item = {f.rstrip(): v for f, v in zip(json_field, item)}
+            json_list.append(dict_item)
+        print(json.dumps(json_list, indent=4))
+    else:
+        print_table(field, item_list)
 
 def show_chassis():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
@@ -905,13 +910,22 @@ def show_ndk_eeprom():
     field.append('Value                     ')
 
     item_list = []
-    item_list.append(['Card ProductName       ', str(response1.card_product_name)])
-    item_list.append(['Card SerialNum         ', str(response2.card_serial_num)])
-    item_list.append(['Card PartNum           ', str(response3.card_part_num)])
-    item_list.append(['Card BaseMac           ', str(response4.card_base_mac)])
-    item_list.append(['Card MacCount          ', str(response5.card_mac_count)])
+    item_list.append(['Card ProductName', str(response1.card_product_name)])
+    item_list.append(['Card SerialNum', str(response2.card_serial_num)])
+    item_list.append(['Card PartNum', str(response3.card_part_num)])
+    item_list.append(['Card BaseMac', str(response4.card_base_mac)])
+    item_list.append(['Card MacCount', str(response5.card_mac_count)])
+    
     print('CARD-EEPROM INFORMATION')
-    print_table(field, item_list)
+    if format_type == 'json-format':
+        dict_item = {}
+        for item in item_list:
+            dict_item[item[0]] = item[1]
+            # dict_item = {f.rstrip(): v for f, v in zip(field, item)}
+            #json_list.append(dict_item)
+        print(json.dumps(dict_item, indent=4))
+    else:        
+        print_table(field, item_list)
 
     response = stub.GetChassisEeprom(platform_ndk_pb2.ReqEepromInfoPb())
 
@@ -923,26 +937,24 @@ def show_ndk_eeprom():
 
     item_list = []
     chassis_eeprom = response.chassis_eeprom
-    item_list.append(['Chassis Type           ', str(platform_ndk_pb2.HwChassisType.Name(chassis_eeprom.chassis_type))])
-    item_list.append(['Chassis SerialNum      ', str(chassis_eeprom.chassis_serial_num)])
-    item_list.append(['Chassis PartNum        ', str(chassis_eeprom.chassis_part_num)])
-    item_list.append(['Chassis CleiNum        ', str(chassis_eeprom.chassis_clei_num)])
-    item_list.append(['Chassis MfgDate        ', str(chassis_eeprom.chassis_mfg_date)])
-    item_list.append(['Chassis BaseMac        ', str(chassis_eeprom.chassis_base_mac)])
-    item_list.append(['Chassis MacCount       ', str(chassis_eeprom.chassis_mac_count)])
 
-    if format_type == 'json-format':
-        json_list = []
-        for item in item_list:
-            dict_item = {f.rstrip(): v for f, v in zip(field, item)}
-            json_list.append(dict_item)
+    item_list.append(['Chassis Type', str(platform_ndk_pb2.HwChassisType.Name(chassis_eeprom.chassis_type))])
+    item_list.append(['Chassis SerialNum', str(chassis_eeprom.chassis_serial_num)])
+    item_list.append(['Chassis PartNum', str(chassis_eeprom.chassis_part_num)])
+    item_list.append(['Chassis CleiNum', str(chassis_eeprom.chassis_clei_num)])
+    item_list.append(['Chassis MfgDate', str(chassis_eeprom.chassis_mfg_date)])
+    item_list.append(['Chassis BaseMac', str(chassis_eeprom.chassis_base_mac)])
+    item_list.append(['Chassis MacCount', str(chassis_eeprom.chassis_mac_count)])
 
-        print(json.dumps(json_list, indent=4))
-        return
-
+    print("")
     print('CHASSIS-EEPROM INFORMATION')
-    print_table(field, item_list)
-    return
+    if format_type == 'json-format':
+        dict_item = {}
+        for item in item_list:
+            dict_item[item[0]] = item[1]
+        print(json.dumps(dict_item, indent=4))
+    else:
+        print_table(field, item_list)
 
 def show_ndk_version():
     ndk_version_file = "/etc/opt/srlinux/ndk-version"
@@ -1014,14 +1026,6 @@ def show_ndk_status():
         uptime = (current_time_utc - start_time_utc)
         item.append(pretty_time_delta(uptime.seconds))
 
-        if is_cpm is True and proc_item == "nokia-sr-device-mgr":
-            if os.path.isfile("/etc/opt/srlinux/ungraceful_detect"):
-                item.append("ungraceful")
-            else:
-                item.append("graceful")
-        else:
-            item.append("N/A")
-
         # Add it to the item list
         item_list.append(item)
 
@@ -1031,7 +1035,6 @@ def show_ndk_status():
     field.append('PID     ')
     field.append('RestartCount')
     field.append('Uptime/Exittime   ')
-    field.append('RebootStatus')
 
     if format_type == 'json-format':
         json_list = []
@@ -1054,8 +1057,7 @@ def show_fabric_pcieinfo(hw_slot):
     response = stub.GetFabricPcieInfo(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=hw_slot))
 
     nokia_common.channel_shutdown(channel)
-
-    if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_ERR_RESOURCE_NOT_FOUND:
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS :
         print('{}'.format(response.response_status.error_msg))
         return
 
@@ -1204,6 +1206,8 @@ def modify_startup_debug(key_str, new_stringval):
     startup_debug="/etc/opt/srlinux/startup_debug.json"
     tmp_startup_debug="/tmp/startup_debug.json"
     data = None
+
+    file=os.readlink(startup_debug)
     with open(startup_debug, "r") as stream:
         data = json.load(stream)
     if data:
@@ -1216,7 +1220,7 @@ def modify_startup_debug(key_str, new_stringval):
             f.write(json.dumps(data, sort_keys=True, indent=4))
             f.write('\n')
 
-        process = subprocess.Popen(["sudo", "mv", tmp_startup_debug, startup_debug])
+        process = subprocess.Popen(["sudo", "mv", tmp_startup_debug, file])
         process.wait()
         return True
 
@@ -1245,7 +1249,7 @@ def set_ndk_log_level(level):
     tmp_startup_debug="/tmp/startup_debug.json"
     level_str = level
     if level == 'default':
-        level_str = "error"
+        level_str = "debug"
     if modify_startup_debug("sonic_log_level", level_str):
         # display to allow users to view it
         with open(startup_debug, "r") as stream:
@@ -2177,9 +2181,9 @@ def main():
 
     # Set asic temp
     set_asictemp_parser = setsubparsers.add_parser('asic-temp', help='set asic temp-device')
-    set_asictemp_parser.add_argument('name', nargs='?', help='sensor name')
-    set_asictemp_parser.add_argument('temp', nargs='?', help='current temp')
-    set_asictemp_parser.add_argument('threshold', nargs='?', help='threshold')
+    set_asictemp_parser.add_argument('name', nargs='?', help='Sensor name. Format: <asic_name>_<sensor_name> from the output of \'nokia_cmd show asic-temperature\'')
+    set_asictemp_parser.add_argument('temp', nargs='?', help='Temperature value')
+    set_asictemp_parser.add_argument('threshold', nargs='?', help='Threshold')
 
     # set stop-sfm
     set_shutdownsfm_parser = setsubparsers.add_parser('shutdown-sfm', help='shutdown a sfm and related asic services (swss and syncd)')
@@ -2202,16 +2206,13 @@ def main():
 
     # Request Commands
     req_parser = subparsers.add_parser('request', help='Req help')
-    reqsubparsers = req_parser.add_subparsers(help='req cmd options', dest="reqcmd")
+    reqsubparsers = req_parser.add_subparsers(help='Request command options', dest="reqcmd")
 
     # Devmgr admintech
     req_devmgr_admintech_parser = reqsubparsers.add_parser('devmgr-admintech',
                                                            help='collect devmgr admintech')
     req_devmgr_admintech_parser.add_argument('filepath', nargs='?', help='<filepath>')
 
-    # NDK admintech
-    req_ndk_admintech_parser = reqsubparsers.add_parser('ndk-admintech',
-                                                        help='collect NDK admintech')
     # Clear Commands
     clear_parser = subparsers.add_parser('clear', help='Clear help')
     clearsubparsers = clear_parser.add_subparsers(help='clear cmd options', dest="clearcmd")
@@ -2333,11 +2334,12 @@ def main():
             if d['color'] not in led_list:
                 print('Unsupported color for fan-tray-led. Choose from {}'.format(led_list))
                 return
-            set_fantray_led(int(d['speed']), d['color'])
+            set_fantray_led(int(d['index']), d['color'])
         elif args.setcmd == 'led':
             dev_list = ['port', 'fantray', 'sfm', 'board', 'master-psu', 'master-fan', 'master-sfm']
             if d['device'] not in dev_list:
-                print('Unsupported device for led. Choose from {}'.format(led_list))
+                print('Unsupported device for led. Choose from {}'.format(dev_list))
+                set_deviceled_parser.print_help()
                 return
 
             led_list = ['off', 'red', 'amber', 'green']
@@ -2350,7 +2352,10 @@ def main():
             set_log_level_module(d['level'], d['module'])
         elif args.setcmd == 'log-level-restore':
             set_log_restore_default()
-        elif args.setcmd == 'set-asic-temp':
+        elif args.setcmd == 'asic-temp':
+            if d['name'] is None or d['temp'] is None or d['threshold'] is None:
+                set_asictemp_parser.print_help()
+                return
             set_asic_temp(d['name'], int(d['temp']), int(d['threshold']))
         elif args.setcmd == 'shutdown-sfm':
             if not nokia_common.is_cpm():
@@ -2395,6 +2400,10 @@ def main():
             set_parser.print_help()
     elif args.cmd == 'request':
         if args.reqcmd == 'devmgr-admintech':
+            if d['filepath'] is None:
+                print("Missing parameter: file path is mandatory\n")
+                req_devmgr_admintech_parser.print_help()
+                return
             request_devmgr_admintech(d['filepath'])
         elif args.reqcmd == 'ndk-admintech':
             request_ndk_admintech()
