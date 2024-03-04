@@ -1062,7 +1062,7 @@ def show_fabric_pcieinfo(hw_slot):
         return
 
     if format_type == 'json-format':
-        json_response = MessageToJson(response)
+        json_response = MessageToJson(response, True)
         print(json_response)
         return
 
