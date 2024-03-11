@@ -721,6 +721,9 @@ static int nokia_ioctl(unsigned int cmd, unsigned long arg)
     case LUBDE_GET_DEVICE_STATE:
         io.d0 = BDE_DEV_STATE_NORMAL;
         break;
+    case LUBDE_REPROBE:
+        io.rc = LUBDE_SUCCESS;
+        break;
     case LUBDE_NOKIA_OP_BDB_INIT:
         printk(KINFO "BDB (new) init @ %llx sz %x parallel %x\n", io.p0, io.d0, io.d1);
         _cpuctl_base_addr = ioremap(io.p0, io.d0);
