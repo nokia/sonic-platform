@@ -65,6 +65,18 @@ class Module(ModuleBase):
         self.oper_status = ModuleBase.MODULE_STATUS_EMPTY
         self.chassis_type =  platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_INVALID
         self.description = "Unavailable"
+        self.sfm_module_eeprom = None
+
+    def _get_sfm_eeprom(self):
+        if self.get_type() == ModuleBase.MODULE_TYPE_FABRIC:
+            sfm_eeprom_list = nokia_common._get_sfm_eeprom_info_list()
+            i = 0
+            while i < len(sfm_eeprom_list):
+                eeprom_info = sfm_eeprom_list[i]
+                if eeprom_info.sfm_num == self.module_index + 1:
+                    return eeprom_info
+                i += 1
+        return None
 
     def _format_sfm_eeprom_info(self):
         """
@@ -137,6 +149,9 @@ class Module(ModuleBase):
         if self.oper_status == ModuleBase.MODULE_STATUS_EMPTY:
             self.reset()
         else:
+            if self.get_type() == self.MODULE_TYPE_FABRIC:
+                self.sfm_module_eeprom = self._get_sfm_eeprom()
+
             self.chassis_type = module_info.chassis_type
             self.description = module_info.name
             if module_info.name in DESCRIPTION_MAPPING:
@@ -345,8 +360,10 @@ class Module(ModuleBase):
     def get_model(self):
         if self.eeprom is not None:
             return self.eeprom.get_part_number()
-        elif self.sfm_module_eeprom is not None:
-            return self.sfm_module_eeprom.eeprom_part
+        elif self.get_type() == self.MODULE_TYPE_FABRIC:
+            self._get_module_bulk_info()
+            if self.sfm_module_eeprom is not None:
+                return self.sfm_module_eeprom.eeprom_part
         elif self.get_type() == self.MODULE_TYPE_LINE or self.get_type() == self.MODULE_TYPE_SUPERVISOR:
             eeprom_info = self._get_module_eeprom_info()
             if eeprom_info is not None:
@@ -357,8 +374,10 @@ class Module(ModuleBase):
     def get_serial(self):
         if self.eeprom is not None:
             return self.eeprom.get_serial_number()
-        elif self.sfm_module_eeprom is not None:
-            return self.sfm_module_eeprom.eeprom_serial
+        elif self.get_type() == self.MODULE_TYPE_FABRIC:
+            self._get_module_bulk_info()
+            if self.sfm_module_eeprom is not None:
+                return self.sfm_module_eeprom.eeprom_serial
         elif self.get_type() == self.MODULE_TYPE_LINE or self.get_type() == self.MODULE_TYPE_SUPERVISOR:
             eeprom_info = self._get_module_eeprom_info()
             if eeprom_info is not None:
@@ -381,6 +400,7 @@ class Module(ModuleBase):
             return self.eeprom.get_system_eeprom_info()
         elif self._is_cpm:
             if self.get_type() == self.MODULE_TYPE_FABRIC:
+                self._get_module_bulk_info()
                 if self.sfm_module_eeprom is not None:
                     return self._format_sfm_eeprom_info()
             elif self.get_type() == self.MODULE_TYPE_LINE:
