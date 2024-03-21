@@ -25,8 +25,8 @@ setup(
         'pytest-cov',
     ],
     package_dir={
-        'platform_ndk': 'chassis/platform_ndk',
-        'platform_tests': 'chassis/platform_tests',
-        'sonic_platform': 'chassis/sonic_platform'
+        'platform_ndk': 'platform_ndk',
+        'platform_tests': 'platform_tests',
+        'sonic_platform': 'sonic_platform'
     }
 )

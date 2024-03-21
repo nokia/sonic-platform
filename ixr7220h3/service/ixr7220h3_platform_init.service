@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-7220-IXR-H3 Platform Service
+After=sysinit.target
+Before=pmon.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ixr7220h3_platform_init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
