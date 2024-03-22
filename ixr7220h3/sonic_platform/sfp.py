@@ -3,7 +3,7 @@
 # Description: Module contains the definitions of SFP related APIs
 # for Nokia IXR 7220 H3 platform.
 #
-# Copyright (c) 2023, Nokia
+# Copyright (c) 2024, Nokia
 # All rights reserved.
 #
 
