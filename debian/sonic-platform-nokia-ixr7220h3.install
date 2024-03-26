@@ -1,0 +1,3 @@
+ixr7220h3/scripts/ixr7220h3_platform_init.sh usr/local/bin
+ixr7220h3/service/ixr7220h3_platform_init.service etc/systemd/system
+ixr7220h3/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7220_h3-r0
