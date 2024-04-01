@@ -137,7 +137,7 @@ class asic_thermal(object):
 
     return
 
-  def update_asic_temperature(seld):
+  def update_asic_temperature(self):
     namespaces = thermal.get_asic_namespaces()
     while True:
       timer_interval  = 0

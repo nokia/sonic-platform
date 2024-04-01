@@ -532,22 +532,22 @@ class Chassis(ChassisBase):
 
         list_change = False
         # If number of sensors are different
-        if len(self._thermal_list) != self.num_thermals:
+        existing_len = len(self._thermal_list)
+        if existing_len != self.num_thermals:
             list_change = True
-        else:
-            for i in range(self.num_thermals):
-                temp_device_ = all_temp_devices.temp_device[i]
-                thermal_name = self._thermal_list[i].get_name()
-                if (thermal_name.find(temp_device_.sensor_name) == -1):
-                    list_change = True
-                    break
 
         # Empty previous list
         if list_change:
-            del self._thermal_list[:]
+            logger.log_info("Thermal list changed! 0ld num {} New num {} : Rebuilding".format(len(self._thermal_list), self.num_thermals))
 
             for i in range(self.num_thermals):
                 temp_device_ = all_temp_devices.temp_device[i]
+                if (i < existing_len):
+                    logger.log_info("Thermal entry already exists at index {} existing sensor_name/map_index {} {} new sensor_name/device_idx {} {} : skipping".format(i, self._thermal_list[i].get_name(),
+                        self._thermal_list[i].map_index, temp_device_.sensor_name, temp_device_.device_idx))
+                    continue
+                logger.log_info("   {} instantiating idx {} sensor_name {} device_index {} fanalgo_sensor {}".format(i, temp_device_.device_idx, temp_device_.sensor_name,
+                                  temp_device_.device_idx, temp_device_.fanalgo_sensor))
                 thermal = Thermal(i, temp_device_.device_idx, temp_device_.sensor_name,
                                   temp_device_.fanalgo_sensor, self.thermal_stub)
                 self._thermal_list.append(thermal)
