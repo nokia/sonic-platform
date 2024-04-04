@@ -82,7 +82,7 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
     }
     else
     {
-        pr_err("IOCTL BAR is unknown!\n");
+        pr_warn("IOCTL BAR is unknown!\n");
     }
 	return NOTIFY_DONE;
 }
@@ -169,7 +169,7 @@ static int __init nokia_gpio_wdt_init_driver(void)
     }
     else
     {
-       pr_err("cannot locate IOCTL device!\n");
+       pr_warn("cannot locate IOCTL device!\n");
     }
 
 	return platform_driver_register(&nokia_gpio_wdt_driver);
