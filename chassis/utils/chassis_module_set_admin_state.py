@@ -3,6 +3,9 @@
 # Name: chassis_module_set_admin_state.py, version: 1.0
 # Syntax: chassis_module_set_admin_state.py <module_name> <up/down>
 #
+# Copyright (c) 2024, Nokia
+# All rights reserved.
+#
 import re
 import sys
 import subprocess
@@ -58,7 +61,7 @@ def main():
         logger.log_info("Shutting down chassis module {}".format(module))
         asic_list = sfm_asic_dict[num]
         for asic in asic_list:
-            logger.log_info("Shut down swss@{} and syncd@{} ...".format(asic, asic))
+            logger.log_info("Stopping swss@{} and syncd@{} ...".format(asic, asic))
             # Process state
             process = subprocess.Popen(['sudo', 'systemctl', 'stop', 'swss@{}.service'.format(asic)],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -70,10 +73,9 @@ def main():
         logger.log_info("Power off {} module ...".format(module))
         hw_slot = sfm_hw_slot_mapping[num]
         nokia_common._power_onoff_SFM(hw_slot,False)
-        logger.log_info("Shut down chassis module {} complete".format(module))
+        logger.log_info("Chassis module {} shutdown completed".format(module))
     else:
         logger.log_info("Starting up chassis module {}".format(module))
-        logger.log_info("Power up {} module ...".format(module))
         hw_slot = sfm_hw_slot_mapping[num]
         nokia_common._power_onoff_SFM(hw_slot,True)
         # wait SFM HW init done.
@@ -81,13 +83,13 @@ def main():
 
         asic_list = sfm_asic_dict[num]
         for asic in asic_list:
-            logger.log_info("Start the swss@{} and syncd@{} ...".format(asic, asic))
+            logger.log_info("Start swss@{} and syncd@{} ...".format(asic, asic))
             # Process state
             process = subprocess.Popen(['sudo', 'systemctl', 'start', 'swss@{}.service'.format(asic)],
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = process.communicate()
             outstr = stdout.decode('ascii')
-        logger.log_info("Started chassis module {} complete".format(module))
+        logger.log_info("Chassis module {} startup completed".format(module))
     return
 
 if __name__ == "__main__":
