@@ -12,6 +12,12 @@
 #include <linux/acpi.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
+#include <linux/reboot.h>
+#include <linux/kernel.h>
+#include <linux/panic_notifier.h>
+#include <asm/io.h>
+#include <linux/pci.h>
+#include <linux/sizes.h>
 
 struct nokia_gpio_wdt_priv {
 	struct watchdog_device wdd;
@@ -39,6 +45,53 @@ static int nokia_gpio_wdt_stop(struct watchdog_device *wdd)
 	return 0;
 }
 
+
+void *BAR = NULL;
+
+static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long code, void *unused)
+{
+    if (BAR)
+    {
+        void *base = (void *) (((unsigned long) BAR) & ~0xF) + 0x807D40;
+        void __iomem *io = ioremap((unsigned long) base, SZ_64);
+        unsigned int *my_reg = (unsigned int *) io;
+        unsigned int read_val, read_val_again;
+
+        read_val = ioread32(my_reg);
+        iowrite32(0x0, my_reg);
+        read_val_again = ioread32(my_reg);
+	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+
+        my_reg = io + 4;
+        read_val = ioread32(my_reg);
+        iowrite32(0x0, my_reg);
+        read_val_again = ioread32(my_reg);
+	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+
+        my_reg = io + 0x20;
+        read_val = ioread32(my_reg);
+        iowrite32(0xffffffff, my_reg);
+        read_val_again = ioread32(my_reg);
+	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+
+        my_reg = io + 0x24;
+        read_val = ioread32(my_reg);
+        iowrite32(0xffffffff, my_reg);
+        read_val_again = ioread32(my_reg);
+	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+        iounmap(io);
+    }
+    else
+    {
+        pr_warn("IOCTL BAR is unknown!\n");
+    }
+    return NOTIFY_DONE;
+}
+
+static struct notifier_block nokia_gpio_wdt_notifier = {
+	.notifier_call = nokia_gpio_wdt_notify_sys,
+};
+
 static const struct watchdog_info nokia_gpio_wdt_info = {
 	.identity = "Nokia GPIO Watchdog",
 };
@@ -65,8 +118,8 @@ static int nokia_gpio_wdt_probe(struct platform_device *pdev)
 	priv->wdd.info   = &nokia_gpio_wdt_info;
 	priv->wdd.ops    = &nokia_gpio_wdt_ops;
 
-	watchdog_set_drvdata(&priv->wdd, priv);
-        watchdog_set_nowayout(&priv->wdd, WATCHDOG_NOWAYOUT);
+    watchdog_set_drvdata(&priv->wdd, priv);
+    watchdog_set_nowayout(&priv->wdd, WATCHDOG_NOWAYOUT);
 
 	ret = watchdog_register_device(&priv->wdd);
 	if (ret)
@@ -102,13 +155,34 @@ static struct platform_driver nokia_gpio_wdt_driver = {
 
 static int __init nokia_gpio_wdt_init_driver(void)
 {
-	return platform_driver_register(&nokia_gpio_wdt_driver);
+    int ret;
+    struct pci_dev *pdev = NULL;
+
+    ret = register_reboot_notifier(&nokia_gpio_wdt_notifier);
+    if (ret)
+        pr_err("cannot register reboot notifier (err=%d)\n", ret);
+    atomic_notifier_chain_register(&panic_notifier_list, &nokia_gpio_wdt_notifier);
+    pdev = pci_get_device(0x1064, 0x001a, NULL);
+    if (pdev)
+    {
+       BAR = (void *) pdev->resource[0].start;
+       pr_warn("IOCTL BAR is 0x%lx\n", (unsigned long) BAR);
+    }
+    else
+    {
+       pr_warn("cannot locate IOCTL device!\n");
+    }
+
+    // crash_kexec_post_notifiers = true;
+    return platform_driver_register(&nokia_gpio_wdt_driver);
 }
 module_init(nokia_gpio_wdt_init_driver);
 
 static void __exit nokia_gpio_wdt_exit_driver(void)
 {
-	platform_driver_unregister(&nokia_gpio_wdt_driver);
+    unregister_reboot_notifier(&nokia_gpio_wdt_notifier);
+    atomic_notifier_chain_unregister(&panic_notifier_list, &nokia_gpio_wdt_notifier);
+    platform_driver_unregister(&nokia_gpio_wdt_driver);
 }
 module_exit(nokia_gpio_wdt_exit_driver);
 
