@@ -40,6 +40,7 @@ sfm_hw_slot_mapping = {
 
 def main():
     argc = len(sys.argv)
+    logger.set_min_log_priority_info()
 
     if argc != 3:
         logger.log_warning("Missing parameters!")
