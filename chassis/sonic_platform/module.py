@@ -12,7 +12,7 @@ try:
     from platform_ndk import nokia_common
     from platform_ndk import platform_ndk_pb2
     from sonic_platform.eeprom import Eeprom
-    from sonic_py_common import daemon_base
+    from sonic_py_common import daemon_base, device_info
     from swsscommon import swsscommon
     import time
     from sonic_py_common.logger import Logger
@@ -35,6 +35,8 @@ NOKIA_MODULE_EEPROM_INFO_TABLE = 'NOKIA_MODULE_EEPROM_INFO_TABLE'
 EEPROM_PART = '0x22'
 EEPROM_SERIAL = '0x23'
 EEPROM_BASE_MAC = '0x24'
+NOKIA_MODULE_HWSKU_INFO_TABLE = 'NOKIA_MODULE_HWSKU_INFO_TABLE'
+NOKIA_MODULE_HWSKU_INFO_FIELD = 'hwsku_info'
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
@@ -115,6 +117,33 @@ class Module(ModuleBase):
                 eeprom_info= dict(fvs)
                 return eval(eeprom_info['eeprom_info'])
         return None
+    
+    def _update_module_hwsku_info(self):
+        if self.get_type() != self.MODULE_TYPE_LINE or self._is_cpm:
+            return
+        else:
+            chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
+            nokia_hwsku_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_HWSKU_INFO_TABLE)
+            hwsku = device_info.get_hwsku()
+            if hwsku is None:
+                """ This will only happen when the system is booted with no config.
+                Use hardcoded value for now. Need more flexible way to get 
+                description if more than one type of linecards are supported. """
+                self.description = DESCRIPTION_MAPPING["imm36-400g-qsfpdd"]
+            else:
+                self.description = hwsku
+            module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_HWSKU_INFO_FIELD, str(self.description))]) 
+            nokia_hwsku_tbl.set(self.get_name(), module_fvs)
+        return None
+    
+    def _get_lc_module_description(self):
+        chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
+        nokia_hwsku_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_HWSKU_INFO_TABLE)
+        status, fvs = nokia_hwsku_tbl.get(self.module_name)
+        if status:
+            hwsku_info = dict(fvs)
+            return hwsku_info[NOKIA_MODULE_HWSKU_INFO_FIELD]
+        return None
 
     def _get_module_bulk_info(self):
         """
@@ -159,6 +188,12 @@ class Module(ModuleBase):
                 if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
                     if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
                         self.description = "Nokia-IXR7250E-SUP-6"
+
+            if self.get_type() == self.MODULE_TYPE_LINE and self._is_cpm:
+                desc = self._get_lc_module_description()
+                if desc is not None:
+                     self.description = desc
+
             if module_info.num_asic != 0:
                 i = 0
                 self.asic_list = []
