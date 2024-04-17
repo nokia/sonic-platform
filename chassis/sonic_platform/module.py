@@ -61,6 +61,7 @@ class Module(ModuleBase):
         self.midplane = ""
         self.midplane_status = False
         self.reset()
+        self._update_module_hwsku_info()
 
     def reset(self):
         self.asic_list = []
@@ -167,10 +168,8 @@ class Module(ModuleBase):
             stub.GetModuleBulkInfo,
             platform_ndk_pb2.ReqModuleInfoPb(module_type=platform_module_type, hw_slot=self._get_hw_slot()))
         nokia_common.channel_shutdown(channel)
-
         if ret is False:
             return False
-
         module_info = response.module_info
         self.oper_status = nokia_common.hw_module_status_name(module_info.status)
         self.midplane_ip = module_info.midplane_ip
@@ -182,17 +181,19 @@ class Module(ModuleBase):
                 self.sfm_module_eeprom = self._get_sfm_eeprom()
 
             self.chassis_type = module_info.chassis_type
-            self.description = module_info.name
-            if module_info.name in DESCRIPTION_MAPPING:
-                self.description = DESCRIPTION_MAPPING[module_info.name]
-                if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
-                    if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
-                        self.description = "Nokia-IXR7250E-SUP-6"
 
             if self.get_type() == self.MODULE_TYPE_LINE and self._is_cpm:
                 desc = self._get_lc_module_description()
                 if desc is not None:
                      self.description = desc
+            else:
+                if self.get_type() != self.MODULE_TYPE_LINE:
+                    self.description = module_info.name
+                    if module_info.name in DESCRIPTION_MAPPING:
+                        self.description = DESCRIPTION_MAPPING[module_info.name]
+                        if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
+                            if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
+                                self.description = "Nokia-IXR7250E-SUP-6"
 
             if module_info.num_asic != 0:
                 i = 0
