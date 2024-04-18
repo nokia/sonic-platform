@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-IXR7220-H4-32D Platform Service
+After=sysinit.target
+Before=pmon.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/h4_32d_platform_init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

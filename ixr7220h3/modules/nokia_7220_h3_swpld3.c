@@ -1,6 +1,6 @@
 //  * CPLD driver for Nokia-7220-IXR-H3 Router
 //  *
-//  * Copyright (C) 2024 Nokia Corporation.
+//  * Copyright (C) 2023 Nokia Corporation.
 //  * 
 //  * This program is free software: you can redistribute it and/or modify
 //  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ static const unsigned short cpld_address_list[] = {0x35, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int cpld_version;
+    int code_ver;
     int cpld_type;
 };
 
@@ -113,10 +113,10 @@ static void nokia_7220_h3_swpld_write(struct cpld_data *data, u8 reg, u8 value)
     mutex_unlock(&data->update_lock);
 }
 
-static ssize_t show_cpld_version(struct device *dev, struct device_attribute *devattr, char *buf) 
+static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "0x%02x\n", data->cpld_version);
+    return sprintf(buf, "0x%02x\n", data->code_ver);
 }
 
 static ssize_t show_cpld_type(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -475,7 +475,7 @@ static ssize_t set_sfp_reg2(struct device *dev, struct device_attribute *devattr
 }
 
 // sysfs attributes 
-static SENSOR_DEVICE_ATTR(cpld_version, S_IRUGO, show_cpld_version, NULL, 0);
+static SENSOR_DEVICE_ATTR(code_ver, S_IRUGO, show_code_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(cpld_type, S_IRUGO, show_cpld_type, NULL, SWPLD23_REV_REG_TYPE);
 static SENSOR_DEVICE_ATTR(scratch, S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
 
@@ -575,7 +575,7 @@ static SENSOR_DEVICE_ATTR(sfp0_txdis, S_IRUGO | S_IWUSR, show_sfp_reg2, set_sfp_
 static SENSOR_DEVICE_ATTR(sfp1_txdis, S_IRUGO | S_IWUSR, show_sfp_reg2, set_sfp_reg2, SWPLD23_SFP_REG2_P1_TXDIS);
 
 static struct attribute *nokia_7220_h3_swpld3_attributes[] = {
-    &sensor_dev_attr_cpld_version.dev_attr.attr,
+    &sensor_dev_attr_code_ver.dev_attr.attr,
     &sensor_dev_attr_cpld_type.dev_attr.attr,    
     &sensor_dev_attr_scratch.dev_attr.attr,
     
@@ -711,8 +711,15 @@ static int nokia_7220_h3_swpld3_probe(struct i2c_client *client,
         goto exit;
     }
 
-    data->cpld_version = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) & SWPLD23_REV_REG_MSK;
+    data->code_ver = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) & SWPLD23_REV_REG_MSK;
     data->cpld_type = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) >> SWPLD23_REV_REG_TYPE;  
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_RSTN_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_RSTN_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_INITMOD_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_INITMOD_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_MODSEL_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_MODSEL_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_SFP_REG2, 0x0);
     
     return 0;
 

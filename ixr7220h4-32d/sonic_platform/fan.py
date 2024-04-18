@@ -1,5 +1,5 @@
 ########################################################################
-# Nokia IXR7220 H3
+# Nokia IXR7220 H4-32D
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the Fans' information which are available in the platform
@@ -11,37 +11,44 @@ try:
     import os
     import time
     import glob
+    import struct
+    from os import *
+    from mmap import *
     from sonic_platform_base.fan_base import FanBase
     from sonic_platform.eeprom import Eeprom
     from sonic_py_common import logger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-MAX_7220H3_FANS_PER_DRAWER = 2
+H4_32D_FANS_PER_DRAWER = 2
 
-FORWARD_FAN_F_SPEED = 23000
-FORWARD_FAN_R_SPEED = 20500
-FORWARD_FAN_TOLERANCE = 50    #8
-REVERSE_FAN_F_SPEED = 27000
-REVERSE_FAN_R_SPEED = 23000
-REVERSE_FAN_TOLERANCE = 50    #10
+FAN_PN_F2B = "TGD0412HS-00CXT"
+FAN_PN_B2F = "TGD0412HS-00E5L"
+MAX_FAN_F_SPEED = 27000
+MAX_FAN_R_SPEED = 23000
+FAN_TOLERANCE = 50
+WORKING_ixr7220_FAN_SPEED = 2700
 
 HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/" 
-I2C_DEV_LIST = [("13-002e", "13-002e"),
-                ("13-004c", "13-004c"),
-                ("13-004c", "13-004c"),
-                ("13-004c", "13-002d"),
-                ("13-002d", "13-002d"),
-                ("13-002d", "13-002d")]
+I2C_DEV_LIST = [("5-002e", "5-002e"),
+                ("5-002e", "5-002e"),
+                ("5-002e", "5-004c"),
+                ("5-004c", "5-004c"),
+                ("5-004c", "5-004c"),
+                ("5-002d", "5-002d"),
+                ("5-002d", "5-002d")]
 FAN_INDEX_IN_DRAWER = [(1, 2),
-                       (1, 2),
                        (3, 4),
                        (5, 1),
                        (2, 3),
-                       (4, 5)]
+                       (4, 5),
+                       (1, 2),
+                       (3, 4)]
 GPIO_DIR = "/sys/class/gpio/gpio{}/" 
-GPIO_PORT = [10224, 10225, 10226, 10227, 10228, 10229]
-SWPLD1_DIR = "/sys/bus/i2c/devices/17-0032/"
+GPIO_PORT = [10224, 10225, 10226, 10227, 10228, 10229, 10230]
+RESOURCE = "/sys/bus/pci/devices/0000:02:00.0/resource0"
+REG_FAN_LED = 0x00A0
+INDEX_FAN_LED = [0, 4, 8, 12, 16, 20 , 24]
 
 sonic_logger = logger.Logger('fan')
 
@@ -56,7 +63,7 @@ class Fan(FanBase):
 
         if not self.is_psu_fan:
             # Fan is 1-based in Nokia platforms
-            self.index = drawer_index * MAX_7220H3_FANS_PER_DRAWER + fan_index + 1
+            self.index = drawer_index * H4_32D_FANS_PER_DRAWER + fan_index + 1
             self.fan_drawer = drawer_index
             fan_index_emc230x = FAN_INDEX_IN_DRAWER[drawer_index][fan_index]
             self.set_fan_speed_reg = hwmon_path[0] + "pwm{}".format(fan_index_emc230x)
@@ -66,16 +73,11 @@ class Fan(FanBase):
             # Fan eeprom
             self.eeprom = Eeprom(False, 0, True, drawer_index)
 
-            if self.get_direction() == self.FAN_DIRECTION_EXHAUST:
-                if fan_index == 0:
-                    self.std_fan_speed = REVERSE_FAN_F_SPEED
-                else:
-                    self.std_fan_speed = REVERSE_FAN_R_SPEED               
+            if fan_index == 0:
+                self.max_fan_speed = MAX_FAN_F_SPEED                    
             else:
-                if fan_index == 0:
-                    self.std_fan_speed = FORWARD_FAN_F_SPEED
-                else:
-                    self.std_fan_speed = FORWARD_FAN_R_SPEED
+                self.max_fan_speed = MAX_FAN_R_SPEED              
+            
         else:
             # this is a PSU Fan
             self.index = fan_index
@@ -118,7 +120,26 @@ class Fan(FanBase):
                 rv = 'ERR'
 
         return rv
+    
+    def pci_set_value(resource, data, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        mm.write(struct.pack('I', data))
+        mm.close()
+        close(fd)
 
+    def pci_get_value(resource, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        read_data_stream = mm.read(4)
+        reg_val = struct.unpack('I', read_data_stream)
+        mm.close()
+        close(fd)
+        return reg_val
+
+    
     def get_name(self):
         """
         Retrieves the name of the Fan
@@ -189,11 +210,9 @@ class Fan(FanBase):
         """
         status = False
 
-        fan_speed = self.get_speed()
-        target_speed = self.get_target_speed()
-        tolerance = self.get_speed_tolerance()      
-        if (fan_speed != 0 and target_speed != 0 and tolerance != 0):
-            if (abs(fan_speed - target_speed) <= tolerance):            
+        fan_speed = self._read_sysfs_file(self.get_fan_speed_reg)
+        if (fan_speed != 'ERR'):
+            if (int(fan_speed) > WORKING_ixr7220_FAN_SPEED):
                 status = True
 
         return status
@@ -206,10 +225,10 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or
             FAN_DIRECTION_EXHAUST depending on fan direction
         """
-        model_name = self.get_part_number()
-        if model_name[0:10] == "3HE16436AA":
+        part_number = self.get_part_number()
+        if part_number == FAN_PN_F2B:
             return self.FAN_DIRECTION_INTAKE
-        elif model_name[0:10] == "3HE16437AA":
+        elif part_number == FAN_PN_F2B:
             return self.FAN_DIRECTION_EXHAUST
         else:
             return 'N/A'
@@ -228,7 +247,7 @@ class Fan(FanBase):
         Returns:
             bool: True if it is replaceable.
         """
-        return False
+        return True
 
     def get_speed(self):
         """
@@ -245,7 +264,7 @@ class Fan(FanBase):
         else:
             speed_in_rpm = 0
 
-        speed = 100*speed_in_rpm//self.std_fan_speed
+        speed = 100*speed_in_rpm//self.max_fan_speed
         if speed > 100:
             speed = 100
 
@@ -259,16 +278,8 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed
             which is considered tolerable
         """
-        model_name = self.get_part_number()
-        self.tolerance = 0
-        if model_name[0:10] == "3HE16436AA":
-            self.tolerance = FORWARD_FAN_TOLERANCE
-        elif model_name[0:10] == "3HE16437AA":
-            self.tolerance = REVERSE_FAN_TOLERANCE
-        else:
-            return 'N/A'        
-
-        return self.tolerance
+         
+        return FAN_TOLERANCE
 
     def set_speed(self, speed):
         """
@@ -303,7 +314,7 @@ class Fan(FanBase):
         if (rv != 'ERR'):
             return True
         else:
-            return False      
+            return False
 
     def set_status_led(self, color):
         """
@@ -327,16 +338,21 @@ class Fan(FanBase):
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
         if not self.get_presence(): 
+            return self.STATUS_LED_COLOR_OFF        
+
+        val = self.pci_get_value(RESOURCE, REG_FAN_LED) 
+        result = val[0] & (0x7<<INDEX_FAN_LED[self.fan_drawer]) >> INDEX_FAN_LED[self.fan_drawer]
+
+        if result == 0 or result == 6 or result == 7:
             return self.STATUS_LED_COLOR_OFF
-         
-        file_str = SWPLD1_DIR + "fan{}_led".format(self.fan_drawer+1)
-        result = self._read_sysfs_file(file_str)
-        if result == '1':
+        elif result == 1:
             return self.STATUS_LED_COLOR_GREEN
-        elif result == '0':
-            return self.STATUS_LED_COLOR_OFF
-        elif result == '2':
-            return self.STATUS_LED_COLOR_RED
+        elif result == 2:
+            return self.STATUS_LED_COLOR_AMBER
+        elif result == 3:
+            return self.STATUS_LED_COLOR_GREEN_BLINK
+        elif result == 4:
+            return self.STATUS_LED_COLOR_AMBER_BLINK
         else:
             return 'N/A'
 

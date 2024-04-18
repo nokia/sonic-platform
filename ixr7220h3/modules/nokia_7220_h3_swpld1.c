@@ -140,7 +140,7 @@ struct cpld_data {
     int swbd_id;
     int swbd_version;
     int cpld_type;
-    int cpld_version;
+    int code_ver;
 };
 
 static int nokia_7220_h3_swpld_read(struct cpld_data *data, u8 reg)
@@ -226,7 +226,7 @@ static ssize_t show_cpld_type(struct device *dev, struct device_attribute *devat
 static ssize_t show_cpld_version(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "0x%02x\n", data->cpld_version);
+    return sprintf(buf, "0x%02x\n", data->code_ver);
 }
 
 static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -604,7 +604,7 @@ static ssize_t set_misc_sel_reg(struct device *dev, struct device_attribute *dev
 static SENSOR_DEVICE_ATTR(swbd_id,      S_IRUGO, show_swbd_id, NULL, 0);
 static SENSOR_DEVICE_ATTR(swbd_version, S_IRUGO, show_swbd_version, NULL, 0);
 static SENSOR_DEVICE_ATTR(cpld_type,    S_IRUGO, show_cpld_type, NULL, SWPLD1_CPLD_REV_REG_TYPE);
-static SENSOR_DEVICE_ATTR(cpld_version, S_IRUGO, show_cpld_version, NULL, 0);
+static SENSOR_DEVICE_ATTR(code_ver,     S_IRUGO, show_cpld_version, NULL, 0);
 static SENSOR_DEVICE_ATTR(scratch,      S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
 
 static SENSOR_DEVICE_ATTR(psu2_alert, S_IRUGO, show_psu1_reg, NULL, SWPLD1_PSU1_REG_PSU2_INT);
@@ -690,7 +690,7 @@ static struct attribute *nokia_7220_h3_swpld1_attributes[] = {
     &sensor_dev_attr_swbd_id.dev_attr.attr,
     &sensor_dev_attr_swbd_version.dev_attr.attr,   
     &sensor_dev_attr_cpld_type.dev_attr.attr,
-    &sensor_dev_attr_cpld_version.dev_attr.attr,    
+    &sensor_dev_attr_code_ver.dev_attr.attr,    
     &sensor_dev_attr_scratch.dev_attr.attr,
     
     &sensor_dev_attr_psu2_alert.dev_attr.attr,
@@ -812,7 +812,7 @@ static int nokia_7220_h3_swpld1_probe(struct i2c_client *client,
     data->swbd_id = nokia_7220_h3_swpld_read(data, SWPLD1_SWBD_ID_REG);
     data->swbd_version = nokia_7220_h3_swpld_read(data, SWPLD1_SWBD_VER_REG); 
     data->cpld_type = nokia_7220_h3_swpld_read(data, SWPLD1_CPLD_REV_REG) >> SWPLD1_CPLD_REV_REG_TYPE; 
-    data->cpld_version = nokia_7220_h3_swpld_read(data, SWPLD1_CPLD_REV_REG) & SWPLD1_CPLD_REV_REG_MSK;
+    data->code_ver = nokia_7220_h3_swpld_read(data, SWPLD1_CPLD_REV_REG) & SWPLD1_CPLD_REV_REG_MSK;
    
     return 0;
 

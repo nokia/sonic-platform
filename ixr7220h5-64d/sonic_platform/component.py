@@ -1,5 +1,5 @@
 ########################################################################
-# NOKIA IXR7220 H3
+# NOKIA IXR7220 H5-64D
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the Components' (e.g., BIOS, CPLD, FPGA, etc.) available in
@@ -13,6 +13,9 @@ try:
     import time
     import subprocess
     import ntpath
+    import struct
+    from os import *
+    from mmap import *
     from sonic_platform_base.component_base import ComponentBase
     from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 except ImportError as e:
@@ -24,22 +27,24 @@ if sys.version_info[0] < 3:
 else:
     import subprocess as cmd
 
+RESOURCE = "/sys/bus/pci/devices/0000:02:00.0/resource0"
+REG_CODE_REV0 = 0x0004
 
 CPLD_DIR = ["/sys/bus/i2c/devices/0-0031/",
-            "/sys/bus/i2c/devices/17-0032/",
-            "/sys/bus/i2c/devices/17-0034/",
-            "/sys/bus/i2c/devices/17-0035/"]
+            " ",
+            "/sys/bus/i2c/devices/9-0034/",
+            "/sys/bus/i2c/devices/9-0035/"]
 
 class Component(ComponentBase):
     """Nokia platform-specific Component class"""
 
     CHASSIS_COMPONENTS = [
         ["CPUPLD", "Used for managing CPU board "],
-        ["SWPLD1", "Used for managing BCM chip, SFPs, PSUs and LEDs "],
-        ["SWPLD2", "Used for managing QSFP-DD 1-16 "],
-        ["SWPLD3", "Used for managing QSFP-DD 17-32, SFP+ "] ]
+        ["SysFPGA", "Used for managing BCM chip, SFPs, PSUs and LEDs "],
+        ["PortPLD1", "Used for managing QSFP-DD 1-32 "],
+        ["PortPLD2", "Used for managing QSFP-DD 33-64, SFP+ "] ]
     
-    CPLD_UPDATE_COMMAND = ['./h3_cpld', '']
+    CPLD_UPDATE_COMMAND = ['./h5_64d_cpld', '']
 
     def __init__(self, component_index):
         self.index = component_index
@@ -96,10 +101,35 @@ class Component(ComponentBase):
                 rv = 'ERR'
 
         return rv
+    
+    def pci_set_value(resource, data, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        mm.write(struct.pack('I', data))
+        mm.close()
+        close(fd)
+
+    def pci_get_value(resource, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        read_data_stream = mm.read(4)
+        reg_val = struct.unpack('I', read_data_stream)
+        mm.close()
+        close(fd)
+        return reg_val
 
     def _get_cpld_version(self, cpld_number):
-        
-        return self._read_sysfs_file(self.cpld_dir + "code_ver")       
+
+        if self.index == 1:
+            val = self.pci_get_value(RESOURCE, REG_CODE_REV0)
+            code_rev = val[0] & 0xFF 
+            return str(hex(code_rev))
+        elif self.index < 3:
+            return self._read_sysfs_file(self.cpld_dir + "code_ver")
+        else:
+            return 'NA'        
 
     def get_name(self):
         """
@@ -174,8 +204,8 @@ class Component(ComponentBase):
 
         Returns:
             A string containing the firmware version of the component
-        """
-        return self._read_sysfs_file(self.cpld_dir + "code_ver")         
+        """        
+        return self._get_cpld_version(self.index)        
 
     def install_firmware(self, image_path):
         """
@@ -188,7 +218,7 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         image_name = ntpath.basename(image_path)
-        print(" IXR-7220-H3 - install cpld {}".format(image_name))
+        print(" IXR-7220-H5-64D - install cpld {}".format(image_name))
 
         # check whether the image file exists
         if not os.path.isfile(image_path):
@@ -196,8 +226,8 @@ class Component(ComponentBase):
             return False
 
         # check whether the cpld exe exists
-        if not os.path.isfile('/tmp/h3_cpld'):
-            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/h3_cpld'))
+        if not os.path.isfile('/tmp/cpldupd_h5_64d'):
+            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/cpldupd_h5_64d'))
             return False
 
         self.CPLD_UPDATE_COMMAND[1] = image_name

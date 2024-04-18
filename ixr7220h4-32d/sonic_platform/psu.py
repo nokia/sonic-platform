@@ -1,5 +1,5 @@
 ########################################################################
-# Nokia IXR7220 H3
+# Nokia IXR7220 H4-32D
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the PSUs' information which are available in the platform
@@ -9,6 +9,9 @@
 try:
     import os
     import time
+    import struct
+    from os import *
+    from mmap import *
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common import logger
     from sonic_platform.eeprom import Eeprom
@@ -17,12 +20,17 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 sonic_logger = logger.Logger('psu')
-PSU_DIR = ["/sys/bus/i2c/devices/10-0058/",
-           "/sys/bus/i2c/devices/11-0058/"]
-SWPLD1_DIR = "/sys/bus/i2c/devices/17-0032/"
+H4_32D_PSU = 2
+PSU_DIR = ["/sys/bus/i2c/devices/2-0058/",
+           "/sys/bus/i2c/devices/3-0058/"]
+RESOURCE = "/sys/bus/pci/devices/0000:02:00.0/resource0"
+REG_BRD_CTRL4 = 0x0020
+REG_FRONT_LED = [0x008C, 0x0090]
+INDEX_PSU_PRES = [16, 20]
+INDEX_PSU_OK = [17, 21]
 
 class Psu(PsuBase):
-    """Nokia platform-specific PSU class for 7220 H3 """
+    """Nokia platform-specific PSU class for 7220 H4-32D """
 
     def __init__(self, psu_index):
         PsuBase.__init__(self)
@@ -75,6 +83,24 @@ class Psu(PsuBase):
 
         return rv
     
+    def pci_set_value(resource, data, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        mm.write(struct.pack('I', data))
+        mm.close()
+        close(fd)
+
+    def pci_get_value(resource, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        read_data_stream = mm.read(4)
+        reg_val = struct.unpack('I', read_data_stream)
+        mm.close()
+        close(fd)
+        return reg_val
+
     def _get_active_psus(self):
         """
         Retrieves the operational status of the PSU and
@@ -84,13 +110,12 @@ class Psu(PsuBase):
             Integer: Number of active PSU's
         """  
         active_psus = 0
-        psu1_result = self._read_sysfs_file(SWPLD1_DIR+"psu1_ok")
-        psu2_result = self._read_sysfs_file(SWPLD1_DIR+"psu2_ok")
 
-        if psu1_result == '0':
-            active_psus = active_psus + 1
-        if psu2_result == '0':
-            active_psus = active_psus + 1
+        val = self.pci_get_value(RESOURCE, REG_BRD_CTRL4)
+        for i in range(H4_32D_PSU):             
+            psu_result = (val[0] & (1<<INDEX_PSU_OK[i])) >> INDEX_PSU_OK[i] 
+            if psu_result == '0':
+                active_psus = active_psus + 1        
         
         return active_psus
 
@@ -110,8 +135,8 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is present, False if not
         """
-        psu_sysfs_str = SWPLD1_DIR + "psu{}_pres".format(self.index)
-        result = self._read_sysfs_file(psu_sysfs_str)
+        val = self.pci_get_value(RESOURCE, REG_BRD_CTRL4) 
+        result = (val[0] & (1<<INDEX_PSU_PRES[self.index-1])) >> INDEX_PSU_PRES[self.index-1]        
 
         if result == '0':
             return True
@@ -177,8 +202,8 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is operating properly, False if not
         """
-        psu_sysfs_str = SWPLD1_DIR + "psu{}_ok".format(self.index)
-        result = self._read_sysfs_file(psu_sysfs_str)
+        val = self.pci_get_value(RESOURCE, REG_BRD_CTRL4) 
+        result = (val[0] & (1<<INDEX_PSU_OK[self.index-1])) >> INDEX_PSU_OK[self.index-1] 
 
         if result == '0':
             return True
@@ -278,8 +303,8 @@ class Psu(PsuBase):
             A boolean, True if PSU has stablized its output voltages and
             passed all its internal self-tests, False if not.
         """
-        psu_sysfs_str = SWPLD1_DIR + "psu{}_ok".format(self.index)
-        result = self._read_sysfs_file(psu_sysfs_str)
+        val = self.pci_get_value(RESOURCE, REG_BRD_CTRL4) 
+        result = (val[0] & (1<<INDEX_PSU_OK[self.index-1])) >> INDEX_PSU_OK[self.index-1] 
 
         if result == '0':
             return True
@@ -293,16 +318,20 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        psu_sysfs_str = SWPLD1_DIR + "led_psu{}".format(self.index)
-        result = self._read_sysfs_file(psu_sysfs_str)
+        val = self.pci_get_value(RESOURCE, REG_FRONT_LED[self.index-1]) 
+        result = val[0] & 0x7
      
-        if result == '1':
-            return self.STATUS_LED_COLOR_GREEN
-        elif result == '2':
-            return self.STATUS_LED_COLOR_AMBER
-        elif result == '3':
+        if result == 0 or result == 6:
             return self.STATUS_LED_COLOR_OFF
-        elif result == '0':
+        elif result == 1:
+            return self.STATUS_LED_COLOR_GREEN
+        elif result == 2:
+            return self.STATUS_LED_COLOR_AMBER
+        elif result == 3:
+            return self.STATUS_LED_COLOR_GREEN_BLINK
+        elif result == 4:
+            return self.STATUS_LED_COLOR_AMBER_BLINK
+        elif result == 4:
             if self.get_presence():
                 if self.get_status():
                     return self.STATUS_LED_COLOR_GREEN
@@ -310,8 +339,8 @@ class Psu(PsuBase):
                     return self.STATUS_LED_COLOR_AMBER
             else:
                 return self.STATUS_LED_COLOR_OFF
-        
-        return 'N/A'
+        else:
+            return 'N/A'       
 
     def set_status_led(self, color):
         """
@@ -333,16 +362,20 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        psu_sysfs_str = SWPLD1_DIR + "led_psu{}".format(self.index)
-        result = self._read_sysfs_file(psu_sysfs_str)
+        val = self.pci_get_value(RESOURCE, REG_FRONT_LED[self.index-1]) 
+        result = val[0] & 0x7
      
-        if result == '1':
-            return self.STATUS_LED_COLOR_GREEN
-        elif result == '2':
-            return self.STATUS_LED_COLOR_AMBER
-        elif result == '3':
+        if result == 0 or result == 6:
             return self.STATUS_LED_COLOR_OFF
-        elif result == '0':
+        elif result == 1:
+            return self.STATUS_LED_COLOR_GREEN
+        elif result == 2:
+            return self.STATUS_LED_COLOR_AMBER
+        elif result == 3:
+            return self.STATUS_LED_COLOR_GREEN_BLINK
+        elif result == 4:
+            return self.STATUS_LED_COLOR_AMBER_BLINK
+        elif result == 4:
             if self.get_presence():
                 if self.get_status():
                     return self.STATUS_LED_COLOR_GREEN
@@ -350,8 +383,8 @@ class Psu(PsuBase):
                     return self.STATUS_LED_COLOR_AMBER
             else:
                 return self.STATUS_LED_COLOR_OFF
-        
-        return 'N/A'
+        else:
+            return 'N/A'
 
     def set_status_master_led(self, color):
         """

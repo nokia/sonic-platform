@@ -9,7 +9,9 @@ try:
     import os
     import time
     import sys
-    import glob
+    import struct
+    from os import *
+    from mmap import *
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.sfp import Sfp
     from sonic_platform.eeprom import Eeprom
@@ -25,19 +27,18 @@ except ImportError as e:
 
 PORT_START = 1
 QSFP_PORT_NUM = 32
-PORT_END = 34
-
+PORT_END = 33
+QSFP_I2C_START = 23
 CPUPLD_DIR = "/sys/bus/i2c/devices/0-0031/"
-SWPLD1_DIR = "/sys/bus/i2c/devices/17-0032/"
-SWPLD2_DIR = "/sys/bus/i2c/devices/17-0034/"
-SWPLD3_DIR = "/sys/bus/i2c/devices/17-0035/"
+RESOURCE = "/sys/bus/pci/devices/0000:02:00.0/resource0"
+REG_FRONT_SYSLED = 0x0084
 
 # Device counts
-MAX_7220H3_FAN_DRAWERS = 6
-MAX_7220H3_FANS_PER_DRAWER = 2
-MAX_7220H3_PSU = 2
-MAX_7220H3_THERMAL = 7
-MAX_7220H3_COMPONENT = 4
+H4_32D_FAN_DRAWERS = 7
+H4_32D_FANS_PER_DRAWER = 2
+MAX_H4_32D_PSU = 2
+MAX_H4_32D_THERMAL = 7
+MAX_H4_32D_COMPONENT = 4
 
 SYSLOG_IDENTIFIER = "chassis"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
@@ -45,7 +46,7 @@ sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
 class Chassis(ChassisBase):
     """
     Nokia platform-specific Chassis class        
-        customized for the 7220 H3 platform.
+        customized for the 7220 H4-32D platform.
     """
 
     def __init__(self):
@@ -57,14 +58,9 @@ class Chassis(ChassisBase):
 
         # Verify optoe driver QSFP-DD eeprom devices were enumerated and exist
         # then create the sfp nodes
-        eeprom_path = "/sys/bus/i2c/devices/{0}-0050/eeprom"  
-        mux_dev = sorted(glob.glob("/sys/bus/i2c/devices/i2c-0/0-0077/channel-1/i2c-[1-4][0-9]"))     
-        y = 0
-
-        for index in range(PORT_START, PORT_START + QSFP_PORT_NUM):
-            mux_dev_num = mux_dev[y]
-            port_i2c_map = mux_dev_num[-2:]
-            y = y + 1
+        eeprom_path = "/sys/bus/i2c/devices/{}-0050/eeprom" 
+        for index in range(PORT_START, PORT_START + QSFP_PORT_NUM):            
+            port_i2c_map = index + QSFP_I2C_START - 1
             port_eeprom_path = eeprom_path.format(port_i2c_map)
             if not os.path.exists(port_eeprom_path):
                 sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)
@@ -72,30 +68,24 @@ class Chassis(ChassisBase):
             self._sfp_list.append(sfp_node)
         
 
-        port_eeprom_path = "/sys/bus/i2c/devices/50-0050/eeprom"
+        port_eeprom_path = "/sys/bus/i2c/devices/14-0050/eeprom"
         if not os.path.exists(port_eeprom_path):
                 sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
-        sfp_node = Sfp(QSFP_PORT_NUM + 1, 'SFP+', port_eeprom_path, 50)
+        sfp_node = Sfp(QSFP_PORT_NUM + 1, 'SFP+', port_eeprom_path, 14)
         self._sfp_list.append(sfp_node)
 
         self.sfp_event_initialized = False
-
-        port_eeprom_path = "/sys/bus/i2c/devices/50-0051/eeprom"
-        if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
-        sfp_node = Sfp(QSFP_PORT_NUM + 2, 'SFP+', port_eeprom_path, 51)
-        self._sfp_list.append(sfp_node)
 
         # Instantiate system eeprom object
         self._eeprom = Eeprom(False, 0, False, 0)
 
         # Construct lists fans, power supplies, thermals & components
-        for i in range(MAX_7220H3_THERMAL):
+        for i in range(MAX_H4_32D_THERMAL):
             thermal = Thermal(i)
             self._thermal_list.append(thermal)
 
-        drawer_num = MAX_7220H3_FAN_DRAWERS
-        fan_num_per_drawer = MAX_7220H3_FANS_PER_DRAWER
+        drawer_num = H4_32D_FAN_DRAWERS
+        fan_num_per_drawer = H4_32D_FANS_PER_DRAWER
         drawer_ctor = RealDrawer
         for drawer_index in range(drawer_num):
             drawer = drawer_ctor(drawer_index)
@@ -105,11 +95,11 @@ class Chassis(ChassisBase):
                 drawer._fan_list.append(fan)
                 self._fan_list.append(fan)
 
-        for i in range(MAX_7220H3_PSU):
+        for i in range(MAX_H4_32D_PSU):
             psu = Psu(i)
             self._psu_list.append(psu)
 
-        for i in range(MAX_7220H3_COMPONENT):
+        for i in range(MAX_H4_32D_COMPONENT):
             component = Component(i)
             self._component_list.append(component)
 
@@ -151,6 +141,24 @@ class Chassis(ChassisBase):
                 rv = 'ERR'
 
         return rv
+    
+    def pci_set_value(resource, data, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        mm.write(struct.pack('I', data))
+        mm.close()
+        close(fd)
+
+    def pci_get_value(resource, offset):
+        fd = open(resource, O_RDWR)
+        mm = mmap(fd, 0)
+        mm.seek(offset)
+        read_data_stream = mm.read(4)
+        reg_val = struct.unpack('I', read_data_stream)
+        mm.close()
+        close(fd)
+        return reg_val
     
     def get_sfp(self, index):
         """
@@ -227,7 +235,7 @@ class Chassis(ChassisBase):
 
     def get_num_psus(self):
 
-        return MAX_7220H3_PSU
+        return MAX_H4_32D_PSU
 
     def get_name(self):
         """
@@ -295,7 +303,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision value of chassis
         """
-        #Revision is always 0 for 7220-IXR-H3
+        #Revision is always 0 for 7220-IXR-H4-32D
         return str(0)
 
     def get_system_eeprom_info(self):
@@ -327,7 +335,8 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        result = self._read_sysfs_file(CPUPLD_DIR + "cpu_sys_rst")
+
+        result = self._read_sysfs_file(CPUPLD_DIR + "reset_cause")
 
         if (int(result, 16) & 0x10) >> 4 == 1:
              return (self.REBOOT_CAUSE_WATCHDOG, None)
@@ -335,6 +344,9 @@ class Chassis(ChassisBase):
         if (int(result, 16) & 0x01) == 1:
              return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")        
 
+        if (int(result, 16) & 0x02) >> 1 == 1:
+             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Down")
+        
         if (int(result, 16) & 0x80) >> 7 == 1:
              return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
 
@@ -402,24 +414,20 @@ class Chassis(ChassisBase):
         if color not in self.system_led_supported_color:
             return False
 
-        if (color == 'green'):
-            value = '1'
+        if (color == 'off'):
+            value = 0
+        elif (color == 'green'):
+            value = 1
         elif (color == 'green_blink'):
-            value = '2'
+            value = 2
         elif (color == 'amber'):
-            value = '3'
+            value = 3
         elif (color == 'amber_blink'):
-            value = '4'
-        elif (color == 'off'):
-            value = '0'
+            value = 4
         else:
             return False
-        # Write sys led
-        status = self._write_sysfs_file(SWPLD1_DIR+"led_sys", value)
         
-        if status == "ERR":
-            return False
-
+        self.pci_set_value(RESOURCE, value, REG_FRONT_SYSLED)
         return True
 
     def get_status_led(self):
@@ -430,18 +438,19 @@ class Chassis(ChassisBase):
             A string, one of the valid LED color strings which could be vendor
             specified.
         """
-        # Read sys led
-        value = self._read_sysfs_file(SWPLD1_DIR+"led_sys")
+        
+        val = self.pci_get_value(RESOURCE, REG_FRONT_SYSLED) 
+        result = val[0] & 0x7
 
-        if value == '1':
-            color = 'green'
-        elif value == '2':
-            color = 'green_blink'
-        elif value == '3':
-            color = 'amber'
-        elif value == '4':
-            color = 'amber_blink'        
+        if result == 0 or result == 6 or result == 7:
+            return self.STATUS_LED_COLOR_OFF
+        elif result == 1:
+            return self.STATUS_LED_COLOR_GREEN
+        elif result == 2:
+            return self.STATUS_LED_COLOR_AMBER
+        elif result == 3:
+            return self.STATUS_LED_COLOR_GREEN_BLINK
+        elif result == 4:
+            return self.STATUS_LED_COLOR_AMBER_BLINK
         else:
-            color = 'off'
-
-        return color
+            return 'N/A'
