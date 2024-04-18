@@ -12,6 +12,7 @@ from sonic_py_common.logger import Logger
 from sonic_py_common import multi_asic, device_info
 from sonic_platform_base.device_base import DeviceBase
 from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
+from swsscommon import swsscommon
 try:
     from sonic_led import led_control_base
 except ImportError as e:
@@ -28,11 +29,16 @@ class LedControlCommon(led_control_base.LedControlBase):
             # For multi ASIC platforms we pass DIR of port_config_file_path and the number of asics
             (platform_path, hwsku_path) = device_info.get_paths_to_platform_and_hwsku_dirs()
 
+            if not swsscommon.SonicDBConfig.isGlobalInit():
+                swsscommon.SonicDBConfig.load_sonic_global_db_config()
             # Load platform module from source
             self.platform_sfputil.read_all_porttab_mappings(hwsku_path, multi_asic.get_num_asics())
         else:
             # For single ASIC platforms we pass port_config_file_path and the asic_inst as 0
             port_config_file_path = device_info.get_path_to_port_config_file()
+            
+            if not swsscommon.SonicDBConfig.isInit():
+                swsscommon.SonicDBConfig.load_sonic_db_config()
             self.platform_sfputil.read_porttab_mappings(port_config_file_path, 0)
 
         led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_PORT
