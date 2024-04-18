@@ -134,7 +134,6 @@ class Module(ModuleBase):
         return None
     
     def _get_lc_module_description(self):
-
         chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
         nokia_hwsku_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_HWSKU_INFO_TABLE)
         status, fvs = nokia_hwsku_tbl.get(self.module_name)
