@@ -1,0 +1,5 @@
+
+ixr7220h4-32d/scripts/h4_32d_platform_init.sh usr/local/bin
+ixr7220h4-32d/scripts/pcisysfs.py usr/local/bin
+ixr7220h4-32d/service/h4_32d_platform_init.service etc/systemd/system
+ixr7220h4-32d/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7220_h4_32d-r0

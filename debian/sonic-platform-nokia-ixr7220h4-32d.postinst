@@ -1,0 +1,8 @@
+#!/bin/sh
+# postinst script for sonic-platform-nokia-IXR7220-H4-32D
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/h4_32d_platform_init.sh
+systemctl enable h4_32d_platform_init.service
+systemctl start h4_32d_platform_init.service

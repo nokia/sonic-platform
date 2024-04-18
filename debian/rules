@@ -20,7 +20,7 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 
 
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= chassis ixr7220h3
+MODULE_DIRS:= chassis ixr7220h3 ixr7220h4-32d ixr7220h5-64d
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
