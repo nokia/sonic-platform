@@ -61,7 +61,6 @@ class Module(ModuleBase):
         self.midplane = ""
         self.midplane_status = False
         self.reset()
-        self._update_module_hwsku_info_to_supervisor()
 
     def reset(self):
         self.asic_list = []
@@ -119,7 +118,7 @@ class Module(ModuleBase):
                 return eval(eeprom_info['eeprom_info'])
         return None
     
-    def _update_module_hwsku_info_to_supervisor(self):
+    def _update_module_hwsku_info_to_supervisor(self, default):
         if self.get_type() != self.MODULE_TYPE_LINE or self._is_cpm:
             return
         else:
@@ -127,10 +126,7 @@ class Module(ModuleBase):
             nokia_hwsku_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_HWSKU_INFO_TABLE)
             hwsku = device_info.get_hwsku()
             if hwsku is None:
-                """ This will only happen when the system is booted with no config.
-                Use hardcoded value for now. Need more flexible way to get 
-                description if more than one type of linecards are supported. """
-                self.description = DESCRIPTION_MAPPING["imm36-400g-qsfpdd"]
+                self.description = default
             else:
                 self.description = hwsku
             module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_HWSKU_INFO_FIELD, str(self.description))]) 
@@ -138,6 +134,7 @@ class Module(ModuleBase):
         return None
     
     def _get_lc_module_description(self):
+
         chassis_state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
         nokia_hwsku_tbl = swsscommon.Table(chassis_state_db, NOKIA_MODULE_HWSKU_INFO_TABLE)
         status, fvs = nokia_hwsku_tbl.get(self.module_name)
@@ -181,20 +178,22 @@ class Module(ModuleBase):
                 self.sfm_module_eeprom = self._get_sfm_eeprom()
 
             self.chassis_type = module_info.chassis_type
+            self.description = module_info.name
+            if module_info.name in DESCRIPTION_MAPPING:
+                self.description = DESCRIPTION_MAPPING[module_info.name]
+                if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
+                    if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
+                        self.description = "Nokia-IXR7250E-SUP-6"
 
-            if self.get_type() == self.MODULE_TYPE_LINE and self._is_cpm:
-                desc = self._get_lc_module_description()
-                if desc is not None:
-                    self.description = desc
-            else:
-                if self.get_type() != self.MODULE_TYPE_LINE:
-                    self.description = module_info.name
-                    if module_info.name in DESCRIPTION_MAPPING:
-                        self.description = DESCRIPTION_MAPPING[module_info.name]
-                        if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
-                            if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
-                                self.description = "Nokia-IXR7250E-SUP-6"
-
+            if self.get_type() == self.MODULE_TYPE_LINE:
+                if self._is_cpm:
+                    desc = self._get_lc_module_description()
+                    if desc is not None:
+                        self.description = desc
+                else:
+                    if nokia_common._get_my_slot() == self.hw_slot:
+                        self._update_module_hwsku_info_to_supervisor(self.description)
+                
             if module_info.num_asic != 0:
                 i = 0
                 self.asic_list = []
