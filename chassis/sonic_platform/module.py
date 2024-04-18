@@ -151,7 +151,6 @@ class Module(ModuleBase):
         Get module bulk info and cache it for 5 seconds to optimize the chassisd update which is in
         10 seconds intervak periodical query
         """
-        print("HHHH _get_module_bulk_info BEGIN {} type {}".format(self.description, self.get_type()))
         # No need to grpc call for supervisor card once it has been updated once
         if self.get_type() == self.MODULE_TYPE_SUPERVISOR:
             if self.oper_status == ModuleBase.MODULE_STATUS_ONLINE:
@@ -191,7 +190,6 @@ class Module(ModuleBase):
                 if self.get_type() != self.MODULE_TYPE_LINE:
                     self.description = module_info.name
                     if module_info.name in DESCRIPTION_MAPPING:
-                        print("HHHH module_info.name in DESCRIPTION_MAPPING {}".format(DESCRIPTION_MAPPING[module_info.name]))
                         self.description = DESCRIPTION_MAPPING[module_info.name]
                         if platform_module_type == platform_ndk_pb2.HwModuleType.HW_MODULE_TYPE_CONTROL:
                             if self.chassis_type == platform_ndk_pb2.HwChassisType.HW_CHASSIS_TYPE_IXR6:
