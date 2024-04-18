@@ -185,7 +185,7 @@ class Module(ModuleBase):
             if self.get_type() == self.MODULE_TYPE_LINE and self._is_cpm:
                 desc = self._get_lc_module_description()
                 if desc is not None:
-                     self.description = desc
+                    self.description = desc
             else:
                 if self.get_type() != self.MODULE_TYPE_LINE:
                     self.description = module_info.name
