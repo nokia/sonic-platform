@@ -69,13 +69,22 @@ class Fan(FanBase):
             if self.get_direction() == self.FAN_DIRECTION_EXHAUST:
                 if fan_index == 0:
                     self.std_fan_speed = REVERSE_FAN_F_SPEED
+                    #self.max_fan_speed = REVERSE_FAN_F_SPEED * (1 + REVERSE_FAN_TOLERANCE / 100)
+                    #self.min_fan_speed = REVERSE_FAN_F_SPEED * (1 - REVERSE_FAN_TOLERANCE / 100)
                 else:
-                    self.std_fan_speed = REVERSE_FAN_R_SPEED               
+                    self.std_fan_speed = REVERSE_FAN_R_SPEED
+                    #self.max_fan_speed = REVERSE_FAN_R_SPEED * (1 + REVERSE_FAN_TOLERANCE / 100)
+                    #self.min_fan_speed = REVERSE_FAN_R_SPEED * (1 - REVERSE_FAN_TOLERANCE / 100)                
             else:
                 if fan_index == 0:
                     self.std_fan_speed = FORWARD_FAN_F_SPEED
+                    #self.max_fan_speed = FORWARD_FAN_F_SPEED * (1 + FORWARD_FAN_TOLERANCE / 100)
+                    #self.min_fan_speed = FORWARD_FAN_F_SPEED * (1 - FORWARD_FAN_TOLERANCE / 100)
                 else:
                     self.std_fan_speed = FORWARD_FAN_R_SPEED
+                    #self.max_fan_speed = FORWARD_FAN_R_SPEED * (1 + FORWARD_FAN_TOLERANCE / 100)
+                    #self.min_fan_speed = FORWARD_FAN_R_SPEED * (1 - FORWARD_FAN_TOLERANCE / 100)
+
         else:
             # this is a PSU Fan
             self.index = fan_index
@@ -282,20 +291,8 @@ class Fan(FanBase):
         if self.is_psu_fan:
             return False
 
-        if speed in range(0, 10):
-            fandutycycle = 0x00
-        elif speed in range(10, 21):
-            fandutycycle = 32
-        elif speed in range(21, 31):
-            fandutycycle = 64
-        elif speed in range(31, 46):
-            fandutycycle = 102
-        elif speed in range(46, 61):
-            fandutycycle = 140
-        elif speed in range(61, 81):
-            fandutycycle = 204
-        elif speed in range(81, 101):
-            fandutycycle = 255
+        if speed >= 0 and speed <= 100:
+            fandutycycle = round(float(speed)/100*255)        
         else:
             return False
 
@@ -303,7 +300,7 @@ class Fan(FanBase):
         if (rv != 'ERR'):
             return True
         else:
-            return False      
+            return False
 
     def set_status_led(self, color):
         """
@@ -352,20 +349,6 @@ class Fan(FanBase):
 
         fan_duty = self._read_sysfs_file(self.set_fan_speed_reg)
         if (fan_duty != 'ERR'):
-            dutyspeed = int(fan_duty)
-            if dutyspeed == 0:
-                speed = 0
-            elif dutyspeed == 32:
-                speed = 15
-            elif dutyspeed == 64:
-                speed = 25
-            elif dutyspeed == 102:
-                speed = 40
-            elif dutyspeed == 140:
-                speed = 50
-            elif dutyspeed == 204:
-                speed = 70
-            elif dutyspeed == 255:
-                speed = 100
+            speed = round(float(fan_duty)/255*100)            
 
         return speed

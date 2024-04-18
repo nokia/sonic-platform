@@ -327,19 +327,21 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        result = self._read_sysfs_file(CPUPLD_DIR + "cpu_sys_rst")
+        result = self._read_sysfs_file(CPUPLD_DIR+"cold_reset")
+        if result == '1':
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
 
-        if (int(result, 16) & 0x10) >> 4 == 1:
-             return (self.REBOOT_CAUSE_WATCHDOG, None)
-        
-        if (int(result, 16) & 0x01) == 1:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")        
+        result = self._read_sysfs_file(CPUPLD_DIR+"warm_reset")
+        if result == '1':
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
 
-        if (int(result, 16) & 0x80) >> 7 == 1:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
+        result = self._read_sysfs_file(CPUPLD_DIR+"wd_reset")
+        if result == '1':
+            return (self.REBOOT_CAUSE_WATCHDOG, None)
 
-        if (int(result, 16) & 0x40) >> 6 == 1:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
+        result = self._read_sysfs_file(CPUPLD_DIR+"cpu_pwr_err")
+        if result == '1':
+            return (self.REBOOT_CAUSE_POWER_LOSS, None)
         
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
     
@@ -402,16 +404,16 @@ class Chassis(ChassisBase):
         if color not in self.system_led_supported_color:
             return False
 
-        if (color == 'green'):
-            value = '1'
-        elif (color == 'green_blink'):
-            value = '2'
+        if (color == 'off'):
+            value = '5'
         elif (color == 'amber'):
             value = '3'
+        elif (color == 'green'):
+            value = '1'
         elif (color == 'amber_blink'):
             value = '4'
-        elif (color == 'off'):
-            value = '0'
+        elif (color == 'green_blink'):
+            value = '2'
         else:
             return False
         # Write sys led
