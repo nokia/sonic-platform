@@ -348,11 +348,8 @@ class Chassis(ChassisBase):
              return (self.REBOOT_CAUSE_WATCHDOG, None)
         
         if (int(result, 16) & 0x01) == 1:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")        
-
-        if (int(result, 16) & 0x02) >> 1 == 1:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Down")
-        
+             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")
+                
         if (int(result, 16) & 0x80) >> 7 == 1:
              return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
 
@@ -424,9 +421,9 @@ class Chassis(ChassisBase):
             value = 0
         elif (color == 'green'):
             value = 1
-        elif (color == 'green_blink'):
-            value = 2
         elif (color == 'amber'):
+            value = 2
+        elif (color == 'green_blink'):
             value = 3
         elif (color == 'amber_blink'):
             value = 4

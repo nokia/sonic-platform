@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#platform init script for Nokia DDS64C8
+#platform init script for Nokia-IXR7220-H5-64D
 
 # Load required kernel-mode drivers
 load_kernel_drivers() {
@@ -51,16 +51,6 @@ load_kernel_drivers
 
 #insmod /lib/modules/6.1.0-11-2-amd64/delta_fpga.ko
 
-i2cset -y 2 0x41 0x30 0x00
-i2cset -y 2 0x41 0x31 0x00
-i2cset -y 2 0x41 0x32 0x00
-i2cset -y 2 0x41 0x33 0x00
-
-i2cset -y 2 0x45 0x30 0x00
-i2cset -y 2 0x45 0x31 0x00
-i2cset -y 2 0x45 0x32 0x00
-i2cset -y 2 0x45 0x33 0x00
-
 #Enumerate I2C Multiplexers
 echo pca9548 0x71 > /sys/bus/i2c/devices/i2c-3/new_device
 for devnum in {4..11}; do
@@ -79,7 +69,5 @@ for qsfpnum in {20..83}; do
 	echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-${qsfpnum}/new_device
 	sleep 0.1
 done
-
-
 
 exit 0

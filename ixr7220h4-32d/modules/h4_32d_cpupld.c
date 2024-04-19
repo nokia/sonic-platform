@@ -12,7 +12,7 @@
 //  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  * GNU General Public License for more details.
 //  * see <http://www.gnu.org/licenses/>
-// Design Spec 20240402
+// Design Spec 20240418
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -70,14 +70,6 @@
 #define WATCHDOG_REG_WD_PUNCH       0x0
 #define WATCHDOG_REG_WD_EN          0x3
 #define WATCHDOG_REG_WD_TIMER       0x4
-
-#define RST_CAUSE_REG_MB_PWR_ERR    0x0
-#define RST_CAUSE_REG_PWR_DOWN      0x1
-#define RST_CAUSE_REG_BOOT_FAIL     0x2
-#define RST_CAUSE_REG_BIOS_SW       0x3
-#define RST_CAUSE_REG_WD_FAIL       0x4
-#define RST_CAUSE_REG_WARM_RST      0x6
-#define RST_CAUSE_REG_COLD_RST      0x7
 
 #define PWR_CTRL_REG0_1V24_EN       0x0
 #define PWR_CTRL_REG0_1V8_EN        0x1

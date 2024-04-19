@@ -331,7 +331,7 @@ class Psu(PsuBase):
             return self.STATUS_LED_COLOR_GREEN_BLINK
         elif result == 4:
             return self.STATUS_LED_COLOR_AMBER_BLINK
-        elif result == 4:
+        elif result == 7:
             if self.get_presence():
                 if self.get_status():
                     return self.STATUS_LED_COLOR_GREEN
@@ -375,7 +375,7 @@ class Psu(PsuBase):
             return self.STATUS_LED_COLOR_GREEN_BLINK
         elif result == 4:
             return self.STATUS_LED_COLOR_AMBER_BLINK
-        elif result == 4:
+        elif result == 7:
             if self.get_presence():
                 if self.get_status():
                     return self.STATUS_LED_COLOR_GREEN

@@ -12,7 +12,7 @@
 //  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  * GNU General Public License for more details.
 //  * see <http://www.gnu.org/licenses/>
-// Design Spec 20240402
+// Design Spec 20240418
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -52,7 +52,8 @@
 #define TEST_CODE_REV_REG       0xF3
 
 // REG BIT FIELD POSITION or MASK
-
+#define CODE_REV_REG_VER_MSK    0x3F
+#define CODE_REV_REG_TYPE       0x7
 
 #define SYNC_REG_CLK_SEL0       0x0
 #define SYNC_REG_CLK_SEL1       0x1
@@ -69,6 +70,7 @@
 #define HITLESS_REG_EN          0x0
 
 #define PWR_STATUS_REG0_MAC     0x0
+#define PWR_STATUS_REG0_3V3     0x1
 #define PWR_STATUS_REG0_5V      0x2
 #define PWR_STATUS_REG0_3V      0x3
 #define PWR_STATUS_REG0_1V8_0   0x4
@@ -689,8 +691,9 @@ static SENSOR_DEVICE_ATTR(qsfp14_int, S_IRUGO, show_qsfp_int1, NULL, QSFP14_INDE
 static SENSOR_DEVICE_ATTR(qsfp15_int, S_IRUGO, show_qsfp_int1, NULL, QSFP15_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp16_int, S_IRUGO, show_qsfp_int1, NULL, QSFP16_INDEX);
 static SENSOR_DEVICE_ATTR(pwr_status_mac, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_MAC);
+static SENSOR_DEVICE_ATTR(pwr_status_3v3, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_3V3);
 static SENSOR_DEVICE_ATTR(pwr_status_5v, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_5V);
-static SENSOR_DEVICE_ATTR(pwr_status_3v3, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_3V);
+static SENSOR_DEVICE_ATTR(pwr_status_3v, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_3V);
 static SENSOR_DEVICE_ATTR(pwr_status_1v8_0, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_0);
 static SENSOR_DEVICE_ATTR(pwr_status_1v8_1, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_1);
 static SENSOR_DEVICE_ATTR(pwr_status_1v8_2, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_2);
@@ -800,8 +803,9 @@ static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_qsfp15_int.dev_attr.attr,
     &sensor_dev_attr_qsfp16_int.dev_attr.attr,
     &sensor_dev_attr_pwr_status_mac.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_5v.dev_attr.attr,
     &sensor_dev_attr_pwr_status_3v3.dev_attr.attr,
+    &sensor_dev_attr_pwr_status_5v.dev_attr.attr,
+    &sensor_dev_attr_pwr_status_3v.dev_attr.attr,
     &sensor_dev_attr_pwr_status_1v8_0.dev_attr.attr,
     &sensor_dev_attr_pwr_status_1v8_1.dev_attr.attr,
     &sensor_dev_attr_pwr_status_1v8_2.dev_attr.attr,
@@ -858,12 +862,7 @@ static int h4_32d_swpld2_probe(struct i2c_client *client,
     data->code_day = cpld_i2c_read(data, CODE_DAY_REG);
     data->code_month = cpld_i2c_read(data, CODE_MONTH_REG);
     data->code_year = cpld_i2c_read(data, CODE_YEAR_REG);
-    cpld_i2c_write(data, QSFP_RST_REG0, 0xFF);
-    cpld_i2c_write(data, QSFP_RST_REG1, 0xFF);
-    cpld_i2c_write(data, QSFP_INITMOD_REG0, 0x0);
-    cpld_i2c_write(data, QSFP_INITMOD_REG1, 0x0);
-    cpld_i2c_write(data, QSFP_MODSEL_REG0, 0x0);
-    cpld_i2c_write(data, QSFP_MODSEL_REG1, 0x0);
+    cpld_i2c_write(data, RST_REG, 0x01);
     
     return 0;
 

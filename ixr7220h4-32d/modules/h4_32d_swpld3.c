@@ -12,7 +12,7 @@
 //  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  * GNU General Public License for more details.
 //  * see <http://www.gnu.org/licenses/>
-// Design Spec 20240402
+// Design Spec 20240418
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -662,10 +662,10 @@ static SENSOR_DEVICE_ATTR(qsfp29_int, S_IRUGO, show_qsfp_int1, NULL, QSFP29_INDE
 static SENSOR_DEVICE_ATTR(qsfp30_int, S_IRUGO, show_qsfp_int1, NULL, QSFP30_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp31_int, S_IRUGO, show_qsfp_int1, NULL, QSFP31_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp32_int, S_IRUGO, show_qsfp_int1, NULL, QSFP32_INDEX);
-static SENSOR_DEVICE_ATTR(sfp_tx_fault, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_TX_FAULT);
-static SENSOR_DEVICE_ATTR(sfp_rx_los, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_RX_LOS);
-static SENSOR_DEVICE_ATTR(sfp_prs, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_PRS);
-static SENSOR_DEVICE_ATTR(sfp_tx_en, S_IRUGO | S_IWUSR, show_sfp_reg1, set_sfp_reg1, SFP_REG1_TX_EN);
+static SENSOR_DEVICE_ATTR(sfp0_tx_fault, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_TX_FAULT);
+static SENSOR_DEVICE_ATTR(sfp0_rx_los, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_RX_LOS);
+static SENSOR_DEVICE_ATTR(sfp0_prs, S_IRUGO, show_sfp_reg0, NULL, SFP_REG0_PRS);
+static SENSOR_DEVICE_ATTR(sfp0_tx_en, S_IRUGO | S_IWUSR, show_sfp_reg1, set_sfp_reg1, SFP_REG1_TX_EN);
 static SENSOR_DEVICE_ATTR(code_day, S_IRUGO, show_code_day, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_month, S_IRUGO, show_code_month, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_year, S_IRUGO, show_code_year, NULL, 0);
@@ -760,10 +760,10 @@ static struct attribute *h4_32d_swpld3_attributes[] = {
     &sensor_dev_attr_qsfp30_int.dev_attr.attr,
     &sensor_dev_attr_qsfp31_int.dev_attr.attr,
     &sensor_dev_attr_qsfp32_int.dev_attr.attr,
-    &sensor_dev_attr_sfp_tx_fault.dev_attr.attr,
-    &sensor_dev_attr_sfp_rx_los.dev_attr.attr,
-    &sensor_dev_attr_sfp_prs.dev_attr.attr,
-    &sensor_dev_attr_sfp_tx_en.dev_attr.attr,
+    &sensor_dev_attr_sfp0_tx_fault.dev_attr.attr,
+    &sensor_dev_attr_sfp0_rx_los.dev_attr.attr,
+    &sensor_dev_attr_sfp0_prs.dev_attr.attr,
+    &sensor_dev_attr_sfp0_tx_en.dev_attr.attr,
     &sensor_dev_attr_code_day.dev_attr.attr,
     &sensor_dev_attr_code_month.dev_attr.attr,
     &sensor_dev_attr_code_year.dev_attr.attr,
@@ -810,12 +810,7 @@ static int h4_32d_swpld3_probe(struct i2c_client *client,
     data->code_day = cpld_i2c_read(data, CODE_DAY_REG);
     data->code_month = cpld_i2c_read(data, CODE_MONTH_REG);
     data->code_year = cpld_i2c_read(data, CODE_YEAR_REG);
-    cpld_i2c_write(data, QSFP_RST_REG0, 0xFF);
-    cpld_i2c_write(data, QSFP_RST_REG1, 0xFF);
-    cpld_i2c_write(data, QSFP_INITMOD_REG0, 0x0);
-    cpld_i2c_write(data, QSFP_INITMOD_REG1, 0x0);
-    cpld_i2c_write(data, QSFP_MODSEL_REG0, 0x0);
-    cpld_i2c_write(data, QSFP_MODSEL_REG1, 0x0);
+    cpld_i2c_write(data, RST_REG, 0x01);
 
     return 0;
 
