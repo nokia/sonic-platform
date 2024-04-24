@@ -36,6 +36,9 @@ EEPROM_PART = '0x22'
 EEPROM_SERIAL = '0x23'
 EEPROM_BASE_MAC = '0x24'
 
+MODULE_ADMIN_DOWN = 0
+MODULE_ADMIN_UP = 1
+
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
 
@@ -307,7 +310,19 @@ class Module(ModuleBase):
         Returns:
             bool: True if the request has been successful, False if not
         """
-        return False
+        if self.get_type() == self.MODULE_TYPE_FABRIC:
+            if up == MODULE_ADMIN_DOWN:
+                logger.log_info("Power off {} module ...".format(self.module_name))
+                nokia_common._power_onoff_SFM(self.hw_slot,False)
+                logger.log_info("Chassis module {} shutdown completed".format(self.module_name))
+            else:
+                logger.log_info("Starting up chassis module {}".format(self.module_name))
+                logger.log_info("Power on {} module ...".format(self.module_name))
+                nokia_common._power_onoff_SFM(self.hw_slot,True)
+
+            return True
+        else:
+            return False
 
     def get_platform_type(self):
         """
