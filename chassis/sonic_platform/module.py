@@ -37,7 +37,6 @@ EEPROM_SERIAL = '0x23'
 EEPROM_BASE_MAC = '0x24'
 
 MODULE_ADMIN_DOWN = 0
-MODULE_ADMIN_UP = 1
 
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
@@ -211,7 +210,7 @@ class Module(ModuleBase):
             int: slot representation, usually number
         """
         return self.hw_slot
-    
+
     def get_slot(self):
         """
         Retrieves the slot where the module is present
