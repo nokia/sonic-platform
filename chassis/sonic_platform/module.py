@@ -313,12 +313,9 @@ class Module(ModuleBase):
             if up == MODULE_ADMIN_DOWN:
                 logger.log_info("Power off {} module ...".format(self.module_name))
                 nokia_common._power_onoff_SFM(self.hw_slot,False)
-                logger.log_info("Chassis module {} shutdown completed".format(self.module_name))
             else:
                 logger.log_info("Starting up chassis module {}".format(self.module_name))
-                logger.log_info("Power on {} module ...".format(self.module_name))
                 nokia_common._power_onoff_SFM(self.hw_slot,True)
-
             return True
         else:
             return False
