@@ -311,10 +311,10 @@ class Module(ModuleBase):
         """
         if self.get_type() == self.MODULE_TYPE_FABRIC:
             if up == MODULE_ADMIN_DOWN:
-                logger.log_info("Power off {} module ...".format(self.module_name))
+                logger.log_info("Power off {} module".format(self.module_name))
                 nokia_common._power_onoff_SFM(self.hw_slot,False)
             else:
-                logger.log_info("Starting up chassis module {}".format(self.module_name))
+                logger.log_info("Power on {} module".format(self.module_name))
                 nokia_common._power_onoff_SFM(self.hw_slot,True)
             return True
         else:
