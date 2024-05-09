@@ -38,6 +38,8 @@ EEPROM_BASE_MAC = '0x24'
 NOKIA_MODULE_HWSKU_INFO_TABLE = 'NOKIA_MODULE_HWSKU_INFO_TABLE'
 NOKIA_MODULE_HWSKU_INFO_FIELD = 'hwsku_info'
 
+MODULE_ADMIN_DOWN = 0
+
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
 
@@ -242,7 +244,7 @@ class Module(ModuleBase):
             int: slot representation, usually number
         """
         return self.hw_slot
-    
+
     def get_slot(self):
         """
         Retrieves the slot where the module is present
@@ -341,7 +343,16 @@ class Module(ModuleBase):
         Returns:
             bool: True if the request has been successful, False if not
         """
-        return False
+        if self.get_type() == self.MODULE_TYPE_FABRIC:
+            if up == MODULE_ADMIN_DOWN:
+                logger.log_info("Power off {} module".format(self.module_name))
+                nokia_common._power_onoff_SFM(self.hw_slot,False)
+            else:
+                logger.log_info("Power on {} module".format(self.module_name))
+                nokia_common._power_onoff_SFM(self.hw_slot,True)
+            return True
+        else:
+            return False
 
     def get_platform_type(self):
         """
