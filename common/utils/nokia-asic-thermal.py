@@ -30,7 +30,7 @@ ASIC_SENSOR_POLL_STATUS = 'ASIC_SENSORS_POLLER_STATUS'
 ASIC_SENSOR_ADMIN_STATE = 'admin_status'
 ASIC_SENSOR_INTERVAL = 'interval'
 ASIC_TEMP_DEVICE_THRESHOLD = 102
-temp_mon_list = ['FAB0', 'FAB1', 'FAB2', 'FAB3', 'NIF0', 'NIF1', 'PRM', 'EMI0', 'EMI1' ]
+temp_mon_list = ['FAB0', 'FAB1', 'FAB2', 'FAB3', 'NIF0', 'NIF1', 'PRM', 'EMI0', 'EMI1', 'DRAM0', 'DRAM1' ]
 
 
 class asic_thermal(object):
