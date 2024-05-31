@@ -1,6 +1,6 @@
 //  * CPLD driver for Nokia-7220-IXR-H3 Router
 //  *
-//  * Copyright (C) 2024 Nokia Corporation.
+//  * Copyright (C) 2023 Nokia Corporation.
 //  * 
 //  * This program is free software: you can redistribute it and/or modify
 //  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/mutex.h>
+#include <linux/delay.h>
 
 #define DRIVER_NAME "nokia_7220h3_swpld3"
 
@@ -81,8 +82,9 @@ static const unsigned short cpld_address_list[] = {0x35, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int cpld_version;
+    int code_ver;
     int cpld_type;
+    int reset_list[16];
 };
 
 static int nokia_7220_h3_swpld_read(struct cpld_data *data, u8 reg)
@@ -113,10 +115,34 @@ static void nokia_7220_h3_swpld_write(struct cpld_data *data, u8 reg, u8 value)
     mutex_unlock(&data->update_lock);
 }
 
-static ssize_t show_cpld_version(struct device *dev, struct device_attribute *devattr, char *buf) 
+static void dump_reg(struct cpld_data *data) 
+{    
+    struct i2c_client *client = data->client;
+    u8 val0 = 0;
+    u8 val1 = 0;
+     
+    val0 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP17_24_RSTN_REG);    
+    val1 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP25_32_RSTN_REG);
+    dev_info(&client->dev, "[SWPLD3]QSFP_RESET_REG: 0x%02x, 0x%02x\n", val0, val1);
+    
+    val0 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP17_24_INITMOD_REG);
+    val1 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP25_32_INITMOD_REG);
+    dev_info(&client->dev, "[SWPLD3]QSFP_LPMODE_REG: 0x%02x, 0x%02x\n", val0, val1);
+    
+    val0 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP17_24_MODSEL_REG);
+    val1 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP25_32_MODSEL_REG);
+    dev_info(&client->dev, "[SWPLD3]QSFP_MODSEL_REG: 0x%02x, 0x%02x\n", val0, val1);
+    
+    val0 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP17_24_MODPRS_REG);
+    val1 = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP25_32_MODPRS_REG);
+    dev_info(&client->dev, "[SWPLD3]QSFP_MODPRES_REG: 0x%02x, 0x%02x\n", val0, val1);
+
+}
+
+static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "0x%02x\n", data->cpld_version);
+    return sprintf(buf, "0x%02x\n", data->code_ver);
 }
 
 static ssize_t show_cpld_type(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -405,6 +431,20 @@ static ssize_t show_qsfp_g4_prs(struct device *dev, struct device_attribute *dev
     return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
 }
 
+static ssize_t show_modprs_reg(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 val = 0;
+      
+    if (sda->index == 1)
+        val = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP17_24_MODPRS_REG);
+    if (sda->index == 2)
+        val = nokia_7220_h3_swpld_read(data, SWPLD23_QSFP25_32_MODPRS_REG);
+
+    return sprintf(buf, "0x%02x\n", val);
+}
+
 static ssize_t show_qsfp_g3_intn(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -474,8 +514,34 @@ static ssize_t set_sfp_reg2(struct device *dev, struct device_attribute *devattr
     return count;
 }
 
+static ssize_t show_qsfp_reset(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+
+    return sprintf(buf, "%d\n", data->reset_list[sda->index]);
+}
+
+static ssize_t set_qsfp_reset(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 usr_val = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0xFF) {
+        return -EINVAL;
+    }
+
+    data->reset_list[sda->index] = usr_val;
+    return count;
+}
+
 // sysfs attributes 
-static SENSOR_DEVICE_ATTR(cpld_version, S_IRUGO, show_cpld_version, NULL, 0);
+static SENSOR_DEVICE_ATTR(code_ver, S_IRUGO, show_code_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(cpld_type, S_IRUGO, show_cpld_type, NULL, SWPLD23_REV_REG_TYPE);
 static SENSOR_DEVICE_ATTR(scratch, S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
 
@@ -546,6 +612,8 @@ static SENSOR_DEVICE_ATTR(qsfp29_prs, S_IRUGO, show_qsfp_g4_prs, NULL, QSFP29_IN
 static SENSOR_DEVICE_ATTR(qsfp30_prs, S_IRUGO, show_qsfp_g4_prs, NULL, QSFP30_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp31_prs, S_IRUGO, show_qsfp_g4_prs, NULL, QSFP31_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp32_prs, S_IRUGO, show_qsfp_g4_prs, NULL, QSFP32_INDEX);
+static SENSOR_DEVICE_ATTR(modprs_reg1, S_IRUGO, show_modprs_reg, NULL, 1);
+static SENSOR_DEVICE_ATTR(modprs_reg2, S_IRUGO, show_modprs_reg, NULL, 2);
 
 static SENSOR_DEVICE_ATTR(qsfp17_intn, S_IRUGO, show_qsfp_g3_intn, NULL, QSFP17_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp18_intn, S_IRUGO, show_qsfp_g3_intn, NULL, QSFP18_INDEX);
@@ -574,8 +642,25 @@ static SENSOR_DEVICE_ATTR(sfp1_txfault, S_IRUGO, show_sfp_reg1, NULL, SWPLD23_SF
 static SENSOR_DEVICE_ATTR(sfp0_txdis, S_IRUGO | S_IWUSR, show_sfp_reg2, set_sfp_reg2, SWPLD23_SFP_REG2_P0_TXDIS);
 static SENSOR_DEVICE_ATTR(sfp1_txdis, S_IRUGO | S_IWUSR, show_sfp_reg2, set_sfp_reg2, SWPLD23_SFP_REG2_P1_TXDIS);
 
+static SENSOR_DEVICE_ATTR(qsfp17_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 0);
+static SENSOR_DEVICE_ATTR(qsfp18_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 1);
+static SENSOR_DEVICE_ATTR(qsfp19_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 2);
+static SENSOR_DEVICE_ATTR(qsfp20_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 3);
+static SENSOR_DEVICE_ATTR(qsfp21_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 4);
+static SENSOR_DEVICE_ATTR(qsfp22_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 5);
+static SENSOR_DEVICE_ATTR(qsfp23_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 6);
+static SENSOR_DEVICE_ATTR(qsfp24_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 7);
+static SENSOR_DEVICE_ATTR(qsfp25_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 8);
+static SENSOR_DEVICE_ATTR(qsfp26_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 9);
+static SENSOR_DEVICE_ATTR(qsfp27_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 10);
+static SENSOR_DEVICE_ATTR(qsfp28_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 11);
+static SENSOR_DEVICE_ATTR(qsfp29_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 12);
+static SENSOR_DEVICE_ATTR(qsfp30_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 13);
+static SENSOR_DEVICE_ATTR(qsfp31_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 14);
+static SENSOR_DEVICE_ATTR(qsfp32_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 15);
+
 static struct attribute *nokia_7220_h3_swpld3_attributes[] = {
-    &sensor_dev_attr_cpld_version.dev_attr.attr,
+    &sensor_dev_attr_code_ver.dev_attr.attr,
     &sensor_dev_attr_cpld_type.dev_attr.attr,    
     &sensor_dev_attr_scratch.dev_attr.attr,
     
@@ -646,6 +731,8 @@ static struct attribute *nokia_7220_h3_swpld3_attributes[] = {
     &sensor_dev_attr_qsfp30_prs.dev_attr.attr,
     &sensor_dev_attr_qsfp31_prs.dev_attr.attr,
     &sensor_dev_attr_qsfp32_prs.dev_attr.attr,
+    &sensor_dev_attr_modprs_reg1.dev_attr.attr,
+    &sensor_dev_attr_modprs_reg2.dev_attr.attr,
 
     &sensor_dev_attr_qsfp17_intn.dev_attr.attr,
     &sensor_dev_attr_qsfp18_intn.dev_attr.attr,
@@ -673,6 +760,23 @@ static struct attribute *nokia_7220_h3_swpld3_attributes[] = {
 
     &sensor_dev_attr_sfp0_txdis.dev_attr.attr,
     &sensor_dev_attr_sfp1_txdis.dev_attr.attr,
+
+    &sensor_dev_attr_qsfp17_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp18_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp19_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp20_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp21_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp22_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp23_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp24_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp25_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp26_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp27_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp28_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp29_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp30_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp31_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp32_reset.dev_attr.attr,    
     NULL
 };
 
@@ -683,7 +787,8 @@ static const struct attribute_group nokia_7220_h3_swpld3_group = {
 static int nokia_7220_h3_swpld3_probe(struct i2c_client *client)
 {
     int status;
-     struct cpld_data *data = NULL;
+    struct cpld_data *data = NULL;
+    int i;
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
         dev_err(&client->dev, "CPLD PROBE ERROR: i2c_check_functionality failed (0x%x)\n", client->addr);
@@ -710,8 +815,23 @@ static int nokia_7220_h3_swpld3_probe(struct i2c_client *client)
         goto exit;
     }
 
-    data->cpld_version = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) & SWPLD23_REV_REG_MSK;
-    data->cpld_type = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) >> SWPLD23_REV_REG_TYPE;  
+    data->code_ver = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) & SWPLD23_REV_REG_MSK;
+    data->cpld_type = nokia_7220_h3_swpld_read(data, SWPLD23_REV_REG) >> SWPLD23_REV_REG_TYPE;
+    dump_reg(data);
+    dev_info(&client->dev, "[SWPLD3]Reseting QSFPs and SWPLD Registers...\n");
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_MODSEL_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_MODSEL_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_INITMOD_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_INITMOD_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_RSTN_REG, 0x0);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_RSTN_REG, 0x0);
+    msleep(500);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP17_24_RSTN_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_QSFP25_32_RSTN_REG, 0xFF);
+    nokia_7220_h3_swpld_write(data, SWPLD23_SFP_REG2, 0x0);
+    dev_info(&client->dev, "[SWPLD3]QSFPs and SWPLD Registers reset done.\n");
+    dump_reg(data);
+    for (i=0;i<16;i++) data->reset_list[i] = 0;
     
     return 0;
 

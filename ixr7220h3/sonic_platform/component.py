@@ -24,8 +24,11 @@ if sys.version_info[0] < 3:
 else:
     import subprocess as cmd
 
+MAX_7220H3_COMPONENT = 5
+BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
 
-CPLD_DIR = ["/sys/bus/i2c/devices/0-0031/",
+CPLD_DIR = [" ",
+            "/sys/bus/i2c/devices/0-0031/",
             "/sys/bus/i2c/devices/17-0032/",
             "/sys/bus/i2c/devices/17-0034/",
             "/sys/bus/i2c/devices/17-0035/"]
@@ -34,12 +37,13 @@ class Component(ComponentBase):
     """Nokia platform-specific Component class"""
 
     CHASSIS_COMPONENTS = [
-        ["CPU-PLD", "Used for managing CPU board "],
-        ["SW1-PLD", "Used for managing BCM chip, SFPs, PSUs and LEDs "],
-        ["SW2-PLD", "Used for managing QSFP-DD 1-16 "],
-        ["SW3-PLD", "Used for managing QSFP-DD 17-32, SFP+ "] ]
+        ["BIOS", "Basic Input/Output System"],
+        ["CPUPLD", "Used for managing CPU board "],
+        ["SWPLD1", "Used for managing BCM chip, SFPs, PSUs and LEDs "],
+        ["SWPLD2", "Used for managing QSFP-DD 1-16 "],
+        ["SWPLD3", "Used for managing QSFP-DD 17-32, SFP+ "] ]
     
-    CPLD_UPDATE_COMMAND = ['./cpldupd_h3', '']
+    CPLD_UPDATE_COMMAND = ['./h3_cpld', '']
 
     def __init__(self, component_index):
         self.index = component_index
@@ -69,6 +73,7 @@ class Component(ComponentBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -86,6 +91,7 @@ class Component(ComponentBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -98,13 +104,13 @@ class Component(ComponentBase):
         return rv
 
     def _get_cpld_version(self, cpld_number):
-
-        if self.index == 0:
-            return self._read_sysfs_file(self.cpld_dir + "cpld_major_version")
-        elif self.index <= 3:
-            return self._read_sysfs_file(self.cpld_dir + "cpld_version")
+        
+        if self.name == "BIOS": 
+            return self._read_sysfs_file(BIOS_VERSION_PATH)
+        elif self.index < MAX_7220H3_COMPONENT:
+            return self._read_sysfs_file(self.cpld_dir + "code_ver")
         else:
-            return 'NA'        
+            return 'NA'
 
     def get_name(self):
         """
@@ -180,11 +186,8 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
-        if self.index == 0:
-            return self._read_sysfs_file(self.cpld_dir + "cpld_minor_version")
-        if self.index <= 3:
-            return self._get_cpld_version(self.index)        
-
+        return self._get_cpld_version(self.index)
+    
     def install_firmware(self, image_path):
         """
         Installs firmware to the component
@@ -204,8 +207,8 @@ class Component(ComponentBase):
             return False
 
         # check whether the cpld exe exists
-        if not os.path.isfile('/tmp/cpldupd_h3'):
-            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/cpldupd_h3'))
+        if not os.path.isfile('/tmp/h3_cpld'):
+            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/h3_cpld'))
             return False
 
         self.CPLD_UPDATE_COMMAND[1] = image_name
