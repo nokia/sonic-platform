@@ -669,7 +669,7 @@ class Chassis(ChassisBase):
                 self._sfp_list.append(sfp)
 
             self.sfp_module_initialized = True
-            logger.log_info("SFPs are now initialized... stub {}".format(self.sfp_stub))
+            logger.log_warning("SFPs are now initialized... stub {}".format(self.sfp_stub))
             self.Tmutex.release()
         else:
             self.sfp_module_initialized = True
@@ -686,7 +686,7 @@ class Chassis(ChassisBase):
             if not self.sfp_module_initialized:
                self.initialize_sfp()
 
-            logger.log_debug("({} {}) Initializing sfp_event : timeout {} num {} and stub {} : sfp stub {}".format(os.getpid(), threading.get_native_id(), timeout, self.num_sfp, self.sfp_event_stub, self.sfp_stub))
+            logger.log_warning("({} {}) Initializing sfp_event : timeout {} num {} and stub {} : sfp stub {}".format(os.getpid(), threading.get_native_id(), timeout, self.num_sfp, self.sfp_event_stub, self.sfp_stub))
             self.sfp_event_list = sfp_event(self.num_sfp, self.sfp_event_stub)
             self.sfp_event_list.initialize()
             self.sfp_event_initialized = True
