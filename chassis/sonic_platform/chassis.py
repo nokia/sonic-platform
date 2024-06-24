@@ -538,7 +538,7 @@ class Chassis(ChassisBase):
 
         # Empty previous list
         if list_change:
-            logger.log_info("Thermal list changed! 0ld num {} New num {} : Rebuilding".format(len(self._thermal_list), self.num_thermals))
+            logger.log_info("Thermal list changed! old num {} New num {} : Rebuilding".format(len(self._thermal_list), self.num_thermals))
 
             for i in range(self.num_thermals):
                 temp_device_ = all_temp_devices.temp_device[i]
@@ -622,7 +622,7 @@ class Chassis(ChassisBase):
             # prevent Xcvrd threads from simultaneous access
             self.Tmutex.acquire()
             if self.sfp_module_initialized:
-                logger.log_error("SFPs are already initialized! stub {}".format(self.sfp_stub))
+                logger.log_warning("SFPs are already initialized! stub {}".format(self.sfp_stub))
                 self.Tmutex.release()
                 return
 
