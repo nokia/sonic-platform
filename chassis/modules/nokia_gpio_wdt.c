@@ -54,31 +54,48 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
         void *base = (void *) (((unsigned long) BAR) & ~0xF) + 0x807D40;
         void __iomem *io = ioremap((unsigned long) base, SZ_64);
 	    unsigned int *my_reg = (unsigned int *) io;
-	    unsigned int read_val, read_val_again;
+	    unsigned int read_val, read_val_again, qdir, qdata;
 
 	    read_val = ioread32(my_reg);
 	    iowrite32(0x0, my_reg);
 	    read_val_again = ioread32(my_reg);
-	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+	 pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
 	    my_reg = io + 4;
 	    read_val = ioread32(my_reg);
 	    iowrite32(0x0, my_reg);
 	    read_val_again = ioread32(my_reg);
-	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+	 pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
 	    my_reg = io + 0x20;
 	    read_val = ioread32(my_reg);
 	    iowrite32(0xffffffff, my_reg);
 	    read_val_again = ioread32(my_reg);
-	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
+	 pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
 	    my_reg = io + 0x24;
 	    read_val = ioread32(my_reg);
 	    iowrite32(0xffffffff, my_reg);
 	    read_val_again = ioread32(my_reg);
-	 pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x 0x%x", (long unsigned int) my_reg, read_val, read_val_again);
-		iounmap(io);
+	 pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
+	    iounmap(io);
+
+        base = (void *) (((unsigned long) BAR) & ~0xF) + 0x2700050;
+        io = ioremap((unsigned long) base, SZ_64);
+        my_reg = (unsigned int *) io + 4;
+        read_val = ioread32(my_reg);
+        read_val |= 0x20000000;
+        iowrite32(read_val, my_reg);
+        qdir = ioread32(my_reg);
+     pr_warn("*** shutdown hook operating on addr 0x%lx : read 0x%x qdir 0x%x", (long unsigned int) my_reg, read_val, qdir);
+
+        my_reg = (unsigned int *) io;
+        read_val = ioread32(my_reg);
+        qdata = read_val & !(0x20000000);
+        iowrite32(qdata, my_reg);
+        read_val_again = ioread32(my_reg);
+     pr_warn("*** shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
+        iounmap(io);
     }
     else
     {

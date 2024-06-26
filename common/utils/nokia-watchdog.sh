@@ -25,7 +25,21 @@ function platform_ndk_health_monitor()
     fi
 }
 
-watchdog_sleep_time=30
+watchdog_sleep_time=20
+function wait_for_sleep_time()
+{
+    iter=$watchdog_sleep_time
+    while [ $iter -gt 0 ]; do
+        if [ ! -e /tmp/fsde_dev_hung_sig ]; then
+           sleep 1
+        else
+           echo "FSDE detected hung device and rebooting at " `date -u` >> $wd_init_log_file
+           /usr/sbin/reboot
+        fi
+        iter=$(( iter - 1 ))
+    done
+}
+
 start_date=`date -u`
 MAX_RETAINED_LOGS=10
 
@@ -108,9 +122,11 @@ while [ 1 ] ; do
         if [ "$disable_watchdog_hm" != "1" ]; then
             platform_ndk_health_monitor
             if [[ $app_count -ge $min_app_count_failures ]]; then
-                echo "platform process health monitor failed at " `date -u` >> $wd_log_file
-                sleep $watchdog_sleep_time
-                echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_log_file
+                echo "platform process health monitor failed at " `date -u` >> $wd_init_log_file
+                count_down=$watchdog_sleep_time
+                wait_for_sleep_time
+                # sleep $watchdog_sleep_time
+                echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_init_log_file
                 watchdog_fail=1
                 continue
             fi
@@ -122,7 +138,7 @@ while [ 1 ] ; do
     
 
     if [[ $watchdog_fail -eq 1 ]]; then
-        echo "enable watchdog kick" `date -u` >> $wd_log_file
+        echo "enable watchdog kick" `date -u` >> $wd_init_log_file
         watchdog_fail=0
     fi
 
@@ -130,5 +146,6 @@ while [ 1 ] ; do
     echo "w" >&${desc}
     echo $start_date > $wd_log_file
     echo `date -u`  >> $wd_log_file
-    sleep $watchdog_sleep_time
+    wait_for_sleep_time
+    # sleep $watchdog_sleep_time
 done
