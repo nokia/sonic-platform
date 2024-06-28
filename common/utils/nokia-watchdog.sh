@@ -121,13 +121,13 @@ while [ 1 ] ; do
     if [[ $n_kicks -le 0 ]]; then
         if [ "$disable_watchdog_hm" != "1" ]; then
             platform_ndk_health_monitor
+            if [[ $app_count -gt 0 ]]; then
+                echo "platform process health monitor failed with app_count `expr $app_count` at " `date -u` >> $wd_init_log_file
+            fi
             if [[ $app_count -ge $min_app_count_failures ]]; then
-                echo "platform process health monitor failed at " `date -u` >> $wd_init_log_file
-                count_down=$watchdog_sleep_time
-                wait_for_sleep_time
-                # sleep $watchdog_sleep_time
-                echo "missed `expr $app_count - $min_app_count_failures` watchdog kick. System will reboot soon." `date -u` >> $wd_init_log_file
+                echo "missed too many health monitor iters. System will reboot soon." `date -u` >> $wd_init_log_file
                 watchdog_fail=1
+                wait_for_sleep_time
                 continue
             fi
         fi
@@ -135,7 +135,6 @@ while [ 1 ] ; do
         echo "Skipping platform_ndk health monitor check for $n_kicks at " `date -u` >> $wd_init_log_file
         n_kicks=$(( n_kicks - 1 ))
     fi
-    
 
     if [[ $watchdog_fail -eq 1 ]]; then
         echo "enable watchdog kick" `date -u` >> $wd_init_log_file

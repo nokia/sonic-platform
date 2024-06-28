@@ -82,7 +82,7 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
 
         base = (void *) (((unsigned long) BAR) & ~0xF) + 0x2700050;
         io = ioremap((unsigned long) base, SZ_64);
-        my_reg = (unsigned int *) io + 4;
+        my_reg = (unsigned int *) io + 1;
         read_val = ioread32(my_reg);
         read_val |= 0x20000000;
         iowrite32(read_val, my_reg);
