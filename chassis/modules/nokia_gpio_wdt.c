@@ -94,12 +94,12 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
         qdata = read_val & !(0x20000000);
         iowrite32(qdata, my_reg);
         read_val_again = ioread32(my_reg);
-     pr_warn("*** shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
+     pr_warn("*** shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x read_again 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
         iounmap(io);
     }
     else
     {
-        pr_warn("IOCTL BAR is unknown!\n");
+        pr_info("Not IMM!\n");
     }
 	return NOTIFY_DONE;
 }
