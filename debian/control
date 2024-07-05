@@ -19,6 +19,11 @@ Architecture: amd64
 Depends:  ${misc:Depends}
 Description: kernel modules for platform devices such as fan, led, sfp
 
+Package: sonic-platform-nokia-ixr7220h4-64d
+Architecture: amd64
+Depends:  ${misc:Depends}
+Description: kernel modules for platform devices such as sfp, fan, psu, led
+
 Package: sonic-platform-nokia-ixr7220h5-64d
 Architecture: amd64
 Depends:  ${misc:Depends}
