@@ -104,6 +104,8 @@ echo "sync done " `date -u` >> $wd_init_log_file
 
 watchdog_fail=1
 wd_log_file=/var/log/nokia-watchdog.log
+wd_temp_file=/tmp/nokia-watchdog.tmp
+
 echo "start watchdog monitoring" > $wd_log_file
 
 #Option to disable watchdog
@@ -143,8 +145,9 @@ while [ 1 ] ; do
 
     #Kick watchdog
     echo "w" >&${desc}
-    echo $start_date > $wd_log_file
-    echo `date -u`  >> $wd_log_file
+    echo $start_date > $wd_temp_file
+    echo `date -u`  >> $wd_temp_file
+    cp $wd_temp_file $wd_log_file
     wait_for_sleep_time
     # sleep $watchdog_sleep_time
 done
