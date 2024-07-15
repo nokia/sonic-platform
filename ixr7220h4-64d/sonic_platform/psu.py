@@ -1,22 +1,16 @@
-########################################################################
-# Nokia IXR7220 H4-64D
-#
-# Module contains an implementation of SONiC Platform Base API and
-# provides the PSUs' information which are available in the platform
-#
-########################################################################
+"""
+    Nokia IXR7220 H4-64D
+
+    Module contains an implementation of SONiC Platform Base API and
+    provides the PSUs' information which are available in the platform
+"""
 
 try:
-    import os
-    import time
-    import struct    
-    from mmap import *
+    from sonic_platform.sysfs import read_sysfs_file
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common import logger
-    from sonic_platform.eeprom import Eeprom
-    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+    raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('psu')
 PSU_NUM = 2
@@ -26,6 +20,9 @@ REG_DIR = "/sys/bus/i2c/devices/6-0060/"
 PSU_EEPROM = ["/sys/bus/i2c/devices/41-0051/eeprom",
               "/sys/bus/i2c/devices/33-0050/eeprom"]
 
+MAX_VOLTAGE = 14
+MIN_VOLTAGE = 10
+
 class Psu(PsuBase):
     """Nokia platform-specific PSU class for 7220 H4-64D """
 
@@ -34,70 +31,30 @@ class Psu(PsuBase):
         # PSU is 1-based in Nokia platforms
         self.index = psu_index + 1
         self._fan_list = []
-        self.psu_dir = PSU_DIR[psu_index]        
+        self.psu_dir = PSU_DIR[psu_index]
 
         # PSU eeprom
         self.eeprom = self._read_bin_file(PSU_EEPROM[psu_index], 256)
 
-        self.MAX_VOLTAGE = 14
-        self.MIN_VOLTAGE = 10
-
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
+    def _read_bin_file(self, sysfs_file, length):
+        """
+        On successful read, returns the value read from given
+        sysfs file and on failure returns ERR
+        """
         rv = 'ERR'
 
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
-
-    def _write_sysfs_file(self, sysfs_file, value):
-        # On successful write, the value read will be written on
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'w') as fd:
-                rv = fd.write(value)
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        # Ensure that the write operation has succeeded
-        if ((self._read_sysfs_file(sysfs_file)) != value ):
-            time.sleep(3)
-            if ((self._read_sysfs_file(sysfs_file)) != value ):
-                rv = 'ERR'
-
-        return rv
-    
-    def _read_bin_file(self, sysfs_file, len):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
         try:
             with open(sysfs_file, 'rb') as fd:
-                rv = fd.read(len)
+                rv = fd.read(length)
                 fd.close()
-        except Exception as e:
-            rv = 'ERR'
-        
+        except FileNotFoundError:
+            print(f"Error: {sysfs_file} doesn't exist.")
+        except PermissionError:
+            print(f"Error: Permission denied when reading file {sysfs_file}.")
+        except IOError:
+            print(f"IOError: An error occurred while reading file {sysfs_file}.")
         return rv
-    
+
     def _get_active_psus(self):
         """
         Retrieves the operational status of the PSU and
@@ -105,11 +62,11 @@ class Psu(PsuBase):
 
         Returns:
             Integer: Number of active PSU's
-        """  
+        """
         active_psus = 0
 
         for i in range(PSU_NUM):
-            result = self._read_sysfs_file(REG_DIR+"psu{}_pwr_ok".format(i+1))
+            result = read_sysfs_file(REG_DIR+f"psu{i+1}_pwr_ok")
             if result == '1':
                 active_psus = active_psus + 1
 
@@ -122,7 +79,7 @@ class Psu(PsuBase):
         Returns:
             string: The name of the device
         """
-        return "PSU{}".format(self.index)
+        return f"PSU{self.index}"
 
     def get_presence(self):
         """
@@ -131,7 +88,7 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is present, False if not
         """
-        result = self._read_sysfs_file(REG_DIR + "psu{}_present".format(self.index))
+        result = read_sysfs_file(REG_DIR + f"psu{self.index}_present")
 
         if result == '0':
             return True
@@ -181,8 +138,8 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is operating properly, False if not
         """
-        result = self._read_sysfs_file(REG_DIR+"psu{}_pwr_ok".format(self.index))
-        
+        result = read_sysfs_file(REG_DIR+f"psu{self.index}_pwr_ok")
+
         if result == '1':
             return True
 
@@ -196,14 +153,14 @@ class Psu(PsuBase):
             A float number, the output voltage in volts,
             e.g. 12.1
         """
-        if(self.get_presence()):
-            result = self._read_sysfs_file(self.psu_dir+"in2_input")
+        if self.get_presence():
+            result = read_sysfs_file(self.psu_dir+"in2_input")
             psu_voltage = (float(result))/1000
         else:
-            psu_voltage = 0.0        
+            psu_voltage = 0.0
 
         return psu_voltage
-    
+
     def get_current(self):
         """
         Retrieves present electric current supplied by PSU
@@ -211,24 +168,23 @@ class Psu(PsuBase):
         Returns:
             A float number, the electric current in amperes, e.g 15.4
         """
-        
-        if(self.get_presence()):
-            result = self._read_sysfs_file(self.psu_dir+"curr2_input")
+        if self.get_presence():
+            result = read_sysfs_file(self.psu_dir+"curr2_input")
             psu_current = (float(result))/1000
         else:
             psu_current = 0.0
 
         return psu_current
-    
+
     def get_power(self):
         """
         Retrieves current energy supplied by PSU
 
         Returns:
             A float number, the power in watts, e.g. 302.6
-        """        
-        if(self.get_presence()):
-            result = self._read_sysfs_file(self.psu_dir+"power1_input")
+        """
+        if self.get_presence():
+            result = read_sysfs_file(self.psu_dir+"power1_input")
             psu_power = (float(result))/1000000
         else:
             psu_power = 0.0
@@ -251,7 +207,7 @@ class Psu(PsuBase):
             A float number, the high threshold output voltage in volts,
             e.g. 12.1
         """
-        return self.MAX_VOLTAGE
+        return MAX_VOLTAGE
 
     def get_voltage_low_threshold(self):
         """
@@ -261,8 +217,8 @@ class Psu(PsuBase):
             A float number, the low threshold output voltage in volts,
             e.g. 12.1
         """
-        return self.MIN_VOLTAGE
-    
+        return MIN_VOLTAGE
+
     def is_replaceable(self):
         """
         Indicate whether this device is replaceable.
@@ -278,8 +234,8 @@ class Psu(PsuBase):
             A boolean, True if PSU has stablized its output voltages and
             passed all its internal self-tests, False if not.
         """
-        result = self._read_sysfs_file(REG_DIR+"psu{}_pwr_ok".format(self.index))
-        
+        result = read_sysfs_file(REG_DIR+f"psu{self.index}_pwr_ok")
+
         if result == '1':
             return True
 
@@ -295,13 +251,12 @@ class Psu(PsuBase):
         if self.get_presence():
             if self.get_status():
                 return self.STATUS_LED_COLOR_GREEN
-            elif self.get_power() == 0.0:
+            if self.get_power() == 0.0:
                 return self.STATUS_LED_COLOR_OFF
-            else:
-                self.STATUS_LED_COLOR_RED
+            return self.STATUS_LED_COLOR_RED
         return 'N/A'
 
-    def set_status_led(self, color):
+    def set_status_led(self, _color):
         """
         Sets the state of the PSU status LED
         Args:
@@ -311,7 +266,6 @@ class Psu(PsuBase):
             bool: True if status LED state is set successfully, False if
                   not
         """
-        
         return False
 
     def get_status_master_led(self):
@@ -324,13 +278,12 @@ class Psu(PsuBase):
         if self.get_presence():
             if self.get_status():
                 return self.STATUS_LED_COLOR_GREEN
-            elif self.get_power() == 0.0:
+            if self.get_power() == 0.0:
                 return self.STATUS_LED_COLOR_OFF
-            else:
-                self.STATUS_LED_COLOR_AMBER
+            return self.STATUS_LED_COLOR_AMBER
         return 'N/A'
 
-    def set_status_master_led(self, color):
+    def set_status_master_led(self, _color):
         """
         Sets the state of the front panel PSU status LED
 
@@ -338,5 +291,4 @@ class Psu(PsuBase):
             bool: True if status LED state is set successfully, False if
                   not
         """
-        
         return False

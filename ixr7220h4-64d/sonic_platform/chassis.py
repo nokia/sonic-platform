@@ -1,29 +1,26 @@
-#############################################################################
-#
-# Module contains an implementation of SONiC Platform Base API and
-# provides the platform information
-#
-#############################################################################
+"""
+    Module contains an implementation of SONiC Platform Base API and
+    provides the platform information
+"""
 
 try:
     import os
-    import time
     import sys
-    import struct
-    from mmap import *
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.sfp import Sfp
     from sonic_platform.eeprom import Eeprom
     from sonic_platform.fan import Fan
+    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
     from .fan_drawer import RealDrawer
     from sonic_platform.psu import Psu
     from sonic_platform.thermal import Thermal
     from sonic_platform.component import Component
+    from sonic_platform.sfp_event import SfpEvent
     from sonic_py_common import logger
-    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+    raise ImportError(str(e) + ' - required module not found') from e
 
+# Port numbers for SFP List Initialization
 PORT_START = 1
 QSFP_PORT_NUM = 64
 PORT_END = 66
@@ -32,6 +29,7 @@ UDB_NAME = "/sys/devices/platform/pcie_udb_fpga_device.{}/eeprom"
 LDB_NAME = "/sys/devices/platform/pcie_ldb_fpga_device.{}/eeprom"
 SCM_PATH = "/sys/bus/i2c/devices/51-0035/"
 SYS_LED_PATH = "/sys/devices/platform/sys_fpga/led_sys"
+MAX_SELECT_DELAY = 10
 
 # Device counts
 FAN_DRAWERS = 4
@@ -46,51 +44,52 @@ sonic_logger.set_min_log_priority_info()
 
 class Chassis(ChassisBase):
     """
-    Nokia platform-specific Chassis class        
+    Nokia platform-specific Chassis class
         customized for the 7220 H4-64D platform.
     """
+    STATUS_LED_COLOR_BLUE = 'blue'
+    STATUS_LED_COLOR_GREEN_BLINK = 'green_blink'
 
     def __init__(self):
         ChassisBase.__init__(self)
         self.system_led_supported_color = ['off', 'amber', 'green', 'blue', 'green_blink']
-        # Port numbers for SFP List Initialization
-        self.PORT_START = PORT_START        
-        self.PORT_END = PORT_END
-        
+
         # Verify optoe driver QSFP-DD eeprom devices were enumerated and exist
-        # then create the sfp nodes         
-        for index in range(PORT_START, PORT_START + QSFP_PORT_NUM):            
+        # then create the sfp nodes
+        for index in range(PORT_START, PORT_START + QSFP_PORT_NUM):
             port_i2c_map = index
             if index <= QSFP_PORT_NUM // 2:
                 port_eeprom_path = UDB_NAME.format(index - 1)
             else:
                 port_eeprom_path = LDB_NAME.format(index - QSFP_PORT_NUM // 2 - 1)
             if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)
+                sonic_logger.log_info(f"path {port_eeprom_path} didnt exist")
             sfp_node = Sfp(index, 'QSFPDD', port_eeprom_path, port_i2c_map)
-            self._sfp_list.append(sfp_node)        
+            self._sfp_list.append(sfp_node)
 
         port_eeprom_path = LDB_NAME.format(32)
         if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
+            sonic_logger.log_info(f"path {port_eeprom_path} didnt exist")
         sfp_node = Sfp(QSFP_PORT_NUM + 1, 'SFP+', port_eeprom_path, 65)
         self._sfp_list.append(sfp_node)
 
         port_eeprom_path = LDB_NAME.format(33)
         if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
+            sonic_logger.log_info(f"path {port_eeprom_path} didnt exist")
         sfp_node = Sfp(QSFP_PORT_NUM + 2, 'SFP+', port_eeprom_path, 66)
         self._sfp_list.append(sfp_node)
-
         self.sfp_event_initialized = False
-        
         # Instantiate system eeprom object
         self._eeprom = Eeprom(False, 0, False, 0)
-        
+
+        self._watchdog = None
+        self.sfp_event = None
+        self.max_select_event_returned = None
+
         # Construct lists fans, power supplies, thermals & components
         for i in range(THERMAL_NUM):
             thermal = Thermal(i)
-            self._thermal_list.append(thermal)        
+            self._thermal_list.append(thermal)
 
         drawer_num = FAN_DRAWERS
         fan_num_per_drawer = FANS_PER_DRAWER
@@ -102,55 +101,15 @@ class Chassis(ChassisBase):
                 fan = Fan(fan_index, drawer_index)
                 drawer._fan_list.append(fan)
                 self._fan_list.append(fan)
-        
+
         for i in range(PSU_NUM):
             psu = Psu(i)
             self._psu_list.append(psu)
-        
+
         for i in range(COMPONENT_NUM):
             component = Component(i)
             self._component_list.append(component)
-        
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
 
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
-
-    def _write_sysfs_file(self, sysfs_file, value):
-        # On successful write, the value read will be written on
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'w') as fd:
-                rv = fd.write(value)
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        # Ensure that the write operation has succeeded
-        if ((self._read_sysfs_file(sysfs_file)) != value ):
-            time.sleep(3)
-            if ((self._read_sysfs_file(sysfs_file)) != value ):
-                rv = 'ERR'
-
-        return rv
-        
     def get_sfp(self, index):
         """
         Retrieves sfp represented by (1-based) index <index>
@@ -168,8 +127,7 @@ class Chassis(ChassisBase):
             # The index will start from 1
             sfp = self._sfp_list[index-1]
         except IndexError:
-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list)))
+            sys.stderr.write(f"SFP index {index} out of range (1-{len(self._sfp_list)})\n")
         return sfp
 
     def get_change_event(self, timeout=0):
@@ -197,13 +155,12 @@ class Chassis(ChassisBase):
         """
         # Initialize SFP event first
         if not self.sfp_event_initialized:
-            from sonic_platform.sfp_event import sfp_event
-            self.sfp_event = sfp_event()
+            self.sfp_event = SfpEvent()
             self.sfp_event.initialize()
-            self.MAX_SELECT_EVENT_RETURNED = self.PORT_END
+            self.max_select_event_returned = PORT_END
             self.sfp_event_initialized = True
 
-        wait_for_ever = (timeout == 0)
+        wait_for_ever = timeout == 0
         port_dict = {}
         if wait_for_ever:
             # xrcvd will call this monitor loop in the "SYSTEM_READY" state
@@ -211,7 +168,7 @@ class Chassis(ChassisBase):
             timeout = MAX_SELECT_DELAY
             while True:
                 status = self.sfp_event.check_sfp_status(port_dict, timeout)
-                if not port_dict == {}:
+                if port_dict:
                     break
         else:
             # At boot up and in "INIT" state call from xrcvd will have timeout
@@ -221,11 +178,14 @@ class Chassis(ChassisBase):
 
         if status:
             return True, {'sfp': port_dict}
-        else:
-            return True, {'sfp': {}}
+        return True, {'sfp': {}}
 
     def get_num_psus(self):
-
+        """
+        Retrieves the num of the psus
+        Returns:
+            int: The num of the psus
+        """
         return PSU_NUM
 
     def get_name(self):
@@ -310,10 +270,22 @@ class Chassis(ChassisBase):
         return self._eeprom.system_eeprom_info()
 
     def get_thermal_manager(self):
+        """
+        Get thermal manager
+
+        Returns:
+            ThermalManager
+        """
         from .thermal_manager import ThermalManager
         return ThermalManager
-    
+
     def initizalize_system_led(self):
+        """
+        Initizalize system led
+
+        Returns:
+        bool: True if it is successful.
+        """
         return True
 
     def get_reboot_cause(self):
@@ -325,20 +297,20 @@ class Chassis(ChassisBase):
             one of the predefined strings in this class. If the first string
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
-        """        
-        result = self._read_sysfs_file(SCM_PATH + "reset_cause")
+        """
+        result = read_sysfs_file(SCM_PATH + "reset_cause")
 
         if (int(result, 16) & 0x8) >> 3 == 0:
-             return (self.REBOOT_CAUSE_WATCHDOG, "COMe_WDT")
+            return (self.REBOOT_CAUSE_WATCHDOG, "COMe_WDT")
         if (int(result, 16) & 0x4) >> 2 == 0:
-             return (self.REBOOT_CAUSE_WATCHDOG, "TCO_WDT")
+            return (self.REBOOT_CAUSE_WATCHDOG, "TCO_WDT")
         if (int(result, 16) & 0x2) >> 1 == 0:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "SW Reset")
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "SW Reset")
         if (int(result, 16) & 0x1) == 0:
-             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "COMe Reset")        
-        
+            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "COMe Reset")
+
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
-    
+
     def get_watchdog(self):
         """
         Retrieves hardware watchdog device on this chassis
@@ -359,19 +331,19 @@ class Chassis(ChassisBase):
                 from sonic_platform.watchdog import WatchdogImplBase
                 watchdog_device_path = "/dev/watchdog0"
                 self._watchdog = WatchdogImplBase(watchdog_device_path)
-        except Exception as e:
-            sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
+        except ImportError as e:
+            sonic_logger.log_warning(f"Fail to load watchdog {repr(e)}")
 
         return self._watchdog
 
     def get_position_in_parent(self):
         """
-		Retrieves 1-based relative physical position in parent device. If the agent 
+		Retrieves 1-based relative physical position in parent device. If the agent
         cannot determine the parent-relative position
-        for some reason, or if the associated value of entPhysicalContainedIn is '0', 
+        for some reason, or if the associated value of entPhysicalContainedIn is '0',
         then the value '-1' is returned
 		Returns:
-		    integer: The 1-based relative physical position in parent device or -1 if 
+		    integer: The 1-based relative physical position in parent device or -1 if
             cannot determine the position
 		"""
         return -1
@@ -383,7 +355,7 @@ class Chassis(ChassisBase):
             bool: True if it is replaceable.
         """
         return False
-    
+
     def set_status_led(self, color):
         """
         Sets the state of the system LED
@@ -395,23 +367,22 @@ class Chassis(ChassisBase):
         Returns:
             bool: True if system LED state is set successfully, False if not
         """
+        color_to_value = {
+            'off': '0',
+            'green': '8',
+            'amber': '1',
+            'green_blink': '2',
+            'blue': '4'
+        }
+
         if color not in self.system_led_supported_color:
             return False
 
-        if (color == 'off'):
-            value = '0'
-        elif (color == 'green'):
-            value = '8'
-        elif (color == 'amber'):
-            value = '1'
-        elif (color == 'green_blink'):
-            value = '2'
-        elif (color == 'blue'):
-            value = '4'
-        else:
+        value = color_to_value.get(color)
+        if value is None:
             return False
-        
-        self._write_sysfs_file(SYS_LED_PATH, value)
+
+        write_sysfs_file(SYS_LED_PATH, value)
         return True
 
     def get_status_led(self):
@@ -421,16 +392,15 @@ class Chassis(ChassisBase):
         Returns:
             A string, one of the valid LED color strings which could be vendor
             specified.
-        """        
-        result = self._read_sysfs_file(SYS_LED_PATH)    
+        """
+        result = read_sysfs_file(SYS_LED_PATH)
 
         if (int(result, 10) & 0x8) == 0x8:
             return self.STATUS_LED_COLOR_GREEN
-        elif (int(result, 10) & 0x4) == 0x4:
+        if (int(result, 10) & 0x4) == 0x4:
             return self.STATUS_LED_COLOR_BLUE
-        elif (int(result, 10) & 0x2) == 0x2:
+        if (int(result, 10) & 0x2) == 0x2:
             return self.STATUS_LED_COLOR_GREEN_BLINK
-        elif (int(result, 10) & 0x1) == 0x1:
+        if (int(result, 10) & 0x1) == 0x1:
             return self.STATUS_LED_COLOR_AMBER
-        else:
-            return self.STATUS_LED_COLOR_OFF
+        return self.STATUS_LED_COLOR_OFF

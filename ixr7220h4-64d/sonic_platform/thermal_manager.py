@@ -1,10 +1,18 @@
-from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
-from .thermal_actions import *
-from .thermal_conditions import *
-from .thermal_infos import *
-
+"""
+    Nokia IXR7220-H4-64D
+    Module contains an implementation of SONiC Platform Base API and
+    provides the Thermal Manager which are available in the platform
+"""
+try:
+    from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
+    from .thermal_actions import *
+    from .thermal_conditions import *
+    from .thermal_infos import *
+except ImportError as e:
+    raise ImportError(str(e) + ' - required module not found') from e
 
 class ThermalManager(ThermalManagerBase):
+    """Nokia platform-specific Thermal Manager class"""
     THERMAL_ALGORITHM_CONTROL_PATH = '/var/run/hw-management/config/suspend'
 
     @classmethod

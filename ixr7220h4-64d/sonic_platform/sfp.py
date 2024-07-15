@@ -1,25 +1,21 @@
-# Name: sfp.py, version: 1.0
-#
-# Description: Module contains the definitions of SFP related APIs
-# for Nokia IXR 7220 H4-64D platform.
-#
-# Copyright (c) 2024, Nokia
-# All rights reserved.
-#
+"""
+    Name: sfp.py, version: 1.0
 
+    Description: Module contains the definitions of SFP related APIs
+    for Nokia IXR 7220 H4-64D platform.
+
+    Copyright (c) 2024, Nokia
+    All rights reserved.
+"""
 try:
-    import os
     import time
     import sys
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
-    from sonic_py_common import logger
-    from sonic_py_common import device_info
-    from sonic_py_common.general import getstatusoutput_noshell
+    from sonic_py_common import logger, device_info
+    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
 
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
-
-import subprocess as cmd
+    raise ImportError(str(e) + ' - required module not found') from e
 
 QSFP_PORT_NUM = 64
 
@@ -36,7 +32,7 @@ class Sfp(SfpOptoeBase):
     instances = []
 
     port_to_i2c_mapping = 0
-    
+
     def __init__(self, index, sfp_type, eeprom_path, port_i2c_map):
         SfpOptoeBase.__init__(self)
 
@@ -53,49 +49,19 @@ class Sfp(SfpOptoeBase):
             self.name = sfp_type + '_' + str(index-QSFP_PORT_NUM)
             self.port_name = sfp_type + '_' + str(index-QSFP_PORT_NUM-1)
         self.port_to_eeprom_mapping = {}
-        self.port_to_eeprom_mapping[index] = eeprom_path        
-        
-        self._version_info = device_info.get_sonic_version_info()
-        self.lastPresence = False
+        self.port_to_eeprom_mapping[index] = eeprom_path
 
-        #sonic_logger.log_info("Sfp __init__ index {} setting name to {} and eeprom_path to {}".format(index, self.name, self.eeprom_path))
+        self._version_info = device_info.get_sonic_version_info()
+        self.last_presence = False
 
         Sfp.instances.append(self)
 
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
- 
-    def _write_sysfs_file(self, sysfs_file, value):
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'w') as fd:
-                rv = fd.write(value)
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'        
-
-        return rv
-    
     def get_eeprom_path(self):
+        """
+        Retrieves the eeprom path
+        Returns:
+            string: eeprom path
+        """
         return self.eeprom_path
 
     def get_presence(self):
@@ -104,8 +70,8 @@ class Sfp(SfpOptoeBase):
         Returns:
             bool: True if is present, False if not
         """
-        sfpstatus = self._read_sysfs_file(REG_DIR+"module_present_{}".format(self.index))
-                    
+        sfpstatus = read_sysfs_file(REG_DIR+f"module_present_{self.index}")
+
         if sfpstatus == '0':
             return True
 
@@ -134,7 +100,6 @@ class Sfp(SfpOptoeBase):
         Returns:
             bool: True if it is replaceable.
         """
-
         return True
 
     def _get_error_code(self):
@@ -170,13 +135,11 @@ class Sfp(SfpOptoeBase):
             A Boolean, True if reset enabled, False if disabled
         """
         if self.index <= QSFP_PORT_NUM:
-            result = self._read_sysfs_file(REG_DIR+"module_reset_{}".format(self.index))
+            result = read_sysfs_file(REG_DIR+f"module_reset_{self.index}")
             if result == '0':
                 return True
-            else:
-                return False
-        else:
             return False
+        return False
 
     def get_status(self):
         """
@@ -200,32 +163,31 @@ class Sfp(SfpOptoeBase):
         if not self.get_presence():
             sys.stderr.write("Error: Module not inserted, could not reset it.\n\n")
             return False
-        
+        sonic_logger.log_info(f"Reseting port #{self.index}.")
+
         result1 = 'ERR'
         result2 = 'ERR'
         t = 0
 
         if self.index <= QSFP_PORT_NUM:
-            result2 = self._write_sysfs_file(REG_DIR+"qsfp{}_reset".format(self.index), '1')
-            result2 = self._write_sysfs_file(REG_DIR+"module_lp_mode_{}".format(self.index), '1')
-            result1 = self._write_sysfs_file(REG_DIR+"module_reset_{}".format(self.index), '0')            
-            time.sleep(0.5)            
+            result2 = write_sysfs_file(REG_DIR+f"qsfp{self.index}_reset", '1')
+            result2 = write_sysfs_file(REG_DIR+f"module_lp_mode_{self.index}", '1')
+            result1 = write_sysfs_file(REG_DIR+f"module_reset_{self.index}", '0')
+            time.sleep(0.5)
             while t < 10:
-                if self._read_sysfs_file(REG_DIR+"qsfp{}_reset".format(self.index)) == '2':
-                    result1 = self._write_sysfs_file(REG_DIR+"module_reset_{}".format(self.index), '1')
+                if read_sysfs_file(REG_DIR+f"qsfp{self.index}_reset") == '2':
+                    result1 = write_sysfs_file(REG_DIR+f"module_reset_{self.index}", '1')
                     time.sleep(2)
                     break
-                else:
-                    time.sleep(0.5)
+                time.sleep(0.5)
                 if t == 8:                    
                     return False
-                else:
-                    t = t + 1
-            
-            result2 = self._write_sysfs_file(REG_DIR+"qsfp{}_reset".format(self.index), '3')
+                t = t + 1
+
+            result2 = write_sysfs_file(REG_DIR+f"qsfp{self.index}_reset", '3')
         else:
             return False
-        
+
         if result1 != 'ERR' and result2 != 'ERR':
             return True
 
@@ -236,7 +198,7 @@ class Sfp(SfpOptoeBase):
         Sets the lpmode (low power mode) of SFP
         Args:
             lpmode: A Boolean, True to enable lpmode, False to disable it
-            Note  : 
+            Note  :
         Returns:
             A boolean, True if lpmode is set successfully, False if not
         """
@@ -244,10 +206,10 @@ class Sfp(SfpOptoeBase):
 
         if self.index <= QSFP_PORT_NUM:
             if lpmode:
-                result = self._write_sysfs_file(REG_DIR+"module_lp_mode_{}".format(self.index), '1')
+                result = write_sysfs_file(REG_DIR+f"module_lp_mode_{self.index}", '1')
             else:
-                result = self._write_sysfs_file(REG_DIR+"module_lp_mode_{}".format(self.index), '0')
-        
+                result = write_sysfs_file(REG_DIR+f"module_lp_mode_{self.index}", '0')
+
         if result != 'ERR':
             return True
 
@@ -262,8 +224,8 @@ class Sfp(SfpOptoeBase):
         result = 'ERR'
 
         if self.index <= QSFP_PORT_NUM:
-            result = self._read_sysfs_file(REG_DIR+"module_lp_mode_{}".format(self.index))
-        
+            result = read_sysfs_file(REG_DIR+f"module_lp_mode_{self.index}")
+
         if result == '1':
             return True
 

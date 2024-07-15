@@ -1,15 +1,15 @@
-/*
- * Copyright (C)  Nokia
- *
- * 
- * Based on:
- *    optoe.c fromDON BOLLINGER <don@thebollingers.org>
- * Copyright (C) 2017 Finisar Corp.
- *
- * This file is licensed under the terms of the GNU General Public
- * License version 2. This program is licensed "as is" without any
- * warranty of any kind, whether express or implied.
- */
+//
+//  * Copyright (C) 2024 Nokia Corporation.
+//  *
+//  * 
+//  * Based on:
+//  *    optoe.c fromDON BOLLINGER <don@thebollingers.org>
+//  * Copyright (C) 2017 Finisar Corp.
+//  *
+//  * This file is licensed under the terms of the GNU General Public
+//  * License version 2. This program is licensed "as is" without any
+//  * warranty of any kind, whether express or implied.
+// 
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -1519,7 +1519,7 @@ static ssize_t fpga_read_port_status_value(struct bin_attribute *eeprom)
 				ioread32(fpga_ctl->pci_fpga_dev[i].data_base_addr + 
 					 QSFP_RESET_REG_OFFSET);
 	}
-	
+
 	fpga_ctl->last_updated = jiffies;
 
 	return 0;

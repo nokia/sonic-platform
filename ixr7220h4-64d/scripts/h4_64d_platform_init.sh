@@ -3,7 +3,7 @@
 # Load required kernel-mode drivers
 
 load_kernel_drivers() {
-    echo "Loading Kernel Drivers"  
+    echo "Loading Kernel Drivers"
     depmod -a
     modprobe i2c-i801
     modprobe i2c-dev
@@ -41,7 +41,7 @@ file_exists() {
     return 0
  }
 
- # Install kernel drivers required for i2c bus access
+# Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
 # Enumerate I2C Multiplexer
@@ -57,10 +57,11 @@ echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-12/new_device
 echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-18/new_device
 echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-19/new_device
 
-# # Enumerate system eeprom
+# Enumerate eeprom
 echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-20/new_device
 echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-33/new_device
 echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-41/new_device
+echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-26/new_device
 
 # Enumerate CPLDs
 echo smb_cpld 0x60 > /sys/bus/i2c/devices/i2c-6/new_device
@@ -72,7 +73,7 @@ echo pdbr_cpld 0x60 > /sys/bus/i2c/devices/i2c-44/new_device
 echo dps_2400ab_1 0x58 > /sys/bus/i2c/devices/i2c-33/new_device
 echo dps_2400ab_1 0x59 > /sys/bus/i2c/devices/i2c-41/new_device
 
-# Enumerate Thermal Sensor 
+# Enumerate Thermal Sensor
 echo tmp75 0x48 > /sys/bus/i2c/devices/i2c-2/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-2/new_device
 echo tmp422 0x4c > /sys/bus/i2c/devices/i2c-14/new_device
@@ -107,5 +108,9 @@ if [ "$status" == "1" ]; then
 else
     echo "SYSEEPROM file not foud"
 fi
+
+chmod 644 /sys/bus/i2c/devices/26-0051/eeprom
+chmod 644 /sys/bus/i2c/devices/33-0050/eeprom
+chmod 644 /sys/bus/i2c/devices/41-0051/eeprom
 
 exit 0

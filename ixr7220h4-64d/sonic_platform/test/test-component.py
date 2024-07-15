@@ -15,8 +15,5 @@ def main():
         print("        Description: {}".format(component.get_description()))
         print("        FW version: {}\n".format(component.get_firmware_version()))
 
-    return
-
-
 if __name__ == '__main__':
     main()

@@ -15,6 +15,9 @@ def main():
             print("    Name: {} not present".format(psu.get_name()))
         else:
             print("    Name:", psu.get_name())
+            print("    Active num:", psu._get_active_psus())
+            print("    Master LED:", psu.get_status_master_led())
+
             print("        Presence: {}, Status: {}, LED: {}".format(psu.get_presence(),
                                                                      psu.get_status(),
                                                                      psu.get_status_led()))
@@ -33,8 +36,6 @@ def main():
             print("        Voltage: {}, Current: {}, Power: {}\n".format(psu.get_voltage(),
                                                                          current,
                                                                          power))
-    return
-
 
 if __name__ == '__main__':
     main()

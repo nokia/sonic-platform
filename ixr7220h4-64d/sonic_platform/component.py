@@ -1,29 +1,19 @@
-########################################################################
-# NOKIA IXR7220 H4-64D
-#
-# Module contains an implementation of SONiC Platform Base API and
-# provides the Components' (e.g., BIOS, CPLD, FPGA, etc.) available in
-# the platform
-#
-########################################################################
+"""
+    NOKIA IXR7220 H4-64D
+
+    Module contains an implementation of SONiC Platform Base API and
+    provides the Components' (e.g., BIOS, CPLD, FPGA, etc.) available in
+      the platform
+"""
 
 try:
-    import sys
     import os
-    import time
     import subprocess
     import ntpath
-    import struct    
-    from mmap import *
     from sonic_platform_base.component_base import ComponentBase
-    from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
+    from sonic_platform.sysfs import read_sysfs_file
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
-
-if sys.version_info[0] < 3:
-    import commands as cmd
-else:
-    import subprocess as cmd
+    raise ImportError(str(e) + ' - required module not found') from e
 
 COMPONENT_NUM = 13
 SYSFS_PATH = ["/sys/class/dmi/id/bios_version",
@@ -45,19 +35,19 @@ class Component(ComponentBase):
 
     CHASSIS_COMPONENTS = [
         ["BIOS", "Basic Input/Output System"],
-        ["SMB FPGA", "Used for managing syetem board"],
-        ["UDB FPGA", "Used for managing upper QSFPs 1-32"],
-        ["LDB FPGA", "Used for managing lower QSFPs 33-64 and SFP+"],
-        ["SMB CPLD", "Used for managing system board"],
-        ["UDB CPLD1", "Used for managing upper QSFPs 1-32"],
-        ["UDB CPLD2", "Used for managing upper QSFPs 1-32"],
-        ["LDB CPLD1", "Used for managing lower QSFPs 33-64 and SFP+"],
-        ["LDB CPLD2", "Used for managing lower QSFPs 33-64 and SFP+"],
-        ["FAN CPLD", "Used for managing fans"],
-        ["PDB_L CPLD", "Used for managing left PSU"],
-        ["PDB_R CPLD", "Used for managing right PSU"],
-        ["SCM CPLD", "Used for managing misc system"]]
-    
+        ["SMB_FPGA", "Used for managing syetem board"],
+        ["UDB_FPGA", "Used for managing upper QSFPs 1-32"],
+        ["LDB_FPGA", "Used for managing lower QSFPs 33-64 and SFP+"],
+        ["SMB_CPLD", "Used for managing system board"],
+        ["UDB_CPLD1", "Used for managing upper QSFPs 1-32"],
+        ["UDB_CPLD2", "Used for managing upper QSFPs 1-32"],
+        ["LDB_CPLD1", "Used for managing lower QSFPs 33-64 and SFP+"],
+        ["LDB_CPLD2", "Used for managing lower QSFPs 33-64 and SFP+"],
+        ["FAN_CPLD", "Used for managing fans"],
+        ["PDBL_CPLD", "Used for managing left PSU"],
+        ["PDBR_CPLD", "Used for managing right PSU"],
+        ["SCM_CPLD", "Used for managing misc system"]]
+
     CPLD_UPDATE_COMMAND = ['./vme', '']
 
     def __init__(self, component_index):
@@ -68,58 +58,19 @@ class Component(ComponentBase):
 
     def _get_command_result(self, cmdline):
         try:
-            proc = subprocess.Popen(cmdline.split(), stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            stdout = proc.communicate()[0]
+            with subprocess.Popen(cmdline.split(), stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT) as proc:
+                _, _ = proc.communicate()
+                stdout = proc.communicate()[0]
             proc.wait()
             result = stdout.rstrip('\n')
         except OSError:
             result = None
 
         return result
-    
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
-
-    def _write_sysfs_file(self, sysfs_file, value):
-        # On successful write, the value read will be written on
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'w') as fd:
-                rv = fd.write(value)
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        # Ensure that the write operation has succeeded
-        if (int(self._read_sysfs_file(sysfs_file)) != value ):
-            time.sleep(3)
-            if (int(self._read_sysfs_file(sysfs_file)) != value ):
-                rv = 'ERR'
-
-        return rv
 
     def _get_cpld_version(self):
-        return self._read_sysfs_file(self.sysfs_path)
+        return read_sysfs_file(self.sysfs_path)
 
     def get_name(self):
         """
@@ -194,7 +145,7 @@ class Component(ComponentBase):
 
         Returns:
             A string containing the firmware version of the component
-        """        
+        """
         return self._get_cpld_version()
 
     def install_firmware(self, image_path):
@@ -208,41 +159,43 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         image_name = ntpath.basename(image_path)
-        print(" IXR-7220-H4-64D - install cpld {}".format(image_name))
+        print(f"IXR-7220-H4-64D - install cpld {image_name}")
 
         # check whether the image file exists
         if not os.path.isfile(image_path):
-            print("ERROR: the cpld image {} doesn't exist ".format(image_path))
+            print(f"ERROR: the cpld image {image_path} doesn't exist ")
             return False
 
         # check whether the cpld exe exists
         if not os.path.isfile('/tmp/vme'):
-            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/vme'))
+            print(f"ERROR: the cpld exe {'/tmp/vme'} doesn't exist ")
             return False
 
         self.CPLD_UPDATE_COMMAND[1] = image_name
 
         success_flag = False
- 
-        try:   
+
+        try:
             subprocess.check_call(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
 
             success_flag = True
         except subprocess.CalledProcessError as e:
-            print("ERROR: Failed to upgrade CPLD: rc={}".format(e.returncode))
+            print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
 
         if success_flag:
             print("INFO: Refresh or power cycle is required to finish CPLD installation")
 
         return success_flag
-    
-    def update_firmware(self, image_path):
+
+    def update_firmware(self, _image_path):
         """
         Updates firmware of the component
 
-        This API performs firmware update: it assumes firmware installation and loading in a single call.
+        This API performs firmware update:
+        it assumes firmware installation and loading in a single call.
         In case platform component requires some extra steps (apart from calling Low Level Utility)
-        to load the installed firmware (e.g, reboot, power cycle, etc.) - this will be done automatically by API
+        to load the installed firmware (e.g, reboot, power cycle, etc.)
+        - this will be done automatically by API
 
         Args:
             image_path: A string, path to firmware image
@@ -251,8 +204,8 @@ class Component(ComponentBase):
             RuntimeError: update failed
         """
         return False
-    
-    def get_available_firmware_version(self, image_path):
+
+    def get_available_firmware_version(self, _image_path):
         """
         Retrieves the available firmware version of the component
 

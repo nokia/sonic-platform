@@ -1,35 +1,27 @@
-########################################################################
-# Nokia IXR7220 H4-64D
-#
-# Module contains an implementation of SONiC Platform Base API and
-# provides the Fans' information which are available in the platform
-#
-########################################################################
+"""
+    Nokia IXR7220 H4-64D
 
+    Module contains an implementation of SONiC Platform Base API and
+    provides the Fans' information which are available in the platform
+"""
 
 try:
-    import os
-    import time
-    import glob
-    import struct    
-    from mmap import *
     from sonic_platform_base.fan_base import FanBase
     from sonic_platform.eeprom import Eeprom
+    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
     from sonic_py_common import logger
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+    raise ImportError(str(e) + ' - required module not found') from e
 
 FANS_PER_DRAWER = 2
-
 FAN_PN_F2B = "3HE19865AARA01"
 MAX_SPEED = 13600
 FAN_TOLERANCE = 20
-WORKING_ixr7220_FAN_SPEED = 1360
+WORKING_IXR7220_FAN_SPEED = 1360
 
-I2C_DIR = "/sys/bus/i2c/devices/i2c-25/25-0033/" 
+I2C_DIR = "/sys/bus/i2c/devices/i2c-25/25-0033/"
 
 sonic_logger = logger.Logger('fan')
-
 
 class Fan(FanBase):
     """Nokia platform-specific Fan class"""
@@ -41,55 +33,21 @@ class Fan(FanBase):
             # Fan is 1-based in Nokia platforms
             self.index = drawer_index * FANS_PER_DRAWER + fan_index + 1
             self.drawer_index = drawer_index + 1
-            self.set_fan_speed_reg = I2C_DIR + "pwm{}".format(self.index)
-            self.get_fan_speed_reg = I2C_DIR + "fan{}_speed".format(self.index)
-            self.fan_presence_reg = I2C_DIR + "fan{}_present".format(self.drawer_index)
-            self.fan_led_reg = I2C_DIR + "fan{}_led".format(self.drawer_index)
+            self.set_fan_speed_reg = I2C_DIR + f"pwm{self.index}"
+            self.get_fan_speed_reg = I2C_DIR + f"fan{self.index}_speed"
+            self.fan_presence_reg = I2C_DIR + f"fan{self.drawer_index}_present"
+            self.fan_led_reg = I2C_DIR + f"fan{self.drawer_index}_led"
             self.system_led_supported_color = ['off', 'red', 'green']
-           
+
             # Fan eeprom
             self.eeprom = Eeprom(False, 0, True, drawer_index)
-            self.max_fan_speed = MAX_SPEED                    
-                  
+            self.max_fan_speed = MAX_SPEED
+
         else:
             # this is a PSU Fan
             self.index = fan_index
             self.dependency = dependency
 
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
-
-    def _write_sysfs_file(self, sysfs_file, value):
-        # On successful write, the value read will be written on
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'w') as fd:
-                rv = fd.write(value)
-                fd.close()
-        except Exception as e:
-            rv = 'ERR'
-
-        return rv
-    
     def get_name(self):
         """
         Retrieves the name of the Fan
@@ -98,9 +56,8 @@ class Fan(FanBase):
             string: The name of the Fan
         """
         if not self.is_psu_fan:
-            return "Fan{}".format(self.index)
-        else:
-            return "PSU{} Fan".format(self.index)
+            return f"Fan{self.index}"
+        return f"PSU{self.index} Fan"
 
     def get_presence(self):
         """
@@ -109,11 +66,10 @@ class Fan(FanBase):
         Returns:
             bool: True if Fan is present, False if not
         """
-        result = self._read_sysfs_file(self.fan_presence_reg)
+        result = read_sysfs_file(self.fan_presence_reg)
         if result == '1':
             return True
-        else:
-            return False
+        return False
 
     def get_model(self):
         """
@@ -160,9 +116,9 @@ class Fan(FanBase):
         """
         status = False
 
-        fan_speed = self._read_sysfs_file(self.get_fan_speed_reg)
-        if (fan_speed != 'ERR'):
-            if (int(fan_speed) > WORKING_ixr7220_FAN_SPEED):
+        fan_speed = read_sysfs_file(self.get_fan_speed_reg)
+        if fan_speed != 'ERR':
+            if int(fan_speed) > WORKING_IXR7220_FAN_SPEED:
                 status = True
 
         return status
@@ -175,9 +131,7 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or
             FAN_DIRECTION_EXHAUST depending on fan direction
         """
-        
         return self.FAN_DIRECTION_INTAKE
-        
 
     def get_position_in_parent(self):
         """
@@ -204,17 +158,15 @@ class Fan(FanBase):
         """
         speed = 0
 
-        fan_speed = self._read_sysfs_file(self.get_fan_speed_reg)
-        if (fan_speed != 'ERR'):
+        fan_speed = read_sysfs_file(self.get_fan_speed_reg)
+        if fan_speed != 'ERR':
             speed_in_rpm = int(fan_speed)
         else:
             speed_in_rpm = 0
 
         speed = 100*speed_in_rpm//self.max_fan_speed
-        if speed > 100:
-            speed = 100
-
-        return int(speed)
+        speed = min(speed, 100)
+        return speed
 
     def get_speed_tolerance(self):
         """
@@ -224,7 +176,6 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed
             which is considered tolerable
         """
-         
         return FAN_TOLERANCE
 
     def set_speed(self, speed):
@@ -242,17 +193,16 @@ class Fan(FanBase):
         if speed in range(0, 10):
             fandutycycle = 0x00
         elif speed in range(10, 100):
-            fandutycycle = (speed*255)//100 
+            fandutycycle = (speed*255)//100
         else:
             return False
 
-        rv = self._write_sysfs_file(self.set_fan_speed_reg, str(fandutycycle))
-        if (rv != 'ERR'):
+        rv = write_sysfs_file(self.set_fan_speed_reg, str(fandutycycle))
+        if rv != 'ERR':
             return True
-        else:
-            return False
+        return False
 
-    def set_status_led(self, color):
+    def set_status_led(self, _color):
         """
         Set led to expected color
         Args:
@@ -262,7 +212,7 @@ class Fan(FanBase):
             bool: True if set success, False if fail.
 
             No indivial led for each H4-64D fans
-        """        
+        """
         return False
 
     def get_status_led(self):
@@ -272,19 +222,18 @@ class Fan(FanBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        if not self.get_presence(): 
-            return self.STATUS_LED_COLOR_OFF        
-
-        result = self._read_sysfs_file(self.fan_led_reg)
-
-        if result == "base" or result == "off":
+        if not self.get_presence():
             return self.STATUS_LED_COLOR_OFF
-        elif result == "green":
+
+        result = read_sysfs_file(self.fan_led_reg)
+
+        if result in {"base", "off"}:
+            return self.STATUS_LED_COLOR_OFF
+        if result == "green":
             return self.STATUS_LED_COLOR_GREEN
-        elif result == "red":
+        if result == "red":
             return self.STATUS_LED_COLOR_RED
-        else:
-            return 'N/A'
+        return 'N/A'
 
     def get_target_speed(self):
         """
@@ -296,8 +245,8 @@ class Fan(FanBase):
         """
         speed = 0
 
-        fan_duty = self._read_sysfs_file(self.set_fan_speed_reg)
-        if (fan_duty != 'ERR'):
+        fan_duty = read_sysfs_file(self.set_fan_speed_reg)
+        if fan_duty != 'ERR':
             dutyspeed = int(fan_duty)
             if dutyspeed == 0:
                 speed = 0
