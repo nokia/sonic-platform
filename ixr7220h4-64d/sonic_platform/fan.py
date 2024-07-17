@@ -164,7 +164,7 @@ class Fan(FanBase):
         else:
             speed_in_rpm = 0
 
-        speed = 100*speed_in_rpm//self.max_fan_speed
+        speed = round(100*speed_in_rpm/self.max_fan_speed)
         speed = min(speed, 100)
         return speed
 
@@ -193,7 +193,7 @@ class Fan(FanBase):
         if speed in range(0, 10):
             fandutycycle = 0x00
         elif speed in range(10, 100):
-            fandutycycle = (speed*255)//100
+            fandutycycle = round((speed*255)/100)
         else:
             return False
 
@@ -251,6 +251,6 @@ class Fan(FanBase):
             if dutyspeed == 0:
                 speed = 0
             else:
-                speed = (dutyspeed*100)//255
+                speed = round((dutyspeed*100)/255)
 
         return int(speed)

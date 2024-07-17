@@ -25,7 +25,7 @@ class Thermal(ThermalBase):
                     "65-004c", "34-0048", "42-0049", "27-0049", "27-0048"]
     THERMAL_NAME = ["MAC Rear", "MAC Under", "UDB Front", "UDB Rear", "LDB Front",
                     "LDB Rear", "PSU Left", "PSU Right", "FAN Left", "FAN Right", "MAC TH4"]
-    THRESHHOLD = [76, 76, 61, 70, 67, 67, 77, 77, 67, 67, 100]
+    THRESHHOLD = [76.0, 76.0, 61.0, 70.0, 67.0, 67.0, 77.0, 77.0, 67.0, 67.0, 100.0]
 
     def __init__(self, thermal_index):
         ThermalBase.__init__(self)

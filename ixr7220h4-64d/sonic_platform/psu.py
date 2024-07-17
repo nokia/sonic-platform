@@ -20,8 +20,8 @@ REG_DIR = "/sys/bus/i2c/devices/6-0060/"
 PSU_EEPROM = ["/sys/bus/i2c/devices/41-0051/eeprom",
               "/sys/bus/i2c/devices/33-0050/eeprom"]
 
-MAX_VOLTAGE = 14
-MIN_VOLTAGE = 10
+MAX_VOLTAGE = 13
+MIN_VOLTAGE = 11
 
 class Psu(PsuBase):
     """Nokia platform-specific PSU class for 7220 H4-64D """
