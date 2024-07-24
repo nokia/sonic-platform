@@ -25,6 +25,7 @@ function platform_ndk_health_monitor()
     fi
 }
 
+watchdog_fail=1
 watchdog_sleep_time=20
 function wait_for_sleep_time()
 {
@@ -32,6 +33,10 @@ function wait_for_sleep_time()
     while [ $iter -gt 0 ]; do
         if [ ! -e /tmp/fsde_dev_hung_sig ]; then
            sleep 1
+           if [[ $watchdog_fail -eq 1 ]]; then
+              sync
+              sync
+           fi
         else
            echo "FSDE detected hung device and rebooting at " `date -u` >> $wd_init_log_file
            /usr/sbin/reboot
@@ -102,7 +107,6 @@ dmesg | grep nokia >> $wd_init_log_file
 sync
 echo "sync done " `date -u` >> $wd_init_log_file
 
-watchdog_fail=1
 wd_log_file=/var/log/nokia-watchdog.log
 wd_temp_file=/tmp/nokia-watchdog.tmp
 
