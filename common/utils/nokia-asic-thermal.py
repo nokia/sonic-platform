@@ -115,8 +115,7 @@ class asic_thermal(object):
        asic_temp = ''
        if temp == 'temperature':
          temp_name = 'ASIC' + str(asic_id) +'_' + index + '--' + temp_mon_list[int(index)]
-
-       nokia_cmd.set_asic_temp(temp_name, int(value), ASIC_TEMP_DEVICE_THRESHOLD)
+         nokia_cmd.set_asic_temp(temp_name, int(value), ASIC_TEMP_DEVICE_THRESHOLD)
     return
 
   def get_db_asic_temp(self, namespace, asic_id):
