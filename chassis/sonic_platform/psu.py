@@ -345,6 +345,10 @@ class Psu(PsuBase):
         """
         Set the PSU master led register with the input color
         """
+        # Linecard doesn't have psu_master_led
+        if nokia_common.is_cpm() == 0:
+            return True
+        
         cls.psu_master_led_color = color
         led_type = platform_ndk_pb2.ReqLedType.LED_TYPE_MASTER_PSU_STATUS
         _led_info = nokia_common.led_color_to_info(color)
