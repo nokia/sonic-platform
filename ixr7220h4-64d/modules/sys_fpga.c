@@ -1,4 +1,8 @@
-//
+//  * Copyright (C)  Alex Lai <alex_lai@edge-core.com>
+//  *
+//  * This module supports the accton fpga via pcie that read/write reg
+//  * mechanism to get QSFP/SFP status, eeprom info...etc.
+//  *
 //  * Copyright (C) 2024 Nokia Corporation.
 //  *
 //  * 
@@ -1286,9 +1290,9 @@ static ssize_t show_present_all(struct device *dev, struct device_attribute *dev
 
 	qsfp_present_udb = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + QSFP_PRESENT_REG_OFFSET);
 	qsfp_present_ldb = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + QSFP_PRESENT_REG_OFFSET);
-	sfp_present = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + 0x100C);
+	sfp_present = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_LDB_GPIO1_DATA_IN);
 
-	val_sfp = (sfp_present & 0x4) >> 2 |  (sfp_present & 0x400) >> 9;
+	val_sfp = (sfp_present & 0x4) >> 1 | (sfp_present & 0x400) >> 10;
 
     return sprintf(buf, "0x%.1x%.8x%.8x\n", val_sfp, qsfp_present_ldb, qsfp_present_udb);
 }
@@ -1309,11 +1313,11 @@ static ssize_t show_present(struct device *dev, struct device_attribute *devattr
 		bit_val = (reg_val >> (sda->index - MODULE_PRESENT_33)) & 0x1;
 		break;
 	case MODULE_PRESENT_65:
-	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + 0x100C);
-		bit_val = (reg_val & 0x400) >> 9;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_LDB_GPIO1_DATA_IN);
+		bit_val = (reg_val & 0x400) >> 10;
 		break;
 	case MODULE_PRESENT_66:
-	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + 0x100C);
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_LDB_GPIO1_DATA_IN);
 		bit_val = (reg_val & 0x4) >> 2;
 		break;
 	default:
@@ -2774,6 +2778,6 @@ static void __exit sys_fpga_exit(void)
 module_init(sys_fpga_init);
 module_exit(sys_fpga_exit);
 
-MODULE_AUTHOR("Nokia");
-MODULE_DESCRIPTION("FPGAs Driver");
+MODULE_AUTHOR("Alex Lai <alex_lai@edge-core.com>");
+MODULE_DESCRIPTION("FPGA Driver");
 MODULE_LICENSE("GPL");

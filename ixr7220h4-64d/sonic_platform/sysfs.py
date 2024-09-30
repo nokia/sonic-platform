@@ -44,19 +44,5 @@ def write_sysfs_file(sysfs_file, value):
         print(f"Error: Permission denied when writing file {sysfs_file}.")
     except IOError:
         print(f"IOError: An error occurred while writing file {sysfs_file}.")
-
-    if rv != 'ERR':
-        # Ensure that the write operation has succeeded
-        val = read_sysfs_file(sysfs_file)
-        try:
-            expected_value = int(value)
-            if val[:2] == '0x':
-                current_value = int(val, 16)
-            else:
-                current_value = int(val)
-
-            if current_value != expected_value:
-                rv = 'ERR'
-        except ValueError:
-            rv = 'ERR'
+    
     return rv

@@ -21,34 +21,79 @@ sonic_logger = logger.Logger('eeprom')
 class Eeprom(TlvInfoDecoder):
     """Nokia platform-specific EEPROM class"""
 
-    I2C_DIR = "/sys/bus/i2c/devices/"
-    FAN_EEPROM_DIR = "/sys/bus/i2c/devices/26-0051/eeprom"
+    I2C_DIR = "/sys/bus/i2c/devices/"    
     def __init__(self, is_psu, psu_index, is_fan, drawer_index):
         self.is_psu_eeprom = is_psu
         self.is_fan_eeprom = is_fan
-        self.is_sys_eeprom = not is_psu | is_fan
-        self.service_tag = 'NA'
-        self.part_number = 'NA'
+        self.is_sys_eeprom = not is_psu | is_fan        
 
         if self.is_sys_eeprom:
             self.start_offset = 0
             self.eeprom_path = self.I2C_DIR + "20-0051/eeprom"
             # System EEPROM is in ONIE TlvInfo EEPROM format
-            super().__init__(self.eeprom_path, self.start_offset, '', True)            
-            self.base_mac = os.popen("sudo decode-syseeprom -d -m").read().rstrip('\n')
-            self.model_str = "7220 IXR-H4"
-            self.serial_number = os.popen("sudo decode-syseeprom -d -s").read().rstrip('\n')
+            super().__init__(self.eeprom_path, self.start_offset, '', True)
+            self.base_mac = ''
+            self.serial_number = ''
+            self.part_number = ''
+            self.model_str = ''
+            self.service_tag = ''
 
         elif self.is_psu_eeprom:
             self.start_offset = 0
+            self.serial_number = ''
+            self.part_number = ''
+            self.model_str = ''
+            self.service_tag = 'NA'
 
         elif self.is_fan_eeprom:
-            self.start_offset = 0
-            self.eeprom_path = self.FAN_EEPROM_DIR
+            self.start_offset = 0            
+            self.serial_number = 'NK21503Cxxx'
+            self.part_number = '3HE17753AA0101'
+            self.model_str = 'DFPH0880B2UY010'
+            self.service_tag = 'NA'
 
-            # Fan EEPROM is in ONIE TlvInfo EEPROM format
-            super().__init__(self.eeprom_path, self.start_offset, '', True)
-            self._load_system_eeprom()
+    def read_eeprom_with_tmp_file(self):
+        """
+        Reads the system EEPROM by a temporary file to increase read speed
+        when read after the first read.
+        """
+        temp_file_path = '/tmp/' + self.eeprom_path.replace('/', '_')
+        eeprom_data = None
+        if not os.path.exists(temp_file_path):
+            try:
+                with open(temp_file_path, 'wb') as file:
+                    eeprom_data = self.read_eeprom()
+                    file.write(eeprom_data)
+                    sonic_logger.log_info(f"eeprom {self.eeprom_path} has been copied to /tmp.")
+            except FileNotFoundError:
+                print(f"Error: {temp_file_path} doesn't exist.")
+            except PermissionError:
+                print(f"Error: Permission denied when writing file {temp_file_path}.")
+            except IOError:
+                print(f"IOError: An error occurred while writing file {temp_file_path}.")
+        elif os.path.getsize(temp_file_path)<3:
+            try:
+                with open(temp_file_path, 'wb') as file:
+                    eeprom_data = self.read_eeprom()
+                    file.write(eeprom_data)
+                    sonic_logger.log_info(f"eeprom {self.eeprom_path} has been copied to /tmp.")
+            except FileNotFoundError:
+                print(f"Error: {temp_file_path} doesn't exist.")
+            except PermissionError:
+                print(f"Error: Permission denied when writing file {temp_file_path}.")
+            except IOError:
+                print(f"IOError: An error occurred while writing file {temp_file_path}.")
+        else:
+            try:
+                with open(temp_file_path, 'rb') as file:
+                    eeprom_data = file.read()
+            except FileNotFoundError:
+                print(f"Error: {temp_file_path} doesn't exist.")
+            except PermissionError:
+                print(f"Error: Permission denied when reading file {temp_file_path}.")
+            except IOError:
+                print(f"IOError: An error occurred while reading file {temp_file_path}.")
+        return eeprom_data
 
     def _load_system_eeprom(self):
         """
@@ -58,7 +103,7 @@ class Eeprom(TlvInfoDecoder):
         """
         try:
             # Read System EEPROM as per ONIE TlvInfo EEPROM format.
-            self.eeprom_data = self.read_eeprom()
+            self.eeprom_data = self.read_eeprom_with_tmp_file()
         except Exception as e:
             sonic_logger.log_warning(f"Unable to read system eeprom: {e}")
             self.base_mac = 'NA'
@@ -72,7 +117,7 @@ class Eeprom(TlvInfoDecoder):
             self.eeprom_tlv_dict = {}
 
             if not self.is_valid_tlvinfo_header(eeprom):
-                sonic_logger.log_warning("Invalid system eeprom TLV header")
+                sonic_logger.log_warning(f"Invalid system eeprom TLV header [{self.eeprom_path}]")
                 self.base_mac = 'NA'
                 self.serial_number = 'NA'
                 self.part_number = 'NA'
@@ -129,12 +174,18 @@ class Eeprom(TlvInfoDecoder):
         """
         Returns the serial number.
         """
+        if not self.serial_number:
+            self._load_system_eeprom()
+
         return self.serial_number
 
     def part_number_str(self):
         """
         Returns the part number.
         """
+        if not self.part_number:
+            self._load_system_eeprom()
+
         return self.part_number
 
     def airflow_fan_type(self):
@@ -152,12 +203,18 @@ class Eeprom(TlvInfoDecoder):
         """
         Returns the base MAC address found in the system EEPROM.
         """
+        if not self.base_mac:
+            self._load_system_eeprom()
+
         return self.base_mac
 
     def modelstr(self):
         """
         Returns the Model name.
         """
+        if not self.model_str:
+            self._load_system_eeprom()
+
         return self.model_str
 
     def service_tag_str(self):

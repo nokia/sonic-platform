@@ -12,16 +12,17 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-sonic_logger = logger.Logger('psu')
 PSU_NUM = 2
 PSU_DIR = ["/sys/bus/i2c/devices/41-0059/",
            "/sys/bus/i2c/devices/33-0058/"]
 REG_DIR = "/sys/bus/i2c/devices/6-0060/"
 PSU_EEPROM = ["/sys/bus/i2c/devices/41-0051/eeprom",
               "/sys/bus/i2c/devices/33-0050/eeprom"]
-
 MAX_VOLTAGE = 13
 MIN_VOLTAGE = 11
+
+sonic_logger = logger.Logger('psu')
+sonic_logger.set_min_log_priority_error()
 
 class Psu(PsuBase):
     """Nokia platform-specific PSU class for 7220 H4-64D """
@@ -139,8 +140,7 @@ class Psu(PsuBase):
             bool: True if PSU is operating properly, False if not
         """
         result = read_sysfs_file(REG_DIR+f"psu{self.index}_pwr_ok")
-
-        if result == '1':
+        if result == '1':            
             return True
 
         return False
@@ -158,6 +158,12 @@ class Psu(PsuBase):
             psu_voltage = (float(result))/1000
         else:
             psu_voltage = 0.0
+
+        if self.get_status() and self.get_model() == "DPS-2400AB-1":
+            result = read_sysfs_file(self.psu_dir+"in1_input")
+            voltage_in = (float(result))/1000
+            if voltage_in < 170:
+                sonic_logger.log_error(f"!ERROR!: PSU {self.index} not supplying enough voltage. {voltage_in}v is less than the required 200-220V")                   
 
         return psu_voltage
 

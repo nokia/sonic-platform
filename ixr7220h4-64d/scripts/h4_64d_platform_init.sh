@@ -61,7 +61,6 @@ echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-19/new_device
 echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-20/new_device
 echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-33/new_device
 echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-41/new_device
-echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-26/new_device
 
 # Enumerate CPLDs
 echo smb_cpld 0x60 > /sys/bus/i2c/devices/i2c-6/new_device
@@ -90,7 +89,6 @@ echo tmp75 0x48 > /sys/bus/i2c/devices/i2c-34/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-42/new_device
 
 # # Set the PCA9548 mux behavior
-echo -2 > /sys/bus/i2c/devices/0-0072/idle_state
 echo -2 > /sys/bus/i2c/devices/3-0071/idle_state
 echo -2 > /sys/bus/i2c/devices/5-0071/idle_state
 echo -2 > /sys/bus/i2c/devices/9-0076/idle_state
@@ -109,8 +107,44 @@ else
     echo "SYSEEPROM file not foud"
 fi
 
-chmod 644 /sys/bus/i2c/devices/26-0051/eeprom
 chmod 644 /sys/bus/i2c/devices/33-0050/eeprom
 chmod 644 /sys/bus/i2c/devices/41-0051/eeprom
+
+i2cset -y 72 0x58 0x06 0x18
+i2cset -y 72 0x58 0x0F 0x00
+i2cset -y 72 0x58 0x16 0x00
+i2cset -y 72 0x58 0x17 0xAA
+i2cset -y 72 0x58 0x18 0x00
+i2cset -y 72 0x58 0x1D 0x00
+i2cset -y 72 0x58 0x24 0x00
+i2cset -y 72 0x58 0x25 0xA8
+i2cset -y 72 0x58 0x26 0x00
+i2cset -y 72 0x58 0x2C 0x00
+i2cset -y 72 0x58 0x2D 0xAA
+i2cset -y 72 0x58 0x2E 0x00
+i2cset -y 72 0x58 0x34 0xAA
+i2cset -y 72 0x58 0x35 0x00
+i2cset -y 72 0x58 0x3A 0x00
+i2cset -y 72 0x58 0x3B 0xAA
+i2cset -y 72 0x58 0x3C 0x00
+i2cset -y 72 0x58 0x41 0x00
+i2cset -y 72 0x58 0x42 0xAA
+i2cset -y 72 0x58 0x43 0x00
+
+check_voltage() {
+    dev=("41-0059" "33-0058")
+    status=$(cat /sys/bus/i2c/devices/6-0060/psu$(($1))_pwr_ok)
+    model=$(cat /sys/bus/i2c/devices/${dev[(($1-1))]}/psu_mfr_model)
+    if [[ ${status[0]} == "1" ]] && [[ ${model[0]:0:12} == "DPS-2400AB-1" ]]; then
+        vol_i=$(cat /sys/bus/i2c/devices/${dev[(($1-1))]}/in1_input)
+        vol_d=$(echo "$vol_i 1000" | awk '{printf "%0.3f\n", $1/$2}')
+        if (("$vol_i" < 170000)); then
+            echo -e "\nERROR: PSU $1 not supplying enough voltage. [$vol_d]v is less than the required 200-220V\n"
+        fi
+    fi
+    return 0
+ }
+check_voltage 1
+check_voltage 2
 
 exit 0
