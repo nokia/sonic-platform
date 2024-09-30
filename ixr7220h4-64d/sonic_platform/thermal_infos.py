@@ -72,7 +72,6 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
         self._num_fan_levels = 2
-        self._high_crital_threshold = 80
         self._level_up_threshold = [[60, 59, 51, 58, 56, 54, 60, 60, 50, 50, 75],
                                     [77, 76, 61, 70, 67, 67, 77, 77, 67, 67, 88]]
 
@@ -89,7 +88,6 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._over_high_critical_threshold = False
         self._set_fan_default_speed = False
         self._set_fan_threshold_one_speed = False
-        #self._set_fan_threshold_two_speed = False
         self._set_fan_high_temp_speed = False
 
         # Calculate average temp within the device

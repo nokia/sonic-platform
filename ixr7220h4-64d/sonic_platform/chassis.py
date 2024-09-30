@@ -78,6 +78,7 @@ class Chassis(ChassisBase):
             sonic_logger.log_info(f"path {port_eeprom_path} didnt exist")
         sfp_node = Sfp(QSFP_PORT_NUM + 2, 'SFP+', port_eeprom_path, 66)
         self._sfp_list.append(sfp_node)
+        
         self.sfp_event_initialized = False
         # Instantiate system eeprom object
         self._eeprom = Eeprom(False, 0, False, 0)
@@ -303,9 +304,7 @@ class Chassis(ChassisBase):
         if (int(result, 16) & 0x8) >> 3 == 0:
             return (self.REBOOT_CAUSE_WATCHDOG, "COMe_WDT")
         if (int(result, 16) & 0x4) >> 2 == 0:
-            return (self.REBOOT_CAUSE_WATCHDOG, "TCO_WDT")
-        if (int(result, 16) & 0x2) >> 1 == 0:
-            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "SW Reset")
+            return (self.REBOOT_CAUSE_WATCHDOG, "TCO_WDT")        
         if (int(result, 16) & 0x1) == 0:
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "COMe Reset")
 

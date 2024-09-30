@@ -15,7 +15,6 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
     JSON_FIELD_SPEED = 'speed'
     JSON_FIELD_DEFAULT_SPEED = 'default_speed'
     JSON_FIELD_THRESHOLD1_SPEED = 'threshold1_speed'
-    JSON_FIELD_THRESHOLD2_SPEED = 'threshold2_speed'
     JSON_FIELD_HIGHTEMP_SPEED = 'hightemp_speed'
 
     def __init__(self):
@@ -23,8 +22,7 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         Constructor of SetFanSpeedAction
         """
         self.default_speed = 50
-        self.threshold1_speed=70
-        #self.threshold2_speed=70
+        self.threshold1_speed=70        
         self.hightemp_speed = 90
         self.speed = self.default_speed
 
@@ -109,7 +107,7 @@ class ThermalRecoverAction(SetFanSpeedAction):
         else:
             raise ValueError(f'SetFanSpeedAction missing mandatory field {SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED} in JSON policy file')
 
-        sonic_logger.log_warning(f"ThermalRecoverAction: default: {self.default_speed}, threshold1: {self.threshold1_speed}, threshold2: {self.threshold2_speed}, hightemp: {self.hightemp_speed}")
+        sonic_logger.log_warning(f"ThermalRecoverAction: default: {self.default_speed}, threshold1: {self.threshold1_speed}, hightemp: {self.hightemp_speed}")
 
     def execute(self, thermal_info_dict):
         """
@@ -143,9 +141,7 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
         :return:
         """
         sonic_logger.log_warning("Alarm for temperature critical is detected, reboot Device")
-        # import os
-        # os.system('reboot')
-
+        
 @thermal_json_object('thermal_control.control')
 class ControlThermalAlgoAction(ThermalPolicyActionBase):
     """

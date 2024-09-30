@@ -98,11 +98,16 @@ class SfpEvent:
             if port_status != self.modprs_list:
                 for i in range(PORT_END):
                     if port_status[i] != self.modprs_list[i]:
-                        # sfp_presence is active low
                         if port_status[i]:
                             port_change[i+1] = '1'
                         else:
                             port_change[i+1] = '0'
+                        
+                        if (i == PORT_END -2) or (i == PORT_END -1):
+                            if port_status[i]:
+                                write_sysfs_file(REG_DIR+f"module_tx_disable_{i+1}", '0')
+                            else:
+                                write_sysfs_file(REG_DIR+f"module_tx_disable_{i+1}", '1')
 
                 # Update reg value
                 self.modprs_list = port_status
