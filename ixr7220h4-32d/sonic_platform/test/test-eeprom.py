@@ -18,7 +18,6 @@ def main():
                                               eeprom.serial_number_str()))
     print("    Base MAC: {}".format(eeprom.base_mac_addr()))
 
-    return
 
 
 if __name__ == '__main__':

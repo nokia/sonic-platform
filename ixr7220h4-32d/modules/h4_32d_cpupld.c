@@ -12,7 +12,6 @@
 //  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  * GNU General Public License for more details.
 //  * see <http://www.gnu.org/licenses/>
-// Design Spec 20240418
 
 #include <linux/module.h>
 #include <linux/init.h>

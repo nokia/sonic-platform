@@ -1,7 +1,9 @@
-from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
-from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
-
-from sonic_py_common import logger
+try:
+    from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
+    from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
+    from sonic_py_common import logger
+except ImportError as e:
+    raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_actions')
 
@@ -21,10 +23,10 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         """
         Constructor of SetFanSpeedAction
         """
-        self.default_speed = 40
+        self.default_speed = 50
         self.threshold1_speed=55
-        self.threshold2_speed=80
-        self.hightemp_speed = 100
+        self.threshold2_speed=70
+        self.hightemp_speed = 90
         self.speed = self.default_speed
 
     def load_from_json(self, json_obj):
@@ -40,12 +42,10 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         if SetFanSpeedAction.JSON_FIELD_SPEED in json_obj:
             speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_SPEED])
             if speed < 0 or speed > 100:
-                raise ValueError('SetFanSpeedAction invalid speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(speed))
+                raise ValueError(f'SetFanSpeedAction invalid speed value {speed} in JSON policy file, valid value should be [0, 100]')
             self.speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_SPEED])
         else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_SPEED))
+            raise ValueError(f'SetFanSpeedAction missing mandatory field {SetFanSpeedAction.JSON_FIELD_SPEED} in JSON policy file')
 
     @classmethod
     def set_all_fan_speed(cls, thermal_info_dict, speed):
@@ -92,23 +92,19 @@ class ThermalRecoverAction(SetFanSpeedAction):
         if SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED in json_obj:
             default_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED])
             if default_speed < 0 or default_speed > 100:
-                raise ValueError('SetFanSpeedAction invalid default speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(default_speed))
+                raise ValueError(f'SetFanSpeedAction invalid default speed value {default_speed} in JSON policy file, valid value should be [0, 100]')
             self.default_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED])
         else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED))
+            raise ValueError(f'SetFanSpeedAction missing mandatory field {SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED} in JSON policy file')
 
         if SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED in json_obj:
             threshold1_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED])
             if threshold1_speed < 0 or threshold1_speed > 100:
-                raise ValueError('SetFanSpeedAction invalid default speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(threshold1_speed))
+                raise ValueError(f'SetFanSpeedAction invalid default speed value {threshold1_speed} in JSON policy file, valid value should be [0, 100]')
             self.threshold1_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED])
         else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED))
-        
+            raise ValueError(f'SetFanSpeedAction missing mandatory field {SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED} in JSON policy file')
+
         if SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED in json_obj:
             threshold2_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED])
             if threshold2_speed < 0 or threshold2_speed > 100:
@@ -118,18 +114,16 @@ class ThermalRecoverAction(SetFanSpeedAction):
         else:
             raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
                              format(SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED))
-        
+
         if SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED in json_obj:
             hightemp_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED])
             if hightemp_speed < 0 or hightemp_speed > 100:
-                raise ValueError('SetFanSpeedAction invalid hightemp speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(hightemp_speed))
+                raise ValueError(f'SetFanSpeedAction invalid hightemp speed value {hightemp_speed} in JSON policy file, valid value should be [0, 100]')
             self.hightemp_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED])
         else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED))
+            raise ValueError(f'SetFanSpeedAction missing mandatory field {SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED} in JSON policy file')
 
-        sonic_logger.log_warning("ThermalRecoverAction: default: {}, threshold1: {}, threshold2: {}, hightemp: {}".format(self.default_speed, self.threshold1_speed, self.threshold2_speed, self.hightemp_speed))
+        sonic_logger.log_warning(f"ThermalRecoverAction: default: {self.default_speed}, threshold1: {self.threshold1_speed}, threshold2: {self.threshold2_speed}, hightemp: {self.hightemp_speed}")
 
     def execute(self, thermal_info_dict):
         """
@@ -143,14 +137,13 @@ class ThermalRecoverAction(SetFanSpeedAction):
 
             thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
             if thermal_info_obj.is_set_fan_high_temp_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed) 
+                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
             elif thermal_info_obj.is_set_fan_threshold_two_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold2_speed)
             elif thermal_info_obj.is_set_fan_threshold_one_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold1_speed)
             elif thermal_info_obj.is_set_fan_default_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
-
 
 @thermal_json_object('switch.shutdown')
 class SwitchPolicyAction(ThermalPolicyActionBase):
@@ -166,9 +159,6 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
         :return:
         """
         sonic_logger.log_warning("Alarm for temperature critical is detected, reboot Device")
-        # import os
-        # os.system('reboot')
-
 
 @thermal_json_object('thermal_control.control')
 class ControlThermalAlgoAction(ThermalPolicyActionBase):
@@ -198,12 +188,10 @@ class ControlThermalAlgoAction(ThermalPolicyActionBase):
             elif status_str == 'false':
                 self.status = False
             else:
-                raise ValueError('Invalid {} field value, please specify true of false'.
-                                 format(ControlThermalAlgoAction.JSON_FIELD_STATUS))
+                raise ValueError(f'Invalid {ControlThermalAlgoAction.JSON_FIELD_STATUS} field value, please specify true of false')
         else:
             raise ValueError('ControlThermalAlgoAction '
-                             'missing mandatory field {} in JSON policy file'.
-                             format(ControlThermalAlgoAction.JSON_FIELD_STATUS))
+                             f'missing mandatory field {ControlThermalAlgoAction.JSON_FIELD_STATUS} in JSON policy file')
 
     def execute(self, thermal_info_dict):
         """

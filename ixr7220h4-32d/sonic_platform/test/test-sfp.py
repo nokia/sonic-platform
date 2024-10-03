@@ -16,7 +16,7 @@ def main():
     PORT_START = 1
     PORT_END = 34
 
-    for physical_port in range(PORT_START, PORT_END+1):
+    for physical_port in range(PORT_START, PORT_END):
         print(" ")
         print(" SFP transceiver tests  PORT = ", physical_port)
         name = chassis.get_sfp(physical_port).get_name()
@@ -48,9 +48,6 @@ def main():
 
         threshold = chassis.get_sfp(physical_port).get_transceiver_threshold_info()
         print("TEST 9 - sfp bulk status for port:", physical_port, threshold)
-
-    return
-
 
 if __name__ == '__main__':
     main()
