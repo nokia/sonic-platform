@@ -1,6 +1,9 @@
-from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
-from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
-from sonic_py_common.logger import Logger
+try:
+    from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
+    from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
+    from sonic_py_common.logger import Logger
+except ImportError as e:
+    raise ImportError(str(e) + ' - required module not found') from e
 
 logger = Logger()
 
@@ -72,14 +75,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
         self._num_fan_levels = 3
-        self._high_crital_threshold = 80 
-        self._level_up_threshold = [[47,47,47,47,47,47,73],
-                                    [66,66,66,66,66,66,93],
-                                    [74,74,74,74,74,74,100]]
-        
-        self._level_down_threshold = [[42,42,42,42,42,42,68],
-                                      [61,61,61,61,61,61,89],
-                                      [70,70,70,70,70,70,96]]
+        self._level_up_threshold = [[55,57,39,37,40,39,70,93],
+                                    [59,61,44,41,43,43,74,97],
+                                    [63,65,49,45,46,47,78,101]]
+
+        self._level_down_threshold = [[51,53,35,33,36,35,66,89],
+                                      [54,56,38,36,39,38,69,92],
+                                      [58,60,43,40,42,42,73,96]]
 
     def collect(self, chassis):
         """
@@ -98,11 +100,11 @@ class ThermalInfo(ThermalPolicyInfoBase):
         num_of_thermals = chassis.get_num_thermals()
         for index in range(num_of_thermals):
             self._temps.insert(index, chassis.get_thermal(index).get_temperature())
-        
+
 
        # Find current required threshold level
         max_level =0
-        min_level = [self._num_fan_levels for i in range(num_of_thermals)]  
+        min_level = [self._num_fan_levels for i in range(num_of_thermals)]
         for index in range(num_of_thermals):
             for level in range(self._num_fan_levels):
 
@@ -115,17 +117,17 @@ class ThermalInfo(ThermalPolicyInfoBase):
 
         max_of_min_level=max(min_level)
 
-        #compare with running threshold level 
+        #compare with running threshold level
         if max_of_min_level > self._old_threshold_level:
             max_of_min_level=self._old_threshold_level
-          
+
         self._current_threshold_level = max(max_of_min_level,max_level)
-       
+
         #set fan to max speed if one fan is down
         for fan in chassis.get_all_fans():
             if not fan.get_status() :
                 self._current_threshold_level = 3
-          
+
        # Decide fan speed based on threshold level
 
         if self._current_threshold_level != self._old_threshold_level:
@@ -153,14 +155,14 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return: True if the temperature is warm up and over high threshold else False
         """
         return self._set_fan_threshold_one_speed
-    
+
     def is_set_fan_threshold_two_speed(self):
         """
         Retrieves if the temperature is warm up and over high threshold
         :return: True if the temperature is warm up and over high threshold else False
         """
         return self._set_fan_threshold_two_speed
-
+    
     def is_set_fan_high_temp_speed(self):
         """
         Retrieves if the temperature is warm up and over high threshold

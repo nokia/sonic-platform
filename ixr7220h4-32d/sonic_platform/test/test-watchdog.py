@@ -15,8 +15,5 @@ def main():
     print("    Armed: {}".format(watchdog.is_armed()))
     print("    Time Left: {}".format(watchdog.get_remaining_time()))
 
-    return
-
-
 if __name__ == '__main__':
     main()

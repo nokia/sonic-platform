@@ -12,7 +12,7 @@
 //  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  * GNU General Public License for more details.
 //  * see <http://www.gnu.org/licenses/>
-// Design Spec 20240418
+
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -24,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/mutex.h>
+#include <linux/delay.h>
 
 #define DRIVER_NAME "h4_32d_swpld2"
 
@@ -44,8 +45,7 @@
 #define QSFP_MODPRS_REG1        0x52
 #define QSFP_INT_REG0           0x61
 #define QSFP_INT_REG1           0x62
-#define PWR_STATUS_REG0         0x81
-#define PWR_STATUS_REG1         0x82
+#define QSFP_LED_REG1           0x90
 #define CODE_DAY_REG            0xF0
 #define CODE_MONTH_REG          0xF1
 #define CODE_YEAR_REG           0xF2
@@ -68,22 +68,6 @@
 #define RST_REG_PLD_SOFT_RST    0x0
 
 #define HITLESS_REG_EN          0x0
-
-#define PWR_STATUS_REG0_MAC     0x0
-#define PWR_STATUS_REG0_3V3     0x1
-#define PWR_STATUS_REG0_5V      0x2
-#define PWR_STATUS_REG0_3V      0x3
-#define PWR_STATUS_REG0_1V8_0   0x4
-#define PWR_STATUS_REG0_1V8_1   0x5
-#define PWR_STATUS_REG0_1V8_2   0x6
-#define PWR_STATUS_REG0_1V2_0   0x7
-
-#define PWR_STATUS_REG1_1V2_1   0x0
-#define PWR_STATUS_REG1_1V0_0   0x1
-#define PWR_STATUS_REG1_1V0_1   0x2
-#define PWR_STATUS_REG1_0V77_0  0x3
-#define PWR_STATUS_REG1_0V77_1  0x4
-#define PWR_STATUS_REG1_CPLDB   0x7
 
 // common index of each qsfp modules
 #define QSFP01_INDEX            0x7
@@ -113,6 +97,7 @@ struct cpld_data {
     int code_day;
     int code_month;
     int code_year;
+    int reset_list[16];
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -141,6 +126,30 @@ static void cpld_i2c_write(struct cpld_data *data, u8 reg, u8 value)
         dev_err(&client->dev, "CPLD WRITE ERROR: reg(0x%02x) err %d\n", reg, res);
     }
     mutex_unlock(&data->update_lock);
+}
+
+static void dump_reg(struct cpld_data *data) 
+{    
+    struct i2c_client *client = data->client;
+    u8 val0 = 0;
+    u8 val1 = 0;
+      
+    val0 = cpld_i2c_read(data, QSFP_RST_REG0);
+    val1 = cpld_i2c_read(data, QSFP_RST_REG1);
+    dev_info(&client->dev, "[SWPLD2]QSFP_RESET_REG: 0x%02x, 0x%02x\n", val0, val1);
+
+    val0 = cpld_i2c_read(data, QSFP_INITMOD_REG0);
+    val1 = cpld_i2c_read(data, QSFP_INITMOD_REG1);
+    dev_info(&client->dev, "[SWPLD2]QSFP_LPMODE_REG: 0x%02x, 0x%02x\n", val0, val1);
+    
+    val0 = cpld_i2c_read(data, QSFP_MODSEL_REG0);
+    val1 = cpld_i2c_read(data, QSFP_MODSEL_REG1);
+    dev_info(&client->dev, "[SWPLD2]QSFP_MODSEL_REG: 0x%02x, 0x%02x\n", val0, val1);
+    
+    val0 = cpld_i2c_read(data, QSFP_MODPRS_REG0);    
+    val1 = cpld_i2c_read(data, QSFP_MODPRS_REG1);
+    dev_info(&client->dev, "[SWPLD2]QSFP_MODPRES_REG: 0x%02x, 0x%02x\n", val0, val1);
+
 }
 
 static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -536,6 +545,20 @@ static ssize_t show_qsfp_modprs1(struct device *dev, struct device_attribute *de
     return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
 }
 
+static ssize_t show_modprs_reg(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 val = 0;
+      
+    if (sda->index == 1)
+        val = cpld_i2c_read(data, QSFP_MODPRS_REG0);
+    if (sda->index == 2)
+        val = cpld_i2c_read(data, QSFP_MODPRS_REG1);
+
+    return sprintf(buf, "0x%02x\n", val);
+}
+
 static ssize_t show_qsfp_int0(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -558,26 +581,6 @@ static ssize_t show_qsfp_int1(struct device *dev, struct device_attribute *devat
     return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
 }
 
-static ssize_t show_pwr_status0(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-    val = cpld_i2c_read(data, PWR_STATUS_REG0);
-
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t show_pwr_status1(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-    val = cpld_i2c_read(data, PWR_STATUS_REG1);
-
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
-}
-
 static ssize_t show_code_day(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -596,6 +599,62 @@ static ssize_t show_code_year(struct device *dev, struct device_attribute *devat
     return sprintf(buf, "%d\n", data->code_year);
 }
 
+static ssize_t show_qsfp_reset(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+
+    return sprintf(buf, "%d\n", data->reset_list[sda->index]);
+}
+
+static ssize_t set_qsfp_reset(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 usr_val = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0xFF) {
+        return -EINVAL;
+    }
+
+    data->reset_list[sda->index] = usr_val;
+    return count;
+}
+
+static ssize_t show_qsfp_led(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, QSFP_LED_REG1 + sda->index);
+
+    return sprintf(buf, "%02x\n", val);
+}
+
+static ssize_t set_qsfp_led(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 usr_val = 0;
+
+    int ret = kstrtou8(buf, 16, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0xFF) {
+        return -EINVAL;
+    }
+
+    cpld_i2c_write(data, QSFP_LED_REG1 + sda->index, usr_val);
+
+    return count;
+}
+
 // sysfs attributes 
 static SENSOR_DEVICE_ATTR(code_ver, S_IRUGO, show_code_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_type, S_IRUGO, show_code_type, NULL, 0);
@@ -609,22 +668,22 @@ static SENSOR_DEVICE_ATTR(led_test_blink, S_IRUGO | S_IWUSR, show_led_test, set_
 static SENSOR_DEVICE_ATTR(led_test_src_sel, S_IRUGO | S_IWUSR, show_led_test, set_led_test, LED_TEST_REG_SRC_SEL);
 static SENSOR_DEVICE_ATTR(scratch, S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
 static SENSOR_DEVICE_ATTR(rst_pld_soft, S_IRUGO | S_IWUSR, show_rst, set_rst, RST_REG_PLD_SOFT_RST);
-static SENSOR_DEVICE_ATTR(qsfp1_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP01_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp2_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP02_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp3_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP03_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp4_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP04_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp5_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP05_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp6_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP06_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp7_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP07_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp8_rst, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP08_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp9_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP09_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp10_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP10_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp11_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP11_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp12_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP12_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp13_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP13_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp14_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP14_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp15_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP15_INDEX);
-static SENSOR_DEVICE_ATTR(qsfp16_rst, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP16_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp1_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP01_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp2_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP02_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp3_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP03_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp4_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP04_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp5_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP05_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp6_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP06_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp7_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP07_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp8_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst0, set_qsfp_rst0, QSFP08_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp9_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP09_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp10_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP10_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp11_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP11_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp12_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP12_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp13_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP13_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp14_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP14_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp15_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP15_INDEX);
+static SENSOR_DEVICE_ATTR(qsfp16_rstn, S_IRUGO | S_IWUSR, show_qsfp_rst1, set_qsfp_rst1, QSFP16_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp1_lpmod, S_IRUGO | S_IWUSR, show_qsfp_initmod0, set_qsfp_initmod0, QSFP01_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp2_lpmod, S_IRUGO | S_IWUSR, show_qsfp_initmod0, set_qsfp_initmod0, QSFP02_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp3_lpmod, S_IRUGO | S_IWUSR, show_qsfp_initmod0, set_qsfp_initmod0, QSFP03_INDEX);
@@ -674,6 +733,8 @@ static SENSOR_DEVICE_ATTR(qsfp13_prs, S_IRUGO, show_qsfp_modprs1, NULL, QSFP13_I
 static SENSOR_DEVICE_ATTR(qsfp14_prs, S_IRUGO, show_qsfp_modprs1, NULL, QSFP14_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp15_prs, S_IRUGO, show_qsfp_modprs1, NULL, QSFP15_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp16_prs, S_IRUGO, show_qsfp_modprs1, NULL, QSFP16_INDEX);
+static SENSOR_DEVICE_ATTR(modprs_reg1, S_IRUGO, show_modprs_reg, NULL, 1);
+static SENSOR_DEVICE_ATTR(modprs_reg2, S_IRUGO, show_modprs_reg, NULL, 2);
 static SENSOR_DEVICE_ATTR(qsfp1_int, S_IRUGO, show_qsfp_int0, NULL, QSFP01_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp2_int, S_IRUGO, show_qsfp_int0, NULL, QSFP02_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp3_int, S_IRUGO, show_qsfp_int0, NULL, QSFP03_INDEX);
@@ -690,23 +751,42 @@ static SENSOR_DEVICE_ATTR(qsfp13_int, S_IRUGO, show_qsfp_int1, NULL, QSFP13_INDE
 static SENSOR_DEVICE_ATTR(qsfp14_int, S_IRUGO, show_qsfp_int1, NULL, QSFP14_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp15_int, S_IRUGO, show_qsfp_int1, NULL, QSFP15_INDEX);
 static SENSOR_DEVICE_ATTR(qsfp16_int, S_IRUGO, show_qsfp_int1, NULL, QSFP16_INDEX);
-static SENSOR_DEVICE_ATTR(pwr_status_mac, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_MAC);
-static SENSOR_DEVICE_ATTR(pwr_status_3v3, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_3V3);
-static SENSOR_DEVICE_ATTR(pwr_status_5v, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_5V);
-static SENSOR_DEVICE_ATTR(pwr_status_3v, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_3V);
-static SENSOR_DEVICE_ATTR(pwr_status_1v8_0, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_0);
-static SENSOR_DEVICE_ATTR(pwr_status_1v8_1, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_1);
-static SENSOR_DEVICE_ATTR(pwr_status_1v8_2, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V8_2);
-static SENSOR_DEVICE_ATTR(pwr_status_1v2_0, S_IRUGO, show_pwr_status0, NULL, PWR_STATUS_REG0_1V2_0);
-static SENSOR_DEVICE_ATTR(pwr_status_1v2_1, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_1V2_1);
-static SENSOR_DEVICE_ATTR(pwr_status_1v0_0, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_1V0_0);
-static SENSOR_DEVICE_ATTR(pwr_status_1v0_1, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_1V0_1);
-static SENSOR_DEVICE_ATTR(pwr_status_0v77_0, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_0V77_0);
-static SENSOR_DEVICE_ATTR(pwr_status_0v77_1, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_0V77_1);
-static SENSOR_DEVICE_ATTR(pwr_status_cpldb, S_IRUGO, show_pwr_status1, NULL, PWR_STATUS_REG1_CPLDB);
 static SENSOR_DEVICE_ATTR(code_day, S_IRUGO, show_code_day, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_month, S_IRUGO, show_code_month, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_year, S_IRUGO, show_code_year, NULL, 0);
+static SENSOR_DEVICE_ATTR(qsfp1_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 0);
+static SENSOR_DEVICE_ATTR(qsfp2_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 1);
+static SENSOR_DEVICE_ATTR(qsfp3_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 2);
+static SENSOR_DEVICE_ATTR(qsfp4_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 3);
+static SENSOR_DEVICE_ATTR(qsfp5_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 4);
+static SENSOR_DEVICE_ATTR(qsfp6_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 5);
+static SENSOR_DEVICE_ATTR(qsfp7_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 6);
+static SENSOR_DEVICE_ATTR(qsfp8_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 7);
+static SENSOR_DEVICE_ATTR(qsfp9_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 8);
+static SENSOR_DEVICE_ATTR(qsfp10_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 9);
+static SENSOR_DEVICE_ATTR(qsfp11_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 10);
+static SENSOR_DEVICE_ATTR(qsfp12_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 11);
+static SENSOR_DEVICE_ATTR(qsfp13_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 12);
+static SENSOR_DEVICE_ATTR(qsfp14_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 13);
+static SENSOR_DEVICE_ATTR(qsfp15_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 14);
+static SENSOR_DEVICE_ATTR(qsfp16_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 15);
+
+static SENSOR_DEVICE_ATTR(qsfp1_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 0);
+static SENSOR_DEVICE_ATTR(qsfp2_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 1);
+static SENSOR_DEVICE_ATTR(qsfp3_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 2);
+static SENSOR_DEVICE_ATTR(qsfp4_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 3);
+static SENSOR_DEVICE_ATTR(qsfp5_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 4);
+static SENSOR_DEVICE_ATTR(qsfp6_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 5);
+static SENSOR_DEVICE_ATTR(qsfp7_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 6);
+static SENSOR_DEVICE_ATTR(qsfp8_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 7);
+static SENSOR_DEVICE_ATTR(qsfp9_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 8);
+static SENSOR_DEVICE_ATTR(qsfp10_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 9);
+static SENSOR_DEVICE_ATTR(qsfp11_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 10);
+static SENSOR_DEVICE_ATTR(qsfp12_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 11);
+static SENSOR_DEVICE_ATTR(qsfp13_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 12);
+static SENSOR_DEVICE_ATTR(qsfp14_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 13);
+static SENSOR_DEVICE_ATTR(qsfp15_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 14);
+static SENSOR_DEVICE_ATTR(qsfp16_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 15);
 
 static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_code_ver.dev_attr.attr,
@@ -721,22 +801,22 @@ static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_led_test_src_sel.dev_attr.attr,
     &sensor_dev_attr_scratch.dev_attr.attr,
     &sensor_dev_attr_rst_pld_soft.dev_attr.attr,
-    &sensor_dev_attr_qsfp1_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp2_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp3_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp4_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp5_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp6_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp7_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp8_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp9_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp10_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp11_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp12_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp13_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp14_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp15_rst.dev_attr.attr,
-    &sensor_dev_attr_qsfp16_rst.dev_attr.attr,
+    &sensor_dev_attr_qsfp1_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp2_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp3_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp4_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp5_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp6_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp7_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp8_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp9_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp10_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp11_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp12_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp13_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp14_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp15_rstn.dev_attr.attr,
+    &sensor_dev_attr_qsfp16_rstn.dev_attr.attr,
     &sensor_dev_attr_qsfp1_lpmod.dev_attr.attr,
     &sensor_dev_attr_qsfp2_lpmod.dev_attr.attr,
     &sensor_dev_attr_qsfp3_lpmod.dev_attr.attr,
@@ -786,6 +866,8 @@ static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_qsfp14_prs.dev_attr.attr,
     &sensor_dev_attr_qsfp15_prs.dev_attr.attr,
     &sensor_dev_attr_qsfp16_prs.dev_attr.attr,
+    &sensor_dev_attr_modprs_reg1.dev_attr.attr,
+    &sensor_dev_attr_modprs_reg2.dev_attr.attr,
     &sensor_dev_attr_qsfp1_int.dev_attr.attr,
     &sensor_dev_attr_qsfp2_int.dev_attr.attr,
     &sensor_dev_attr_qsfp3_int.dev_attr.attr,
@@ -802,23 +884,42 @@ static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_qsfp14_int.dev_attr.attr,
     &sensor_dev_attr_qsfp15_int.dev_attr.attr,
     &sensor_dev_attr_qsfp16_int.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_mac.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_3v3.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_5v.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_3v.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v8_0.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v8_1.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v8_2.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v2_0.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v2_1.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v0_0.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_1v0_1.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_0v77_0.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_0v77_1.dev_attr.attr,
-    &sensor_dev_attr_pwr_status_cpldb.dev_attr.attr,
     &sensor_dev_attr_code_day.dev_attr.attr,
     &sensor_dev_attr_code_month.dev_attr.attr,
-    &sensor_dev_attr_code_year.dev_attr.attr,  
+    &sensor_dev_attr_code_year.dev_attr.attr,
+    &sensor_dev_attr_qsfp1_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp2_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp3_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp4_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp5_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp6_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp7_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp8_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp9_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp10_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp11_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp12_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp13_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp14_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp15_reset.dev_attr.attr,
+    &sensor_dev_attr_qsfp16_reset.dev_attr.attr,
+
+    &sensor_dev_attr_qsfp1_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp2_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp3_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp4_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp5_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp6_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp7_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp8_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp9_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp10_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp11_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp12_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp13_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp14_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp15_led.dev_attr.attr,
+    &sensor_dev_attr_qsfp16_led.dev_attr.attr,
     NULL
 };
 
@@ -830,7 +931,8 @@ static int h4_32d_swpld2_probe(struct i2c_client *client,
         const struct i2c_device_id *dev_id)
 {
     int status;
-     struct cpld_data *data = NULL;
+    struct cpld_data *data = NULL;
+    int i;
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
         dev_err(&client->dev, "CPLD PROBE ERROR: i2c_check_functionality failed (0x%x)\n", client->addr);
@@ -862,8 +964,21 @@ static int h4_32d_swpld2_probe(struct i2c_client *client,
     data->code_day = cpld_i2c_read(data, CODE_DAY_REG);
     data->code_month = cpld_i2c_read(data, CODE_MONTH_REG);
     data->code_year = cpld_i2c_read(data, CODE_YEAR_REG);
-    cpld_i2c_write(data, RST_REG, 0x01);
-    
+    dump_reg(data);
+    dev_info(&client->dev, "[SWPLD2]Reseting QSFPs and SWPLD Registers...\n");
+    cpld_i2c_write(data, QSFP_RST_REG0, 0x0);
+    cpld_i2c_write(data, QSFP_RST_REG1, 0x0);
+    cpld_i2c_write(data, QSFP_INITMOD_REG0, 0xFF);
+    cpld_i2c_write(data, QSFP_INITMOD_REG1, 0xFF);
+    cpld_i2c_write(data, QSFP_MODSEL_REG0, 0x0);
+    cpld_i2c_write(data, QSFP_MODSEL_REG1, 0x0);
+    msleep(2000);
+    cpld_i2c_write(data, QSFP_RST_REG0, 0xFF);
+    cpld_i2c_write(data, QSFP_RST_REG1, 0xFF);
+    dev_info(&client->dev, "[SWPLD2]QSFPs and SWPLD Registers reset done.\n");
+    dump_reg(data);
+    for (i=0;i<16;i++) data->reset_list[i] = 0;
+
     return 0;
 
 exit:

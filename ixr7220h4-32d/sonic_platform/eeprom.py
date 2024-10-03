@@ -1,53 +1,63 @@
-########################################################################
-# Nokia 7220 IXR H4-32D
-#
-# Module contains platform specific implementation of SONiC Platform
-# Base API and provides the EEPROMs' information.
-#
-# The different EEPROMs available are as follows:
-# - System EEPROM : Contains Serial number, Service tag, Base MA
-#                   address, etc. in ONIE TlvInfo EEPROM format.
-########################################################################
-
+"""
+    Nokia 7220 IXR H4-32D
+    
+    Module contains platform specific implementation of SONiC Platform
+    Base API and provides the EEPROMs' information.
+    
+    The different EEPROMs available are as follows:
+    - System EEPROM : Contains Serial number, Service tag, Base MA
+                      address, etc. in ONIE TlvInfo EEPROM format.
+"""
 
 try:
+    import os
     from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
     from sonic_py_common import logger
 except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+    raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('eeprom')
+sonic_logger.set_min_log_priority_info()
 
 class Eeprom(TlvInfoDecoder):
     """Nokia platform-specific EEPROM class"""
 
     I2C_DIR = "/sys/bus/i2c/devices/"
-    I2C_FAN_LIST = ["57", "58", "59", "60", "61", "62", "63"]
+    I2C_FAN_LIST = ["47", "48", "49", "50", "51", "52", "53"]
 
     def __init__(self, is_psu, psu_index, is_fan, drawer_index):
         self.is_psu_eeprom = is_psu
         self.is_fan_eeprom = is_fan
         self.is_sys_eeprom = not (is_psu | is_fan)
-        
+
         if self.is_sys_eeprom:
             self.start_offset = 0
-            self.eeprom_path = self.I2C_DIR + "0-0053/eeprom"
+            self.eeprom_path = self.I2C_DIR + "1-0053/eeprom"
             # System EEPROM is in ONIE TlvInfo EEPROM format
             super(Eeprom, self).__init__(self.eeprom_path, self.start_offset, '', True)
-            self._load_system_eeprom()
-        
+            self.base_mac = ''
+            self.serial_number = ''
+            self.part_number = ''
+            self.model_str = ''
+            self.service_tag = ''
+
         elif self.is_psu_eeprom:
-            self.part_number = '1'
-            self.model_str = 'NA'
-            self.serial_number = 'NA'
-            self.serial_number = 'NA'  
+            self.start_offset = 0            
+            self.serial_number = ''
+            self.part_number = ''
+            self.model_str = ''
+            self.service_tag = 'NA'
 
         elif self.is_fan_eeprom:
             self.start_offset = 0
             self.eeprom_path = self.I2C_DIR + "{0}-0050/eeprom".format(self.I2C_FAN_LIST[drawer_index])
             # Fan EEPROM is in ONIE TlvInfo EEPROM format
             super(Eeprom, self).__init__(self.eeprom_path, self.start_offset, '', True)
-            self._load_system_eeprom()
+            self.serial_number = ''
+            self.part_number = ''
+            self.model_str = ''
+            self.service_tag = 'NA'
+            
 
     def _load_system_eeprom(self):
         """
@@ -108,8 +118,8 @@ class Eeprom(TlvInfoDecoder):
             self.model_str = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_PRODUCT_NAME), 'NA')
             self.service_tag = self.eeprom_tlv_dict.get(
-                "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA') 
-            
+                "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
+
 
     def _get_eeprom_field(self, field_name):
         """
@@ -129,12 +139,19 @@ class Eeprom(TlvInfoDecoder):
         """
         Returns the serial number.
         """
+        if not self.serial_number:
+            self._load_system_eeprom()
+            
         return self.serial_number
+            
 
     def part_number_str(self):
         """
         Returns the part number.
         """
+        if not self.part_number:
+            self._load_system_eeprom()
+
         return self.part_number
 
     def airflow_fan_type(self):
@@ -146,17 +163,22 @@ class Eeprom(TlvInfoDecoder):
         if self.is_fan_eeprom:
             return int(self.fan_type.encode('hex'), 16)
 
-    # System EEPROM specific methods
     def base_mac_addr(self):
         """
         Returns the base MAC address found in the system EEPROM.
         """
+        if not self.base_mac:
+            self._load_system_eeprom()
+
         return self.base_mac
 
     def modelstr(self):
         """
         Returns the Model name.
         """
+        if not self.model_str:
+            self._load_system_eeprom()
+
         return self.model_str
 
     def service_tag_str(self):

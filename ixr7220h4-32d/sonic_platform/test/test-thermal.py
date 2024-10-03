@@ -43,7 +43,6 @@ def main():
 
             print("        Crit Low Threshold(C): {}, Crit High Threshold(C): {}\n".format(crit_low_thresh,
                                                                                            crit_high_thresh))
-    return
 
 
 if __name__ == '__main__':
