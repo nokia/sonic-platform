@@ -1,0 +1,5 @@
+ixr7250x3b/scripts/ixr7250x3b_platform_init.sh usr/local/bin
+ixr7250x3b/service/ixr7250x3b_platform_init.service etc/systemd/system
+ixr7250x3b/scripts/nokia-watchdog.sh usr/local/bin
+ixr7250x3b/service/nokia-watchdog.service etc/systemd/system
+ixr7250x3b/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250_x3b-r0
