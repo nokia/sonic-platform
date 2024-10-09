@@ -33,3 +33,9 @@ Package: sonic-platform-nokia-ixr7220h5-64o
 Architecture: amd64
 Depends:  ${misc:Depends}
 Description: kernel modules for platform devices such as qsfp, fan, psu, led
+
+Package: sonic-platform-nokia-ixr7250x3b
+Architecture: amd64
+Depends:  ${misc:Depends}
+Description: kernel modules for platform devices such as fan, led, sfp
+
