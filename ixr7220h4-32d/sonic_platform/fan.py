@@ -226,9 +226,8 @@ class Fan(FanBase):
             return False
 
         speed_to_duty = {
-            range(0, 10): 0x00,
-            range(10, 21): 32,
-            range(21, 31): 64,
+            range(0, 15): 0x00,
+            range(15, 31): 85,
             range(31, 46): 102,
             range(46, 53): 128,
             range(53, 66): 141,
@@ -245,9 +244,9 @@ class Fan(FanBase):
                 fan_duty_cycle = duty
                 break
 
-        if fan_duty_cycle:
-            if write_sysfs_file(self.set_fan_speed_reg, str(fan_duty_cycle)) != 'ERR':
-                return True
+        rv = write_sysfs_file(self.set_fan_speed_reg, str(fan_duty_cycle)) != 'ERR'
+        if rv != 'ERR':
+            return True
         return False
 
     def set_status_led(self, _color):
@@ -292,11 +291,10 @@ class Fan(FanBase):
         """
         duty_to_speed = {
             0: 0,
-            32: 15,
-            64: 25,
-            102: 40,
-            128: 50,
-            141: 55,
+            85: 25,
+            102: 35,
+            128: 45,
+            141: 50,
             179: 70,
             204: 80,
             230: 90,

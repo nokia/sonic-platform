@@ -59,8 +59,6 @@ echo pca9548 0x70 > /sys/bus/i2c/devices/i2c-19/new_device
 
 # Enumerate eeprom
 echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-20/new_device
-echo 24c02 0x50 > /sys/bus/i2c/devices/i2c-33/new_device
-echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-41/new_device
 
 # Enumerate CPLDs
 echo smb_cpld 0x60 > /sys/bus/i2c/devices/i2c-6/new_device
@@ -98,6 +96,17 @@ echo -2 > /sys/bus/i2c/devices/12-0070/idle_state
 echo -2 > /sys/bus/i2c/devices/18-0070/idle_state
 echo -2 > /sys/bus/i2c/devices/19-0070/idle_state
 
+for port in {1..64}
+do
+    echo 1 > /sys/devices/platform/sys_fpga/module_lp_mode_${port}
+    echo 0 > /sys/devices/platform/sys_fpga/module_reset_${port}
+done
+sleep 2
+for port in {1..64}
+do
+    echo 1 > /sys/devices/platform/sys_fpga/module_reset_${port}
+done
+
 file_exists /sys/bus/i2c/devices/20-0051/eeprom
 status=$?
 if [ "$status" == "1" ]; then
@@ -106,9 +115,6 @@ if [ "$status" == "1" ]; then
 else
     echo "SYSEEPROM file not foud"
 fi
-
-chmod 644 /sys/bus/i2c/devices/33-0050/eeprom
-chmod 644 /sys/bus/i2c/devices/41-0051/eeprom
 
 i2cset -y 72 0x58 0x06 0x18
 i2cset -y 72 0x58 0x0F 0x00

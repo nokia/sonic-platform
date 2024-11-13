@@ -10,32 +10,12 @@ try:
     import os
     import subprocess
     import ntpath
-    import fcntl
-    import ctypes
     import time
     from sonic_platform_base.component_base import ComponentBase
     from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-GPIO_GET_LINEHANDLE_IOCTL = 0xC16CB403
-GPIOHANDLE_SET_LINE_VALUES_IOCTL = 0xC040B409
-GPIOHANDLE_REQUEST_OUTPUT = 0x02
-
-class gpiohandle_request(ctypes.Structure):
-    _fields_ = [
-        ('lineoffsets', ctypes.c_uint32 * 64),
-        ('flags', ctypes.c_uint32),
-        ('default_values', ctypes.c_uint8 * 64),
-        ('consumer_label', ctypes.c_char * 32),
-        ('lines', ctypes.c_uint32),
-        ('fd', ctypes.c_int),
-    ]
-
-class gpiohandle_data(ctypes.Structure):
-    _fields_ = [
-        ('values', ctypes.c_uint8 * 64),
-    ]
 
 MAX_H4_32D_COMPONENT = 5
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
@@ -195,16 +175,12 @@ class Component(ComponentBase):
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            self.gpio_set("/dev/gpiochip0", 34, 1)
-            self.CPLD_UPDATE_COMMAND[2] = 'h4_32d_cpupld_refresh.vme'
-            try:
-                subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            self.gpio_set("/dev/gpiochip0", 34, 0)
             write_sysfs_file("/sys/class/gpio/gpio10054/value", str(0))
             write_sysfs_file("/sys/class/gpio/unexport", str(10054))
             print("\nCPUPLD firmware upgraded!\n")
+            print("!!!System will reboot in 10 sec!!!")
+            time.sleep(10)
+            write_sysfs_file("/sys/kernel/delta_fpga/sys-pwr", str(1))
             return True
         
         elif self.name == "SWPLD2" or self.name == "SWPLD3":
@@ -299,28 +275,4 @@ class Component(ComponentBase):
             A string containing the available firmware version of the component
         """
         return "N/A"
-    
-    def gpio_set(self, gpio_device, line, value):
-        request = gpiohandle_request()
-        request.lineoffsets[0] = line
-        request.flags = GPIOHANDLE_REQUEST_OUTPUT
-        request.consumer_label = "gpiochip_handler".encode()
-        request.lines = 1
-        try:
-            chip_fd = os.open(gpio_device, os.O_RDONLY)
-        except OSError as e:
-            print(f"ERROR: {e.errno}, Opening GPIO chip: " + e.strerror)
-    
-        try:
-            fcntl.ioctl(chip_fd, GPIO_GET_LINEHANDLE_IOCTL, request)        
-        except (OSError, IOError) as e:
-            print(f"ERROR: {e.errno}, Opening output line handle: " + e.strerror)
-        os.close(chip_fd)    
-        data = gpiohandle_data()
-        data.values[0] = value    
-        try:
-            fcntl.ioctl(request.fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, data)
-        except (OSError, IOError) as e:
-            print(f"ERROR: {e.errno}, Setting line value: " + e.strerror)
-        os.close(request.fd)
     

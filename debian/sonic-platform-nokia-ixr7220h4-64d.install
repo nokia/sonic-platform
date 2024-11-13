@@ -1,3 +1,5 @@
 ixr7220h4-64d/scripts/h4_64d_platform_init.sh usr/local/bin
+ixr7220h4-64d/scripts/ports_notify.py usr/local/bin
 ixr7220h4-64d/service/h4_64d_platform_init.service etc/systemd/system
+ixr7220h4-64d/service/ports_notify.service etc/systemd/system/
 ixr7220h4-64d/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7220_h4-r0

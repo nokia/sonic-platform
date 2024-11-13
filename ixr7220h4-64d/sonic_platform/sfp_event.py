@@ -2,7 +2,9 @@
     listen for the SFP change event and return to chassis.
 """
 try:
+    import os
     import time
+    import subprocess
     from sonic_py_common import logger
     from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
 except ImportError as e:
@@ -20,6 +22,9 @@ PORT_START = 1
 PORT_END = 66
 
 REG_DIR = "/sys/devices/platform/sys_fpga/"
+DRIVER_PATH = "/sys/bus/platform/drivers/pcie_{}_fpga_device/"
+PORT_NAME = "pcie_{}_fpga_device.{}"
+EEPROM_PATH = "/sys/devices/platform/pcie_{}_fpga_device.{}/eeprom"
 
 SYSLOG_IDENTIFIER = "sfp_event"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
@@ -44,6 +49,15 @@ class SfpEvent:
             write_sysfs_file(REG_DIR+"module_tx_disable_65", '0')
         if self.modprs_list[PORT_END-1]:
             write_sysfs_file(REG_DIR+"module_tx_disable_66", '0')
+        for i in range (5):
+            rdx = (i + 1) * 16
+            if rdx > PORT_END:
+                rdx = PORT_END
+            pres_group = self.modprs_list[i*16:rdx]
+            pres_group.reverse()
+            bin_str = ''.join(['0' if x else '1' for x in pres_group])
+            hex_str = hex(int(bin_str, 2))
+            write_sysfs_file(REG_DIR+f"port_g{i+1}_led_pres", hex_str)
 
     def deinitialize(self):
         """
@@ -99,15 +113,35 @@ class SfpEvent:
                 for i in range(PORT_END):
                     if port_status[i] != self.modprs_list[i]:
                         if port_status[i]:
-                            port_change[i+1] = '1'
+                            port_change[i+1] = '1'                            
+                            
+                            if i < QSFP_PORT_NUM // 2:
+                                prefix = "udb"
+                                port_index = i
+                            else:
+                                prefix = "ldb"
+                                port_index = i - QSFP_PORT_NUM // 2
+                            eeprom_file = EEPROM_PATH.format(prefix, port_index)
+                            if os.path.getsize(eeprom_file) == 256:
+                                port_name = PORT_NAME.format(prefix, port_index)
+                                subprocess.run(f"echo {port_name} > {DRIVER_PATH.format(prefix)}"+"unbind", shell=True)
+                                subprocess.run(f"echo {port_name} > {DRIVER_PATH.format(prefix)}"+"bind", shell=True)
+                            if os.path.getsize(eeprom_file) == 256:
+                                port_change[i+1] = '0'
+                                port_status[i] = False
+                                write_sysfs_file(REG_DIR+f"port{i+1}_led_pres", '1')
+                            else:
+                                write_sysfs_file(REG_DIR+f"port{i+1}_led_pres", '0')
+
                         else:
                             port_change[i+1] = '0'
+                            write_sysfs_file(REG_DIR+f"port{i+1}_led_pres", '1')
                         
-                        if (i == PORT_END -2) or (i == PORT_END -1):
+                        if (i >= QSFP_PORT_NUM):                            
                             if port_status[i]:
                                 write_sysfs_file(REG_DIR+f"module_tx_disable_{i+1}", '0')
                             else:
-                                write_sysfs_file(REG_DIR+f"module_tx_disable_{i+1}", '1')
+                                write_sysfs_file(REG_DIR+f"module_tx_disable_{i+1}", '1')                            
 
                 # Update reg value
                 self.modprs_list = port_status

@@ -75,9 +75,9 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
         self._num_fan_levels = 3
-        self._level_up_threshold = [[55,57,39,37,40,39,70,93],
-                                    [59,61,44,41,43,43,74,97],
-                                    [63,65,49,45,46,47,78,101]]
+        self._level_up_threshold = [[55,57,39,37,40,39,70,96],
+                                    [59,61,44,41,43,43,74,100],
+                                    [63,65,49,45,46,47,78,102]]
 
         self._level_down_threshold = [[51,53,35,33,36,35,66,89],
                                       [54,56,38,36,39,38,69,92],

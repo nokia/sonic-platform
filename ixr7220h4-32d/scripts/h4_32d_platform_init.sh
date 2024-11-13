@@ -133,24 +133,9 @@ do
     chmod 644 /sys/bus/i2c/devices/${fan}-0050/eeprom
 done
 
-for qsfpnum in {1..16}; do
-	echo 0x1 > /sys/bus/i2c/devices/14-0034/qsfp${qsfpnum}_led
-    echo 0x1 > /sys/bus/i2c/devices/14-0035/qsfp$((qsfpnum+16))_led
-done
-
-check_voltage() {
-    status=$(cat /sys/kernel/delta_fpga/psu-$(($1))-powergood)
-    model=$(cat /sys/bus/i2c/devices/$((6+$1))-0058/psu_mfr_model)
-    if [ ${status[0]} == "0x0" ] && [ ${model[0]} == "DPS-1600AB-29" ]; then
-        vol_i=$(cat /sys/bus/i2c/devices/$((6+$1))-0058/in1_input)
-        vol_d=$(echo "$vol_i 1000" | awk '{printf "%0.3f\n", $1/$2}')
-        if (("$vol_i" < 170000)); then
-            echo -e "\nERROR: PSU $1 not supplying enough voltage. [$vol_d]v is less than the required 200-220V\n"
-        fi
-    fi
-    return 0
- }
-check_voltage 1
-check_voltage 2
+dev=$(sudo i2cdetect -y 1 0x68 0x68 |grep 68 | cut -c 29-30)
+if [ "$dev" == "68" ]; then
+    echo pcf8523 0x68 > /sys/bus/i2c/devices/i2c-1/new_device
+fi
 
 exit 0

@@ -44,10 +44,6 @@ static const unsigned short cpld_address_list[] = {0x35, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int code_major_ver;
-    int code_minor_ver;
-    int pcb_ver;  
-    int board_id;
     int reset_cause;
 };
 
@@ -82,19 +78,30 @@ static void cpld_i2c_write(struct cpld_data *data, u8 reg, u8 value)
 static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d.%d\n", data->code_major_ver, data->code_minor_ver);
+    u8 major_ver = 0;
+    u8 minor_ver = 0;
+
+    major_ver = cpld_i2c_read(data, MAJOR_REV_REG);
+    minor_ver = cpld_i2c_read(data, MINOR_REV_REG);
+    return sprintf(buf, "%d.%d\n", major_ver, minor_ver);
 }
 
 static ssize_t show_board_id(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
-    struct cpld_data *data = dev_get_drvdata(dev);    
-    return sprintf(buf, "0x%02x\n", data->board_id);
+    struct cpld_data *data = dev_get_drvdata(dev); 
+    u8 val = 0;
+
+    val = cpld_i2c_read(data, HW_REV_REG) & HW_REV_REG_BRDID_MSK;   
+    return sprintf(buf, "0x%02x\n", val);
 }
 
 static ssize_t show_pcb_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
-    struct cpld_data *data = dev_get_drvdata(dev);    
-    return sprintf(buf, "0x%02x\n", data->pcb_ver);
+    struct cpld_data *data = dev_get_drvdata(dev);
+    u8 val = 0;
+
+    val = cpld_i2c_read(data, HW_REV_REG) >> HW_REV_REG_PCB_VER;
+    return sprintf(buf, "0x%02x\n", val);
 }
 
 static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -182,10 +189,6 @@ static int scm_cpld_probe(struct i2c_client *client,
         goto exit;
     }
 
-    data->code_major_ver = cpld_i2c_read(data, MAJOR_REV_REG);
-    data->code_minor_ver = cpld_i2c_read(data, MINOR_REV_REG);
-    data->board_id = cpld_i2c_read(data, HW_REV_REG) & HW_REV_REG_BRDID_MSK;
-    data->pcb_ver = cpld_i2c_read(data, HW_REV_REG) >> HW_REV_REG_PCB_VER;
     data->reset_cause = cpld_i2c_read(data, RST_CAUSE_REG);
     cpld_i2c_write(data, RST_CAUSE_CTRL_REG, 0x1);
 

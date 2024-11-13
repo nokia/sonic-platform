@@ -1,4 +1,4 @@
-//  * CPLD driver for Nokia-7220-IXR-H4-32D Router
+//  * CPLD driver for Nokia-7220-IXR-H4-32D
 //  *
 //  * Copyright (C) 2024 Nokia Corporation.
 //  * 
@@ -149,12 +149,6 @@ static const unsigned short cpld_address_list[] = {0x31, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int code_ver;
-    int board_type;
-    int board_ver;
-    int code_day;
-    int code_month;
-    int code_year;
     int reset_cause;
 };
 
@@ -189,15 +183,21 @@ static void cpld_i2c_write(struct cpld_data *data, u8 reg, u8 value)
 static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "0x%02x\n", data->code_ver);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_REV_REG);
+    return sprintf(buf, "0x%02x\n", val);
 }
 
 static ssize_t show_board_type(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     char *brd_type = NULL;
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, BOARD_INFO_REG) & BOARD_INFO_REG_TYPE_MSK;
     
-    switch (data->board_type) {
+    switch (val) {
     case 0:
         brd_type = "H3 BROADWELL-DE CPU";
         break;
@@ -212,15 +212,18 @@ static ssize_t show_board_type(struct device *dev, struct device_attribute *deva
         break;
     }
 
-    return sprintf(buf, "0x%x %s\n", data->board_type, brd_type);
+    return sprintf(buf, "0x%x %s\n", val, brd_type);
 }
 
 static ssize_t show_board_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     char *str_ver = NULL;
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, BOARD_INFO_REG) >> BOARD_INFO_REG_VER;
     
-    switch (data->board_ver) {
+    switch (val) {
     case 0:
         str_ver = "X00 (EVT)";
         break;
@@ -235,7 +238,7 @@ static ssize_t show_board_ver(struct device *dev, struct device_attribute *devat
         break;
     }
 
-    return sprintf(buf, "0x%x %s\n", data->board_ver, str_ver);
+    return sprintf(buf, "0x%x %s\n", val, str_ver);
 }
 
 static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -885,19 +888,28 @@ static ssize_t show_hitless(struct device *dev, struct device_attribute *devattr
 static ssize_t show_code_day(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_day);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_DAY_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t show_code_month(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_month);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_MONTH_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t show_code_year(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_year);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_YEAR_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 // sysfs attributes 
@@ -1095,12 +1107,6 @@ static int h4_32d_cpupld_probe(struct i2c_client *client,
         goto exit;
     }
 
-    data->code_ver = cpld_i2c_read(data, CODE_REV_REG);
-    data->board_type = cpld_i2c_read(data, BOARD_INFO_REG) & BOARD_INFO_REG_TYPE_MSK;
-    data->board_ver = cpld_i2c_read(data, BOARD_INFO_REG) >> BOARD_INFO_REG_VER;
-    data->code_day = cpld_i2c_read(data, CODE_DAY_REG);
-    data->code_month = cpld_i2c_read(data, CODE_MONTH_REG);
-    data->code_year = cpld_i2c_read(data, CODE_YEAR_REG);
     data->reset_cause = cpld_i2c_read(data, RST_CAUSE_REG);
     cpld_i2c_write(data, RST_CAUSE_REG, 0);
 
