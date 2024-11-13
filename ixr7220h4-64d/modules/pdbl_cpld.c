@@ -36,8 +36,6 @@ static const unsigned short cpld_address_list[] = {0x60, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int code_major_ver;
-    int code_minor_ver;    
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -71,7 +69,12 @@ static void cpld_i2c_write(struct cpld_data *data, u8 reg, u8 value)
 static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d.%d\n", data->code_major_ver, data->code_minor_ver);
+    u8 major_ver = 0;
+    u8 minor_ver = 0;
+
+    major_ver = cpld_i2c_read(data, MAJOR_REV_REG);
+    minor_ver = cpld_i2c_read(data, MINOR_REV_REG);
+    return sprintf(buf, "%d.%d\n", major_ver, minor_ver);
 }
 
 // sysfs attributes 
@@ -117,8 +120,6 @@ static int pdbl_cpld_probe(struct i2c_client *client,
         goto exit;
     }
 
-    data->code_major_ver = cpld_i2c_read(data, MAJOR_REV_REG);
-    data->code_minor_ver = cpld_i2c_read(data, MINOR_REV_REG); 
     return 0;
 
 exit:

@@ -6,6 +6,8 @@
 """
 
 try:
+    import os
+    import subprocess
     from sonic_platform.sysfs import read_sysfs_file
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common import logger
@@ -16,8 +18,8 @@ PSU_NUM = 2
 PSU_DIR = ["/sys/bus/i2c/devices/41-0059/",
            "/sys/bus/i2c/devices/33-0058/"]
 REG_DIR = "/sys/bus/i2c/devices/6-0060/"
-PSU_EEPROM = ["/sys/bus/i2c/devices/41-0051/eeprom",
-              "/sys/bus/i2c/devices/33-0050/eeprom"]
+PSU_EEPROM_I2C = [["41", "51"],
+                  ["33", "50"]]
 MAX_VOLTAGE = 13
 MIN_VOLTAGE = 11
 
@@ -33,9 +35,7 @@ class Psu(PsuBase):
         self.index = psu_index + 1
         self._fan_list = []
         self.psu_dir = PSU_DIR[psu_index]
-
-        # PSU eeprom
-        self.eeprom = self._read_bin_file(PSU_EEPROM[psu_index], 256)
+        self.eeprom = None
 
     def _read_bin_file(self, sysfs_file, length):
         """
@@ -91,8 +91,21 @@ class Psu(PsuBase):
         """
         result = read_sysfs_file(REG_DIR + f"psu{self.index}_present")
 
+        eeprom_path = f"/sys/bus/i2c/devices/{PSU_EEPROM_I2C[self.index-1][0]}-00{PSU_EEPROM_I2C[self.index-1][1]}/eeprom"
         if result == '0':
+            if not os.path.exists(eeprom_path):
+                i2c_address = f"0x{PSU_EEPROM_I2C[self.index-1][1]}"
+                if os.path.exists(f"/sys/bus/i2c/devices/{PSU_EEPROM_I2C[self.index-1][0]}-00{PSU_EEPROM_I2C[self.index-1][1]}"):
+                    i2c_file = f"/sys/bus/i2c/devices/i2c-{PSU_EEPROM_I2C[self.index-1][0]}/delete_device"
+                    os.system(f"echo {i2c_address} > {i2c_file}")
+                i2c_file = f"/sys/bus/i2c/devices/i2c-{PSU_EEPROM_I2C[self.index-1][0]}/new_device"
+                os.system(f"echo 24c02 {i2c_address} > {i2c_file}")
             return True
+        else:
+            if os.path.exists(eeprom_path):
+                i2c_address = f"0x{PSU_EEPROM_I2C[self.index-1][1]}"
+                i2c_file = f"/sys/bus/i2c/devices/i2c-{PSU_EEPROM_I2C[self.index-1][0]}/delete_device"
+                os.system(f"echo {i2c_address} > {i2c_file}")
 
         return False
 
@@ -103,7 +116,17 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
-        return self.eeprom[18:30].decode()
+        if self.get_presence():
+            if self.eeprom is None:
+                try:
+                    eeprom_path = f"/sys/bus/i2c/devices/{PSU_EEPROM_I2C[self.index-1][0]}-00{PSU_EEPROM_I2C[self.index-1][1]}/eeprom"
+                    subprocess.run(["chmod", "644", eeprom_path], stderr=subprocess.STDOUT)
+                    self.eeprom = self._read_bin_file(eeprom_path, 256)
+                except:
+                    return 'N/A'
+            return self.eeprom[18:30].decode()
+
+        return 'N/A'
 
     def get_serial(self):
         """
@@ -112,7 +135,17 @@ class Psu(PsuBase):
         Returns:
             string: Serial number of PSU
         """
-        return self.eeprom[88:99].decode()
+        if self.get_presence():
+            if self.eeprom is None:
+                try:
+                    eeprom_path = f"/sys/bus/i2c/devices/{PSU_EEPROM_I2C[self.index-1][0]}-00{PSU_EEPROM_I2C[self.index-1][1]}/eeprom"
+                    subprocess.run(["chmod", "644", eeprom_path], stderr=subprocess.STDOUT)
+                    self.eeprom = self._read_bin_file(eeprom_path, 256)
+                except:
+                    return 'N/A'
+            return self.eeprom[88:99].decode()
+        
+        return 'N/A'
 
     def get_revision(self):
         """
@@ -130,7 +163,17 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
-        return self.eeprom[34:48].decode()
+        if self.get_presence():
+            if self.eeprom is None:
+                try:
+                    eeprom_path = f"/sys/bus/i2c/devices/{PSU_EEPROM_I2C[self.index-1][0]}-00{PSU_EEPROM_I2C[self.index-1][1]}/eeprom"
+                    subprocess.run(["chmod", "644", eeprom_path], stderr=subprocess.STDOUT)
+                    self.eeprom = self._read_bin_file(eeprom_path, 256)
+                except:
+                    return 'N/A'
+            return self.eeprom[34:48].decode()
+        
+        return 'N/A'
 
     def get_status(self):
         """

@@ -1,4 +1,4 @@
-//  * CPLD driver for Nokia-7220-IXR-H4-32D Router
+//  * CPLD driver for Nokia-7220-IXR-H4-32D
 //  *
 //  * Copyright (C) 2024 Nokia Corporation.
 //  * 
@@ -52,9 +52,6 @@
 #define TEST_CODE_REV_REG       0xF3
 
 // REG BIT FIELD POSITION or MASK
-#define CODE_REV_REG_VER_MSK    0x3F
-#define CODE_REV_REG_TYPE       0x7
-
 #define SYNC_REG_CLK_SEL0       0x0
 #define SYNC_REG_CLK_SEL1       0x1
 #define SYNC_REG_SYNCE_CPLD     0x6
@@ -92,11 +89,6 @@ static const unsigned short cpld_address_list[] = {0x34, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int code_ver;
-    int code_type;
-    int code_day;
-    int code_month;
-    int code_year;
     int reset_list[16];
 };
 
@@ -155,13 +147,10 @@ static void dump_reg(struct cpld_data *data)
 static ssize_t show_code_ver(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "0x%02x\n", data->code_ver);
-}
-
-static ssize_t show_code_type(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%x\n", data->code_type);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_REV_REG);
+    return sprintf(buf, "0x%02x\n", val);
 }
 
 static ssize_t show_sync(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -584,19 +573,28 @@ static ssize_t show_qsfp_int1(struct device *dev, struct device_attribute *devat
 static ssize_t show_code_day(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_day);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_DAY_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t show_code_month(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_month);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_MONTH_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t show_code_year(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    return sprintf(buf, "%d\n", data->code_year);
+    u8 val = 0;
+      
+    val = cpld_i2c_read(data, CODE_YEAR_REG);
+    return sprintf(buf, "%d\n", val);
 }
 
 static ssize_t show_qsfp_reset(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -633,7 +631,7 @@ static ssize_t show_qsfp_led(struct device *dev, struct device_attribute *devatt
       
     val = cpld_i2c_read(data, QSFP_LED_REG1 + sda->index);
 
-    return sprintf(buf, "%02x\n", val);
+    return sprintf(buf, "0x%02x\n", val);
 }
 
 static ssize_t set_qsfp_led(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
@@ -657,7 +655,6 @@ static ssize_t set_qsfp_led(struct device *dev, struct device_attribute *devattr
 
 // sysfs attributes 
 static SENSOR_DEVICE_ATTR(code_ver, S_IRUGO, show_code_ver, NULL, 0);
-static SENSOR_DEVICE_ATTR(code_type, S_IRUGO, show_code_type, NULL, 0);
 static SENSOR_DEVICE_ATTR(sync_clk_sel0, S_IRUGO | S_IWUSR, show_sync, set_sync, SYNC_REG_CLK_SEL0);
 static SENSOR_DEVICE_ATTR(sync_clk_sel1, S_IRUGO | S_IWUSR, show_sync, set_sync, SYNC_REG_CLK_SEL1);
 static SENSOR_DEVICE_ATTR(sync_cpld, S_IRUGO, show_sync, NULL, SYNC_REG_SYNCE_CPLD);
@@ -790,7 +787,6 @@ static SENSOR_DEVICE_ATTR(qsfp16_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp
 
 static struct attribute *h4_32d_swpld2_attributes[] = {
     &sensor_dev_attr_code_ver.dev_attr.attr,
-    &sensor_dev_attr_code_type.dev_attr.attr,
     &sensor_dev_attr_sync_clk_sel0.dev_attr.attr,
     &sensor_dev_attr_sync_clk_sel1.dev_attr.attr,
     &sensor_dev_attr_sync_cpld.dev_attr.attr,
@@ -959,11 +955,6 @@ static int h4_32d_swpld2_probe(struct i2c_client *client,
         goto exit;
     }
 
-    data->code_ver = cpld_i2c_read(data, CODE_REV_REG) & CODE_REV_REG_VER_MSK;
-    data->code_type = cpld_i2c_read(data, CODE_REV_REG) >> CODE_REV_REG_TYPE;
-    data->code_day = cpld_i2c_read(data, CODE_DAY_REG);
-    data->code_month = cpld_i2c_read(data, CODE_MONTH_REG);
-    data->code_year = cpld_i2c_read(data, CODE_YEAR_REG);
     dump_reg(data);
     dev_info(&client->dev, "[SWPLD2]Reseting QSFPs and SWPLD Registers...\n");
     cpld_i2c_write(data, QSFP_RST_REG0, 0x0);

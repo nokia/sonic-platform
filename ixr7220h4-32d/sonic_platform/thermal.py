@@ -22,8 +22,10 @@ class Thermal(ThermalBase):
 
     HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
     I2C_DEV_LIST = ["11-004d", "11-004e", "11-004b", "11-004a", "11-0049", "10-004f"]
-    THERMAL_NAME = ["CPU board", "Fan board", "MAC Right", "MAC Left1",
-                    "MAC Left2", "MAC Front", "CPU", "ASIC TH4"]
+    THERMAL_NAME = ["CPU Board", "MAC Front", "MAC Right", "MAC Left1",
+                    "MAC Left2", "Fan Board", "CPU", "ASIC TH4"]
+    THRESHHOLD = [69.0, 70.0, 61.0, 57.0, 59.0, 61.0, 80.0, 103.0]
+    CRITICAL_THRESHHOLD = [72.0, 73.0, 64.0, 60.0, 62.0, 64.0, 83.0, 105.0]
 
     def __init__(self, thermal_index):
         ThermalBase.__init__(self)
@@ -116,12 +118,13 @@ class Thermal(ThermalBase):
             thermal_temperature = read_sysfs_file(self.thermal_temperature_file)
             if thermal_temperature != 'ERR':
                 thermal_temperature = float(thermal_temperature) / 1000
-                if self._minimum is None or self._minimum > thermal_temperature:
-                    self._minimum = thermal_temperature
-                if self._maximum is None or self._maximum < thermal_temperature:
-                    self._maximum = thermal_temperature
             else:
                 thermal_temperature = 0
+        
+        if self._minimum is None or self._minimum > thermal_temperature:
+            self._minimum = thermal_temperature
+        if self._maximum is None or self._maximum < thermal_temperature:
+            self._maximum = thermal_temperature
 
         return float(f"{thermal_temperature:.3f}")
 
@@ -135,11 +138,7 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
-        if self.index == H4_32D_THERMAL-1:
-            return 82.0
-        if self.index == H4_32D_THERMAL:
-            return 100.0
-        return 78.0
+        return self.THRESHHOLD[self.index - 1]
 
     def set_high_threshold(self, _temperature):
         """
@@ -163,14 +162,7 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        if self.index == H4_32D_THERMAL-1:
-            temp_crit = read_sysfs_file(self.device_path[0] + "temp1_crit")
-            if temp_crit != 'ERR':
-                temp_crit = float(temp_crit) / 1000
-            return float(f"{temp_crit:.3f}")
-        elif self.index == H4_32D_THERMAL:
-            return 103.0
-        return 80.0
+        return self.CRITICAL_THRESHHOLD[self.index - 1]
 
     def set_high_critical_threshold(self):
         """

@@ -116,12 +116,13 @@ class Thermal(ThermalBase):
             thermal_temperature = read_sysfs_file(self.thermal_temperature_file)
             if thermal_temperature != 'ERR':
                 thermal_temperature = float(thermal_temperature) / 1000
-                if self._minimum is None or self._minimum > thermal_temperature:
-                    self._minimum = thermal_temperature
-                if self._maximum is None or self._maximum < thermal_temperature:
-                    self._maximum = thermal_temperature
             else:
                 thermal_temperature = 0
+        
+        if self._minimum is None or self._minimum > thermal_temperature:
+            self._minimum = thermal_temperature
+        if self._maximum is None or self._maximum < thermal_temperature:
+            self._maximum = thermal_temperature
 
         return float(f"{thermal_temperature:.3f}")
 

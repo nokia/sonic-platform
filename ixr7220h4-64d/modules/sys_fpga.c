@@ -62,6 +62,14 @@
 
 #define UDB_CPLD2_FP_LED_SYS2         0x0510
 
+#define CPLD1_PORT_LED_EN             0x04B0
+#define CPLD2_PORT_LED_EN             0x05B0
+#define CPLD1_PORT_LED_LB             0x04B4
+#define CPLD2_PORT_LED_LB             0x05B4
+#define CPLD1_PORT_LED_PRES           0x04B8
+#define CPLD2_PORT_LED_PRES           0x05B8
+#define SFP_PORT_LED                  0x04BC
+
 #define   BIT(x)                      x
 #define   SFP_PORT0_TXDIS(x)          ((x) >> (11))
 #define   SFP_PORT0_ABS(x)            ((x) >> (10))
@@ -229,6 +237,9 @@ struct pcie_fpga_dev_platform_data {
 
 #define pcie_info(fmt, args...) \
 	printk(KERN_INFO "[sys_fpga_driver]: " fmt " ", ##args)
+
+#define pcie_debug(fmt, args...) \
+	printk(KERN_DEBUG "[sys_fpga_driver]: " fmt " ", ##args)
 
 /* UDB */
  /*c from 0 to 31*/
@@ -601,6 +612,17 @@ static ssize_t show_lpmode(struct device *dev, struct device_attribute *devattr,
 static ssize_t set_lpmode(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
 static ssize_t show_reset(struct device *dev, struct device_attribute *devattr, char *buf);
 static ssize_t set_reset(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+static ssize_t show_led_en(struct device *dev, struct device_attribute *devattr, char *buf);
+static ssize_t set_led_en(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+static ssize_t show_group_led_en(struct device *dev, struct device_attribute *devattr, char *buf);
+static ssize_t set_group_led_en(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+static ssize_t show_led_lb(struct device *dev, struct device_attribute *devattr, char *buf);
+static ssize_t set_led_lb(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+static ssize_t show_led_pres(struct device *dev, struct device_attribute *devattr, char *buf);
+static ssize_t set_led_pres(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+static ssize_t show_group_led_pres(struct device *dev, struct device_attribute *devattr, char *buf);
+static ssize_t set_group_led_pres(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count);
+
 /* UDB */
 /*init eeprom private data*/
 static struct eeprom_bin_private_data pcie_udb_eeprom_bin_private_data[] = {
@@ -986,6 +1008,217 @@ static SENSOR_DEVICE_ATTR(qsfp62_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_
 static SENSOR_DEVICE_ATTR(qsfp63_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 62);
 static SENSOR_DEVICE_ATTR(qsfp64_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 63);
 
+static SENSOR_DEVICE_ATTR(port1_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 0);
+static SENSOR_DEVICE_ATTR(port2_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 1);
+static SENSOR_DEVICE_ATTR(port3_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 2);
+static SENSOR_DEVICE_ATTR(port4_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 3);
+static SENSOR_DEVICE_ATTR(port5_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 4);
+static SENSOR_DEVICE_ATTR(port6_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 5);
+static SENSOR_DEVICE_ATTR(port7_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 6);
+static SENSOR_DEVICE_ATTR(port8_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 7);
+static SENSOR_DEVICE_ATTR(port9_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 8);
+static SENSOR_DEVICE_ATTR(port10_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 9);
+static SENSOR_DEVICE_ATTR(port11_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 10);
+static SENSOR_DEVICE_ATTR(port12_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 11);
+static SENSOR_DEVICE_ATTR(port13_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 12);
+static SENSOR_DEVICE_ATTR(port14_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 13);
+static SENSOR_DEVICE_ATTR(port15_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 14);
+static SENSOR_DEVICE_ATTR(port16_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 15);
+static SENSOR_DEVICE_ATTR(port17_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 16);
+static SENSOR_DEVICE_ATTR(port18_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 17);
+static SENSOR_DEVICE_ATTR(port19_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 18);
+static SENSOR_DEVICE_ATTR(port20_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 19);
+static SENSOR_DEVICE_ATTR(port21_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 20);
+static SENSOR_DEVICE_ATTR(port22_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 21);
+static SENSOR_DEVICE_ATTR(port23_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 22);
+static SENSOR_DEVICE_ATTR(port24_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 23);
+static SENSOR_DEVICE_ATTR(port25_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 24);
+static SENSOR_DEVICE_ATTR(port26_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 25);
+static SENSOR_DEVICE_ATTR(port27_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 26);
+static SENSOR_DEVICE_ATTR(port28_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 27);
+static SENSOR_DEVICE_ATTR(port29_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 28);
+static SENSOR_DEVICE_ATTR(port30_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 29);
+static SENSOR_DEVICE_ATTR(port31_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 30);
+static SENSOR_DEVICE_ATTR(port32_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 31);
+static SENSOR_DEVICE_ATTR(port33_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 32);
+static SENSOR_DEVICE_ATTR(port34_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 33);
+static SENSOR_DEVICE_ATTR(port35_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 34);
+static SENSOR_DEVICE_ATTR(port36_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 35);
+static SENSOR_DEVICE_ATTR(port37_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 36);
+static SENSOR_DEVICE_ATTR(port38_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 37);
+static SENSOR_DEVICE_ATTR(port39_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 38);
+static SENSOR_DEVICE_ATTR(port40_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 39);
+static SENSOR_DEVICE_ATTR(port41_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 40);
+static SENSOR_DEVICE_ATTR(port42_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 41);
+static SENSOR_DEVICE_ATTR(port43_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 42);
+static SENSOR_DEVICE_ATTR(port44_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 43);
+static SENSOR_DEVICE_ATTR(port45_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 44);
+static SENSOR_DEVICE_ATTR(port46_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 45);
+static SENSOR_DEVICE_ATTR(port47_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 46);
+static SENSOR_DEVICE_ATTR(port48_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 47);
+static SENSOR_DEVICE_ATTR(port49_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 48);
+static SENSOR_DEVICE_ATTR(port50_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 49);
+static SENSOR_DEVICE_ATTR(port51_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 50);
+static SENSOR_DEVICE_ATTR(port52_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 51);
+static SENSOR_DEVICE_ATTR(port53_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 52);
+static SENSOR_DEVICE_ATTR(port54_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 53);
+static SENSOR_DEVICE_ATTR(port55_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 54);
+static SENSOR_DEVICE_ATTR(port56_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 55);
+static SENSOR_DEVICE_ATTR(port57_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 56);
+static SENSOR_DEVICE_ATTR(port58_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 57);
+static SENSOR_DEVICE_ATTR(port59_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 58);
+static SENSOR_DEVICE_ATTR(port60_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 59);
+static SENSOR_DEVICE_ATTR(port61_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 60);
+static SENSOR_DEVICE_ATTR(port62_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 61);
+static SENSOR_DEVICE_ATTR(port63_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 62);
+static SENSOR_DEVICE_ATTR(port64_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 63);
+static SENSOR_DEVICE_ATTR(port65_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 64);
+static SENSOR_DEVICE_ATTR(port66_led_en, S_IRUGO | S_IWUSR, show_led_en, set_led_en, 65);
+static SENSOR_DEVICE_ATTR(port_g1_led_en, S_IRUGO | S_IWUSR, show_group_led_en, set_group_led_en, 1);
+static SENSOR_DEVICE_ATTR(port_g2_led_en, S_IRUGO | S_IWUSR, show_group_led_en, set_group_led_en, 2);
+static SENSOR_DEVICE_ATTR(port_g3_led_en, S_IRUGO | S_IWUSR, show_group_led_en, set_group_led_en, 3);
+static SENSOR_DEVICE_ATTR(port_g4_led_en, S_IRUGO | S_IWUSR, show_group_led_en, set_group_led_en, 4);
+static SENSOR_DEVICE_ATTR(port_g5_led_en, S_IRUGO | S_IWUSR, show_group_led_en, set_group_led_en, 5);
+
+static SENSOR_DEVICE_ATTR(port1_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 0);
+static SENSOR_DEVICE_ATTR(port2_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 1);
+static SENSOR_DEVICE_ATTR(port3_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 2);
+static SENSOR_DEVICE_ATTR(port4_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 3);
+static SENSOR_DEVICE_ATTR(port5_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 4);
+static SENSOR_DEVICE_ATTR(port6_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 5);
+static SENSOR_DEVICE_ATTR(port7_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 6);
+static SENSOR_DEVICE_ATTR(port8_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 7);
+static SENSOR_DEVICE_ATTR(port9_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 8);
+static SENSOR_DEVICE_ATTR(port10_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 9);
+static SENSOR_DEVICE_ATTR(port11_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 10);
+static SENSOR_DEVICE_ATTR(port12_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 11);
+static SENSOR_DEVICE_ATTR(port13_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 12);
+static SENSOR_DEVICE_ATTR(port14_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 13);
+static SENSOR_DEVICE_ATTR(port15_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 14);
+static SENSOR_DEVICE_ATTR(port16_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 15);
+static SENSOR_DEVICE_ATTR(port17_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 16);
+static SENSOR_DEVICE_ATTR(port18_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 17);
+static SENSOR_DEVICE_ATTR(port19_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 18);
+static SENSOR_DEVICE_ATTR(port20_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 19);
+static SENSOR_DEVICE_ATTR(port21_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 20);
+static SENSOR_DEVICE_ATTR(port22_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 21);
+static SENSOR_DEVICE_ATTR(port23_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 22);
+static SENSOR_DEVICE_ATTR(port24_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 23);
+static SENSOR_DEVICE_ATTR(port25_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 24);
+static SENSOR_DEVICE_ATTR(port26_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 25);
+static SENSOR_DEVICE_ATTR(port27_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 26);
+static SENSOR_DEVICE_ATTR(port28_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 27);
+static SENSOR_DEVICE_ATTR(port29_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 28);
+static SENSOR_DEVICE_ATTR(port30_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 29);
+static SENSOR_DEVICE_ATTR(port31_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 30);
+static SENSOR_DEVICE_ATTR(port32_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 31);
+static SENSOR_DEVICE_ATTR(port33_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 32);
+static SENSOR_DEVICE_ATTR(port34_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 33);
+static SENSOR_DEVICE_ATTR(port35_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 34);
+static SENSOR_DEVICE_ATTR(port36_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 35);
+static SENSOR_DEVICE_ATTR(port37_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 36);
+static SENSOR_DEVICE_ATTR(port38_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 37);
+static SENSOR_DEVICE_ATTR(port39_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 38);
+static SENSOR_DEVICE_ATTR(port40_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 39);
+static SENSOR_DEVICE_ATTR(port41_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 40);
+static SENSOR_DEVICE_ATTR(port42_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 41);
+static SENSOR_DEVICE_ATTR(port43_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 42);
+static SENSOR_DEVICE_ATTR(port44_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 43);
+static SENSOR_DEVICE_ATTR(port45_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 44);
+static SENSOR_DEVICE_ATTR(port46_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 45);
+static SENSOR_DEVICE_ATTR(port47_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 46);
+static SENSOR_DEVICE_ATTR(port48_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 47);
+static SENSOR_DEVICE_ATTR(port49_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 48);
+static SENSOR_DEVICE_ATTR(port50_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 49);
+static SENSOR_DEVICE_ATTR(port51_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 50);
+static SENSOR_DEVICE_ATTR(port52_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 51);
+static SENSOR_DEVICE_ATTR(port53_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 52);
+static SENSOR_DEVICE_ATTR(port54_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 53);
+static SENSOR_DEVICE_ATTR(port55_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 54);
+static SENSOR_DEVICE_ATTR(port56_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 55);
+static SENSOR_DEVICE_ATTR(port57_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 56);
+static SENSOR_DEVICE_ATTR(port58_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 57);
+static SENSOR_DEVICE_ATTR(port59_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 58);
+static SENSOR_DEVICE_ATTR(port60_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 59);
+static SENSOR_DEVICE_ATTR(port61_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 60);
+static SENSOR_DEVICE_ATTR(port62_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 61);
+static SENSOR_DEVICE_ATTR(port63_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 62);
+static SENSOR_DEVICE_ATTR(port64_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 63);
+static SENSOR_DEVICE_ATTR(port65_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 64);
+static SENSOR_DEVICE_ATTR(port66_led_lb, S_IRUGO | S_IWUSR, show_led_lb, set_led_lb, 65);
+
+static SENSOR_DEVICE_ATTR(port1_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 0);
+static SENSOR_DEVICE_ATTR(port2_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 1);
+static SENSOR_DEVICE_ATTR(port3_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 2);
+static SENSOR_DEVICE_ATTR(port4_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 3);
+static SENSOR_DEVICE_ATTR(port5_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 4);
+static SENSOR_DEVICE_ATTR(port6_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 5);
+static SENSOR_DEVICE_ATTR(port7_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 6);
+static SENSOR_DEVICE_ATTR(port8_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 7);
+static SENSOR_DEVICE_ATTR(port9_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 8);
+static SENSOR_DEVICE_ATTR(port10_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 9);
+static SENSOR_DEVICE_ATTR(port11_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 10);
+static SENSOR_DEVICE_ATTR(port12_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 11);
+static SENSOR_DEVICE_ATTR(port13_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 12);
+static SENSOR_DEVICE_ATTR(port14_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 13);
+static SENSOR_DEVICE_ATTR(port15_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 14);
+static SENSOR_DEVICE_ATTR(port16_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 15);
+static SENSOR_DEVICE_ATTR(port17_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 16);
+static SENSOR_DEVICE_ATTR(port18_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 17);
+static SENSOR_DEVICE_ATTR(port19_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 18);
+static SENSOR_DEVICE_ATTR(port20_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 19);
+static SENSOR_DEVICE_ATTR(port21_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 20);
+static SENSOR_DEVICE_ATTR(port22_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 21);
+static SENSOR_DEVICE_ATTR(port23_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 22);
+static SENSOR_DEVICE_ATTR(port24_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 23);
+static SENSOR_DEVICE_ATTR(port25_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 24);
+static SENSOR_DEVICE_ATTR(port26_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 25);
+static SENSOR_DEVICE_ATTR(port27_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 26);
+static SENSOR_DEVICE_ATTR(port28_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 27);
+static SENSOR_DEVICE_ATTR(port29_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 28);
+static SENSOR_DEVICE_ATTR(port30_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 29);
+static SENSOR_DEVICE_ATTR(port31_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 30);
+static SENSOR_DEVICE_ATTR(port32_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 31);
+static SENSOR_DEVICE_ATTR(port33_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 32);
+static SENSOR_DEVICE_ATTR(port34_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 33);
+static SENSOR_DEVICE_ATTR(port35_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 34);
+static SENSOR_DEVICE_ATTR(port36_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 35);
+static SENSOR_DEVICE_ATTR(port37_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 36);
+static SENSOR_DEVICE_ATTR(port38_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 37);
+static SENSOR_DEVICE_ATTR(port39_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 38);
+static SENSOR_DEVICE_ATTR(port40_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 39);
+static SENSOR_DEVICE_ATTR(port41_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 40);
+static SENSOR_DEVICE_ATTR(port42_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 41);
+static SENSOR_DEVICE_ATTR(port43_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 42);
+static SENSOR_DEVICE_ATTR(port44_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 43);
+static SENSOR_DEVICE_ATTR(port45_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 44);
+static SENSOR_DEVICE_ATTR(port46_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 45);
+static SENSOR_DEVICE_ATTR(port47_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 46);
+static SENSOR_DEVICE_ATTR(port48_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 47);
+static SENSOR_DEVICE_ATTR(port49_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 48);
+static SENSOR_DEVICE_ATTR(port50_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 49);
+static SENSOR_DEVICE_ATTR(port51_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 50);
+static SENSOR_DEVICE_ATTR(port52_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 51);
+static SENSOR_DEVICE_ATTR(port53_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 52);
+static SENSOR_DEVICE_ATTR(port54_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 53);
+static SENSOR_DEVICE_ATTR(port55_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 54);
+static SENSOR_DEVICE_ATTR(port56_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 55);
+static SENSOR_DEVICE_ATTR(port57_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 56);
+static SENSOR_DEVICE_ATTR(port58_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 57);
+static SENSOR_DEVICE_ATTR(port59_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 58);
+static SENSOR_DEVICE_ATTR(port60_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 59);
+static SENSOR_DEVICE_ATTR(port61_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 60);
+static SENSOR_DEVICE_ATTR(port62_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 61);
+static SENSOR_DEVICE_ATTR(port63_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 62);
+static SENSOR_DEVICE_ATTR(port64_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 63);
+static SENSOR_DEVICE_ATTR(port65_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 64);
+static SENSOR_DEVICE_ATTR(port66_led_pres, S_IRUGO | S_IWUSR, show_led_pres, set_led_pres, 65);
+static SENSOR_DEVICE_ATTR(port_g1_led_pres, S_IRUGO | S_IWUSR, show_group_led_pres, set_group_led_pres, 1);
+static SENSOR_DEVICE_ATTR(port_g2_led_pres, S_IRUGO | S_IWUSR, show_group_led_pres, set_group_led_pres, 2);
+static SENSOR_DEVICE_ATTR(port_g3_led_pres, S_IRUGO | S_IWUSR, show_group_led_pres, set_group_led_pres, 3);
+static SENSOR_DEVICE_ATTR(port_g4_led_pres, S_IRUGO | S_IWUSR, show_group_led_pres, set_group_led_pres, 4);
+static SENSOR_DEVICE_ATTR(port_g5_led_pres, S_IRUGO | S_IWUSR, show_group_led_pres, set_group_led_pres, 5);
+
 static SENSOR_DEVICE_ATTR(led_sys, S_IRUGO | S_IWUSR, show_fp_led, set_fp_led, 0);
 static SENSOR_DEVICE_ATTR(udb_cpld1_ver, S_IRUGO, show_cpld_version, NULL, 0);
 static SENSOR_DEVICE_ATTR(udb_cpld2_ver, S_IRUGO, show_cpld_version, NULL, 1);
@@ -1142,6 +1375,217 @@ static struct attribute *fpga_transceiver_attributes[] = {
 	&sensor_dev_attr_ldb_cpld1_ver.dev_attr.attr,
 	&sensor_dev_attr_ldb_cpld2_ver.dev_attr.attr,
 
+    &sensor_dev_attr_port1_led_en.dev_attr.attr,
+    &sensor_dev_attr_port2_led_en.dev_attr.attr,
+    &sensor_dev_attr_port3_led_en.dev_attr.attr,
+    &sensor_dev_attr_port4_led_en.dev_attr.attr,
+    &sensor_dev_attr_port5_led_en.dev_attr.attr,
+    &sensor_dev_attr_port6_led_en.dev_attr.attr,
+    &sensor_dev_attr_port7_led_en.dev_attr.attr,
+    &sensor_dev_attr_port8_led_en.dev_attr.attr,
+    &sensor_dev_attr_port9_led_en.dev_attr.attr,
+    &sensor_dev_attr_port10_led_en.dev_attr.attr,
+    &sensor_dev_attr_port11_led_en.dev_attr.attr,
+    &sensor_dev_attr_port12_led_en.dev_attr.attr,
+    &sensor_dev_attr_port13_led_en.dev_attr.attr,
+    &sensor_dev_attr_port14_led_en.dev_attr.attr,
+    &sensor_dev_attr_port15_led_en.dev_attr.attr,
+    &sensor_dev_attr_port16_led_en.dev_attr.attr,
+	&sensor_dev_attr_port17_led_en.dev_attr.attr,
+    &sensor_dev_attr_port18_led_en.dev_attr.attr,
+    &sensor_dev_attr_port19_led_en.dev_attr.attr,
+    &sensor_dev_attr_port20_led_en.dev_attr.attr,
+    &sensor_dev_attr_port21_led_en.dev_attr.attr,
+    &sensor_dev_attr_port22_led_en.dev_attr.attr,
+    &sensor_dev_attr_port23_led_en.dev_attr.attr,
+    &sensor_dev_attr_port24_led_en.dev_attr.attr,
+    &sensor_dev_attr_port25_led_en.dev_attr.attr,
+    &sensor_dev_attr_port26_led_en.dev_attr.attr,
+    &sensor_dev_attr_port27_led_en.dev_attr.attr,
+    &sensor_dev_attr_port28_led_en.dev_attr.attr,
+    &sensor_dev_attr_port29_led_en.dev_attr.attr,
+    &sensor_dev_attr_port30_led_en.dev_attr.attr,
+    &sensor_dev_attr_port31_led_en.dev_attr.attr,
+    &sensor_dev_attr_port32_led_en.dev_attr.attr,
+	&sensor_dev_attr_port33_led_en.dev_attr.attr,
+    &sensor_dev_attr_port34_led_en.dev_attr.attr,
+    &sensor_dev_attr_port35_led_en.dev_attr.attr,
+    &sensor_dev_attr_port36_led_en.dev_attr.attr,
+    &sensor_dev_attr_port37_led_en.dev_attr.attr,
+    &sensor_dev_attr_port38_led_en.dev_attr.attr,
+    &sensor_dev_attr_port39_led_en.dev_attr.attr,
+    &sensor_dev_attr_port40_led_en.dev_attr.attr,
+    &sensor_dev_attr_port41_led_en.dev_attr.attr,
+    &sensor_dev_attr_port42_led_en.dev_attr.attr,
+    &sensor_dev_attr_port43_led_en.dev_attr.attr,
+    &sensor_dev_attr_port44_led_en.dev_attr.attr,
+    &sensor_dev_attr_port45_led_en.dev_attr.attr,
+    &sensor_dev_attr_port46_led_en.dev_attr.attr,
+    &sensor_dev_attr_port47_led_en.dev_attr.attr,
+    &sensor_dev_attr_port48_led_en.dev_attr.attr,
+	&sensor_dev_attr_port49_led_en.dev_attr.attr,
+    &sensor_dev_attr_port50_led_en.dev_attr.attr,
+    &sensor_dev_attr_port51_led_en.dev_attr.attr,
+    &sensor_dev_attr_port52_led_en.dev_attr.attr,
+    &sensor_dev_attr_port53_led_en.dev_attr.attr,
+    &sensor_dev_attr_port54_led_en.dev_attr.attr,
+    &sensor_dev_attr_port55_led_en.dev_attr.attr,
+    &sensor_dev_attr_port56_led_en.dev_attr.attr,
+    &sensor_dev_attr_port57_led_en.dev_attr.attr,
+    &sensor_dev_attr_port58_led_en.dev_attr.attr,
+    &sensor_dev_attr_port59_led_en.dev_attr.attr,
+    &sensor_dev_attr_port60_led_en.dev_attr.attr,
+    &sensor_dev_attr_port61_led_en.dev_attr.attr,
+    &sensor_dev_attr_port62_led_en.dev_attr.attr,
+    &sensor_dev_attr_port63_led_en.dev_attr.attr,
+    &sensor_dev_attr_port64_led_en.dev_attr.attr,
+	&sensor_dev_attr_port65_led_en.dev_attr.attr,
+	&sensor_dev_attr_port66_led_en.dev_attr.attr,
+	&sensor_dev_attr_port_g1_led_en.dev_attr.attr,
+	&sensor_dev_attr_port_g2_led_en.dev_attr.attr,
+	&sensor_dev_attr_port_g3_led_en.dev_attr.attr,
+	&sensor_dev_attr_port_g4_led_en.dev_attr.attr,
+	&sensor_dev_attr_port_g5_led_en.dev_attr.attr,
+
+	&sensor_dev_attr_port1_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port2_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port3_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port4_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port5_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port6_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port7_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port8_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port9_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port10_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port11_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port12_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port13_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port14_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port15_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port16_led_lb.dev_attr.attr,
+	&sensor_dev_attr_port17_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port18_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port19_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port20_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port21_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port22_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port23_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port24_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port25_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port26_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port27_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port28_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port29_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port30_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port31_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port32_led_lb.dev_attr.attr,
+	&sensor_dev_attr_port33_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port34_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port35_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port36_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port37_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port38_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port39_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port40_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port41_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port42_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port43_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port44_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port45_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port46_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port47_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port48_led_lb.dev_attr.attr,
+	&sensor_dev_attr_port49_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port50_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port51_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port52_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port53_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port54_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port55_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port56_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port57_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port58_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port59_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port60_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port61_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port62_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port63_led_lb.dev_attr.attr,
+    &sensor_dev_attr_port64_led_lb.dev_attr.attr,
+	&sensor_dev_attr_port65_led_lb.dev_attr.attr,
+	&sensor_dev_attr_port66_led_lb.dev_attr.attr,
+
+	&sensor_dev_attr_port1_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port2_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port3_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port4_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port5_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port6_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port7_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port8_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port9_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port10_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port11_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port12_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port13_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port14_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port15_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port16_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port17_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port18_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port19_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port20_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port21_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port22_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port23_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port24_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port25_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port26_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port27_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port28_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port29_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port30_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port31_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port32_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port33_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port34_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port35_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port36_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port37_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port38_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port39_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port40_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port41_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port42_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port43_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port44_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port45_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port46_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port47_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port48_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port49_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port50_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port51_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port52_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port53_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port54_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port55_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port56_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port57_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port58_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port59_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port60_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port61_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port62_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port63_led_pres.dev_attr.attr,
+    &sensor_dev_attr_port64_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port65_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port66_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port_g1_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port_g2_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port_g3_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port_g4_led_pres.dev_attr.attr,
+	&sensor_dev_attr_port_g5_led_pres.dev_attr.attr,
+
 	NULL
 };
 
@@ -1254,28 +1698,28 @@ static ssize_t set_fp_led(struct device *dev, struct device_attribute *devattr, 
 static ssize_t show_cpld_version(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
 	u8 major_ver = 0;
 	u8 minor_ver = 0;	
 	
 	switch (sda->index) {
     case 0:
-        major_ver = (fpga_ctl->udb_cpld1_ver & 0xFF00) >> 8;
-		minor_ver = fpga_ctl->udb_cpld1_ver & 0xFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + ASLPC_DEV_UDB_CPLD1_PCIE_START_OFFST);
 		break;
     case 1:
-        major_ver = (fpga_ctl->udb_cpld2_ver & 0xFF00) >> 8;
-		minor_ver = fpga_ctl->udb_cpld2_ver & 0xFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + ASLPC_DEV_UDB_CPLD2_PCIE_START_OFFST);
         break;
     case 2:
-        major_ver = (fpga_ctl->ldb_cpld1_ver & 0xFF00) >> 8;
-		minor_ver = fpga_ctl->ldb_cpld1_ver & 0xFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + ASLPC_DEV_LDB_CPLD1_PCIE_START_OFFST);
         break;    
     case 3:
-        major_ver = (fpga_ctl->ldb_cpld2_ver & 0xFF00) >> 8;
-		minor_ver = fpga_ctl->ldb_cpld2_ver & 0xFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + ASLPC_DEV_LDB_CPLD2_PCIE_START_OFFST);
 	default:        
         break;
     }
+
+	major_ver = (reg_val & 0xFF00) >> 8;
+	minor_ver = reg_val & 0xFF;
 
     return sprintf(buf, "%d.%d\n", major_ver, minor_ver);
 }
@@ -1444,6 +1888,469 @@ static ssize_t set_reset(struct device *dev, struct device_attribute *devattr, c
 		usr_val32 = usr_val << (sda->index - MODULE_RESET_33);
 		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + QSFP_RESET_REG_OFFSET);
 		break;	
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t show_led_en(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u8 bit_val = 0;
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+	    bit_val = (reg_val >> (sda->index)) & 0x1;
+		break;
+	case 16 ... 31:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+	    bit_val = (reg_val >> (sda->index - 16)) & 0x1;
+		break;
+	case 32 ... 47:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		bit_val = (reg_val >> (sda->index - 32)) & 0x1;
+		break;
+	case 48 ... 63:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		bit_val = (reg_val >> (sda->index - 48)) & 0x1;
+		break;
+	case 64 ... 65:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		bit_val = (reg_val >> (sda->index - 64 + 8)) & 0x1;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return sprintf(buf, "%d\n", bit_val);
+}
+
+static ssize_t set_led_en(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u32 mask = 0;
+	u8 usr_val = 0;
+	u32 usr_val32 = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0x1) {
+        return -EINVAL;
+    }
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    mask = (~(1 << (sda->index))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+		break;
+	case 16 ... 31:
+	    mask = (~(1 << (sda->index - 16))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 16);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+		break;
+	case 32 ... 47:
+	    mask = (~(1 << (sda->index - 32))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 32);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		break;
+	case 48 ... 63:
+	    mask = (~(1 << (sda->index - 48))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 48);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		break;
+	case 64 ... 65:
+	    mask = (~(1 << (sda->index - 64 + 8))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 64 + 8);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t show_group_led_en(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+
+	switch(sda->index) {
+	case 1:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 2:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 3:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 4:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 5:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = (reg_val & 0x300) >> 8;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return sprintf(buf, "0x%x\n", reg_val);
+}
+
+static ssize_t set_group_led_en(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u16 usr_val = 0;
+	u32 usr_val32 = 0;
+
+    int ret = kstrtou16(buf, 16, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0xFFFF) {
+        return -EINVAL;
+    }
+
+	switch(sda->index) {
+	case 1:	    
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_EN);
+		break;
+	case 2:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_EN);
+		break;
+	case 3:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_EN);
+		break;
+	case 4:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_EN);
+		break;
+	case 5:
+	    usr_val = (usr_val & 0x3) >> 8;
+		reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = reg_val & 0xFFFFFCFF;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t show_led_lb(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;	
+	u8 bit_val = 0;
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_LB);
+	    bit_val = (reg_val >> (sda->index)) & 0x1;
+		break;
+	case 16 ... 31:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_LB);
+	    bit_val = (reg_val >> (sda->index - 16)) & 0x1;
+		break;
+	case 32 ... 47:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_LB);
+		bit_val = (reg_val >> (sda->index - 32)) & 0x1;
+		break;
+	case 48 ... 63:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_LB);
+		bit_val = (reg_val >> (sda->index - 48)) & 0x1;
+		break;	
+	case 64 ... 65:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		bit_val = (reg_val >> (sda->index - 64 + 10)) & 0x1;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return sprintf(buf, "%d\n", bit_val);
+}
+
+static ssize_t set_led_lb(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u32 mask = 0;
+	u8 usr_val = 0;
+	u32 usr_val32 = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0x1) {
+        return -EINVAL;
+    }
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    mask = (~(1 << (sda->index))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_LB);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_LB);
+		break;
+	case 16 ... 31:
+	    mask = (~(1 << (sda->index - 16))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_LB);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 16);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_LB);
+		break;
+	case 32 ... 47:
+	    mask = (~(1 << (sda->index - 32))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_LB);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 32);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_LB);
+		break;
+	case 48 ... 63:
+	    mask = (~(1 << (sda->index - 48))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_LB);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 48);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_LB);
+		break;
+	case 64 ... 65:
+	    mask = (~(1 << (sda->index - 64 + 10))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 64 + 10);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t show_led_pres(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;	
+	u8 bit_val = 0;
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+	    bit_val = (reg_val >> (sda->index)) & 0x1;
+		break;
+	case 16 ... 31:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+	    bit_val = (reg_val >> (sda->index - 16)) & 0x1;
+		break;
+	case 32 ... 47:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		bit_val = (reg_val >> (sda->index - 32)) & 0x1;
+		break;
+	case 48 ... 63:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		bit_val = (reg_val >> (sda->index - 48)) & 0x1;
+		break;	
+	case 64 ... 65:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		bit_val = (reg_val >> (sda->index - 64 + 12)) & 0x1;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return sprintf(buf, "%d\n", bit_val);
+}
+
+static ssize_t set_led_pres(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u32 mask = 0;
+	u8 usr_val = 0;
+	u32 usr_val32 = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0x1) {
+        return -EINVAL;
+    }
+
+	switch(sda->index) {
+	case 0 ... 15:
+	    mask = (~(1 << (sda->index))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		break;
+	case 16 ... 31:
+	    mask = (~(1 << (sda->index - 16))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 16);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		break;
+	case 32 ... 47:
+	    mask = (~(1 << (sda->index - 32))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 32);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		break;
+	case 48 ... 63:
+	    mask = (~(1 << (sda->index - 48))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 48);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		break;
+	case 64 ... 65:
+	    mask = (~(1 << (sda->index - 64 + 12))) & 0xFFFFFFFF;
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = reg_val & mask;
+		usr_val32 = usr_val << (sda->index - 64 + 12);
+		iowrite32((reg_val | usr_val32), fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return count;
+}
+
+static ssize_t show_group_led_pres(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+
+	switch(sda->index) {
+	case 1:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 2:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 3:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 4:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF;
+		break;
+	case 5:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = (reg_val & 0x3000) >> 12;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	return sprintf(buf, "0x%x\n", reg_val);
+}
+
+static ssize_t set_group_led_pres(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 reg_val = 0;
+	u16 usr_val = 0;
+	u32 usr_val32 = 0;
+
+    int ret = kstrtou16(buf, 16, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+    if (usr_val > 0xFFFF) {
+        return -EINVAL;
+    }
+
+	switch(sda->index) {
+	case 1:	    
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		break;
+	case 2:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		break;
+	case 3:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD1_PORT_LED_PRES);
+		break;
+	case 4:
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		reg_val = reg_val & 0xFFFF0000;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + CPLD2_PORT_LED_PRES);
+		break;
+	case 5:
+	    usr_val = (usr_val & 0x3) << 12;
+		reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		reg_val = reg_val & 0xFFFFCFFF;
+		usr_val32 = reg_val | usr_val;
+		iowrite32(usr_val32, fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + SFP_PORT_LED);
+		break;
 	default:
 		return -EINVAL;
 		break;
@@ -1639,6 +2546,7 @@ static ssize_t port_status_read(struct device *dev,
 	ssize_t  ret = 0;
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
 	struct bin_attribute *eeprom = NULL;
+	u32 reg_val = 0;
 
 	mutex_lock(&update_lock);
 	fpga_read_port_status_value(eeprom);
@@ -1717,22 +2625,26 @@ static ssize_t port_status_read(struct device *dev,
 			);
 		break;
 	case PCIE_FPGA_UDB_VERSION:
+		/*get version*/
+	    reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr);
 		ret = sprintf(buf, 
 			"%d.%d\n", 
-			(fpga_ctl->udb_version>>8) & 0x7f,
-			fpga_ctl->udb_version & 0xff);
+			(reg_val >> 8) & 0x7f,
+			reg_val & 0xff);
 		break;
 	case PCIE_FPGA_LDB_VERSION:
+		reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr);
 		ret = sprintf(buf, 
 			"%d.%d\n", 
-			(fpga_ctl->ldb_version>>8) & 0x7f, 
-			fpga_ctl->ldb_version & 0xff);
+			(reg_val >> 8) & 0x7f,
+			reg_val & 0xff);
 		break;
 	case PCIE_FPGA_SMB_VERSION:
+		reg_val = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_SMB].data_base_addr);
 		ret = sprintf(buf, 
 			"%d.%d\n", 
-			(fpga_ctl->smb_version>>8) & 0x7f, 
-			fpga_ctl->smb_version & 0xff);
+			(reg_val >> 8) & 0x7f,
+			reg_val & 0xff);
 		break;
 	default:
 		ret = -EINVAL;
@@ -2120,7 +3032,7 @@ sfp_eeprom_read(struct file *filp, struct kobject *kobj,
 	return count;
 
 exit_err:
-	pcie_err("%s ERROR(%d): Port%d pcie get done status failed!!", show_date_time(), state, pdata->port_num);
+	pcie_debug("%s ERROR(%d): Port%d pcie get done status failed!!!", show_date_time(), state, pdata->port_num);
 
 	return -EBUSY;
 }
@@ -2195,7 +3107,7 @@ static ssize_t sfp_bin_read(struct file *filp, struct kobject *kobj,
 	return retval;
 
 exit_err:
-	pcie_err("%s ERROR(%d): Port%d pcie get done status failed!!", show_date_time(), state, pdata->port_num);
+	pcie_debug("%s ERROR(%d): Port%d pcie get done status failed!!!", show_date_time(), state, pdata->port_num);
 
 	return -EBUSY;
 }
@@ -2534,16 +3446,6 @@ static int sys_fpga_stat_probe (struct platform_device *pdev)
 		 0xbd);
 
 	mutex_unlock(&update_lock);
-
-	/*get version*/
-	fpga_ctl->udb_version = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr);
-	fpga_ctl->ldb_version = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr);
-	fpga_ctl->smb_version = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_SMB].data_base_addr);
-
-	fpga_ctl->udb_cpld1_ver = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + ASLPC_DEV_UDB_CPLD1_PCIE_START_OFFST);
-	fpga_ctl->udb_cpld2_ver = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_UDB].data_base_addr + ASLPC_DEV_UDB_CPLD2_PCIE_START_OFFST);
-	fpga_ctl->ldb_cpld1_ver = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + ASLPC_DEV_LDB_CPLD1_PCIE_START_OFFST);
-	fpga_ctl->ldb_cpld2_ver = ioread32(fpga_ctl->pci_fpga_dev[PCI_SUBSYSTEM_ID_LDB].data_base_addr + ASLPC_DEV_LDB_CPLD2_PCIE_START_OFFST);	
 
     for (cnt=0;cnt<QSFP_NUM_OF_PORT;cnt++) fpga_ctl->reset_list[cnt] = 0;
 

@@ -4,5 +4,8 @@
 # see: dh_installdeb(1)
 
 chmod a+x /usr/local/bin/h4_32d_platform_init.sh
+chmod a+x /usr/local/bin/ports_notify.py
 systemctl enable h4_32d_platform_init.service
 systemctl start h4_32d_platform_init.service
+systemctl enable ports_notify.service
+systemctl start --no-block ports_notify.service

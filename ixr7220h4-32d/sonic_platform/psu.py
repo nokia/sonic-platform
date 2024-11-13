@@ -154,15 +154,8 @@ class Psu(PsuBase):
                 psu_voltage = 0.0
             psu_voltage = (float(result))/1000            
         else:
-            psu_voltage = 0.0
+            psu_voltage = 0.0        
         
-        if self.get_status() and self.get_model() == "DPS-1600AB-29":
-            result = read_sysfs_file(self.psu_dir+"in1_input")
-            voltage_in = (float(result))/1000
-            print(f"PSU {self.index} input voltage is {voltage_in}v")
-            if voltage_in < 170:
-                sonic_logger.log_error(f"!ERROR!: PSU {self.index} not supplying enough voltage. {voltage_in}v is less than the required 200-220V")                   
-
         return psu_voltage
 
     def get_current(self):

@@ -58,7 +58,6 @@ class Eeprom(TlvInfoDecoder):
             self.model_str = ''
             self.service_tag = 'NA'
             
-
     def _load_system_eeprom(self):
         """
         Reads the system EEPROM and retrieves the values corresponding
@@ -120,7 +119,6 @@ class Eeprom(TlvInfoDecoder):
             self.service_tag = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
 
-
     def _get_eeprom_field(self, field_name):
         """
         For a field name specified in the EEPROM format, returns the
@@ -142,8 +140,7 @@ class Eeprom(TlvInfoDecoder):
         if not self.serial_number:
             self._load_system_eeprom()
             
-        return self.serial_number
-            
+        return self.serial_number            
 
     def part_number_str(self):
         """

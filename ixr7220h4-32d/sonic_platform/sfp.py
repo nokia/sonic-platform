@@ -180,7 +180,7 @@ class Sfp(SfpOptoeBase):
             A boolean, True if successful, False if not
         """
         if not self.get_presence():
-            sys.stderr.write("Error: Module not inserted, could not reset it.\n\n")
+            sys.stderr.write("Error: Port {self.index} not inserted, could not reset it.\n\n")
             return False
         sonic_logger.log_info(f"Reseting port #{self.index}.")
 
