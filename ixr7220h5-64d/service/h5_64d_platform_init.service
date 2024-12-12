@@ -1,7 +1,7 @@
 [Unit]
 Description=Nokia-IXR7220-H5-64D Platform Service
 After=sysinit.target
-Before=pmon.service determine-reboot-cause.service
+Before=database.service determine-reboot-cause.service
 
 [Service]
 Type=oneshot
