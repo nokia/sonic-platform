@@ -1,13 +1,15 @@
 """
-Module contains an implementation of SONiC Platform Base API and
-provides access to hardware watchdog
+    Module contains an implementation of SONiC Platform Base API and
+    provides access to hardware watchdog
 """
-
-import os
-import fcntl
-import array
-import time
-from sonic_platform_base.watchdog_base import WatchdogBase
+try:
+    import os
+    import fcntl
+    import array
+    from sonic_platform_base.watchdog_base import WatchdogBase
+    from sonic_platform.sysfs import read_sysfs_file
+except ImportError as e:
+    raise ImportError(str(e) + ' - required module not found') from e
 
 """ ioctl constants """
 IO_WRITE = 0x40000000
@@ -37,50 +39,30 @@ WD_SYSFS_PATH = "/sys/class/watchdog/watchdog0/"
 
 WD_COMMON_ERROR = -1
 
-
 class WatchdogImplBase(WatchdogBase):
     """
     Base class that implements common logic for interacting
     with watchdog using ioctl commands
     """
-
     def __init__(self, wd_device_path):
         """
         Open a watchdog handle
         @param wd_device_path Path to watchdog device
         """
         super(WatchdogImplBase, self).__init__()
-        
+
         self.watchdog=""
         self.watchdog_path = wd_device_path
         self.wd_state_reg = WD_SYSFS_PATH+"state"
         self.wd_timeout_reg = WD_SYSFS_PATH+"timeout"
         self.wd_timeleft_reg = WD_SYSFS_PATH+"timeleft"
-    
+
         self.timeout = self._gettimeout()
-
-    def _read_sysfs_file(self, sysfs_file):
-        # On successful read, returns the value read from given
-        # reg_name and on failure returns 'ERR'
-        rv = 'ERR'
-
-        if (not os.path.isfile(sysfs_file)):
-            return rv
-        try:
-            with open(sysfs_file, 'r') as fd:
-                rv = fd.read()
-        except Exception as e:
-            rv = 'ERR'
-
-        rv = rv.rstrip('\r\n')
-        rv = rv.lstrip(" ")
-        return rv
 
     def _disablewatchdog(self):
         """
         Turn off the watchdog timer
         """
-
         req = array.array('h', [WDIOS_DISABLECARD])
         fcntl.ioctl(self.watchdog, WDIOC_SETOPTIONS, req, False)
 
@@ -88,7 +70,6 @@ class WatchdogImplBase(WatchdogBase):
         """
         Turn on the watchdog timer
         """
-
         req = array.array('h', [WDIOS_ENABLECARD])
         fcntl.ioctl(self.watchdog, WDIOC_SETOPTIONS, req, False)
 
@@ -96,7 +77,6 @@ class WatchdogImplBase(WatchdogBase):
         """
         Keep alive watchdog timer
         """
-
         fcntl.ioctl(self.watchdog, WDIOC_KEEPALIVE)
 
     def _settimeout(self, seconds):
@@ -105,7 +85,6 @@ class WatchdogImplBase(WatchdogBase):
         @param seconds - timeout in seconds
         @return is the actual set timeout
         """
-
         req = array.array('I', [seconds])
         fcntl.ioctl(self.watchdog, WDIOC_SETTIMEOUT, req, True)
 
@@ -116,8 +95,8 @@ class WatchdogImplBase(WatchdogBase):
         Get watchdog timeout
         @return watchdog timeout
         """
-        timeout=0
-        timeout=self._read_sysfs_file(self.wd_timeout_reg)
+        timeout = 0
+        timeout = read_sysfs_file(self.wd_timeout_reg)
 
         return timeout
 
@@ -126,7 +105,6 @@ class WatchdogImplBase(WatchdogBase):
         Get time left before watchdog timer expires
         @return time left in seconds
         """
-
         req = array.array('I', [0])
         fcntl.ioctl(self.watchdog, WDIOC_GETTIMELEFT, req, True)
 
@@ -136,15 +114,10 @@ class WatchdogImplBase(WatchdogBase):
         """
         Arm the hardware watchdog
         """
-
         ret = WD_COMMON_ERROR
-        if seconds < 0:
+        if (seconds < 0 or seconds > 340 ):
             return ret
-        
-        # Stop the watchdog service to gain access of watchdog file pointer
-        # if self.is_armed():
-        #     os.popen("systemctl stop cpu_wdt.service")
-        #     time.sleep(2)
+
         if not self.watchdog:
             self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)
         try:
@@ -168,17 +141,13 @@ class WatchdogImplBase(WatchdogBase):
             A boolean, True if watchdog is disarmed successfully, False
             if not
         """
-        
-        if self.is_armed():
-            #os.popen("systemctl stop cpu_wdt.service")
-            #time.sleep(2)
-            if not self.watchdog:
-                self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)
-            try:
-                self._disablewatchdog()
-                self.timeout = 0
-            except IOError:
-                return False
+        if not self.watchdog:
+            self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)
+        try:
+            self._disablewatchdog()
+            self.timeout = 0
+        except IOError:
+            return False
 
         return True
 
@@ -188,7 +157,7 @@ class WatchdogImplBase(WatchdogBase):
         """
         status = False
 
-        state = self._read_sysfs_file(self.wd_state_reg)
+        state = read_sysfs_file(self.wd_state_reg)
         if (state != 'inactive'):
             status = True
 
@@ -198,10 +167,9 @@ class WatchdogImplBase(WatchdogBase):
         """
         Implements get_remaining_time WatchdogBase API
         """
-
         timeleft = WD_COMMON_ERROR
 
         if self.is_armed():
-            timeleft=self._read_sysfs_file(self.wd_timeleft_reg)
+            timeleft = read_sysfs_file(self.wd_timeleft_reg)
 
         return int(timeleft)
