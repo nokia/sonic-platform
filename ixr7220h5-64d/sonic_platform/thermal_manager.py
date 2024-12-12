@@ -1,8 +1,10 @@
-from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
-from .thermal_actions import *
-from .thermal_conditions import *
-from .thermal_infos import *
-
+try:
+    from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
+    from .thermal_actions import *
+    from .thermal_conditions import *
+    from .thermal_infos import *
+except ImportError as e:
+    raise ImportError(str(e) + ' - required module not found') from e
 
 class ThermalManager(ThermalManagerBase):
     THERMAL_ALGORITHM_CONTROL_PATH = '/var/run/hw-management/config/suspend'
