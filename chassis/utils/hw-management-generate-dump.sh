@@ -39,6 +39,8 @@ IS_SUP=1
 NOKIA_NDK_CLI=/opt/srlinux/bin/sr_platform_ndk_cli
 NOKIA_DEVMGR=devmgr
 NOKIA_QFPGA_GRPC_PORT=50067
+NOKIA_NDK_CMD_SET=/opt/srlinux/bin/ndk_cmd_set.sh
+NOKIA_NDK_CMD=/opt/srlinux/bin/ndk_cmd.sh
 
 handle_signal()
 {
@@ -335,7 +337,27 @@ save_ndk_kernel_intf_info() {
     NDK_INTFS=ndk.interfaces.txt
     save_tar_cmd "ip link show" "${NDK_INTFS}" true
 }
-
+save_ndk_pcon_info() {
+    # local timeout_cmd="timeout --foreground ${TIMEOUT_MIN}m"
+    echo "Capture NDK PCON info"
+    if [ ! -f "$NOKIA_NDK_CMD_SET" ] || [ ! -f "$NOKIA_NDK_CMD" ]; then
+        echo "INFO: Nokia ndk scripts not found"
+        return
+    fi
+    ${NOKIA_NDK_CMD_SET} on
+    if [ $IS_SUP -eq 1 ]; then
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 0 10" "/tmp/pcon.txt" false
+    else
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 0 10" "/tmp/pcon.txt" false
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 1 10" "/tmp/pcon.txt" true
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 2 10" "/tmp/pcon.txt" true
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 3 10" "/tmp/pcon.txt" true
+       ${NOKIA_NDK_CMD} "hwPcon::DumpEvents 4 10" "/tmp/pcon.txt" true
+    fi           
+    ${NOKIA_NDK_CMD_SET} off
+    save_file /tmp/pcon.txt dump false true
+    rm -f /tmp/pcon.txt 
+}
 save_platform_info() {
     save_cmd "cat /host/machine.conf" "machine.conf"
 
@@ -427,14 +449,18 @@ main() {
     save_ndk_devicemgr_info
     save_ndk_qfpgamgr_info
     save_ndk_cores
-    save_syslog_file
+    # save_syslog_file
+    save_ndk_pcon_info
+    
+    end_t=$(date +%s%3N)
+    save_file $TECHSUPPORT_TIME_INFO "" false true
+    $RM $TECHSUPPORT_TIME_INFO
+    
+    echo "Total time: $(($end_t-$start_t)) msec" >> $TECHSUPPORT_TIME_INFO
     
     # clean up working tar dir before compressing
     $RM $V -rf $TARDIR
-
-    end_t=$(date +%s%3N)
-    echo "Total time: $(($end_t-$start_t)) msec" >> $TECHSUPPORT_TIME_INFO
-    save_file $TECHSUPPORT_TIME_INFO "" false true
+    
     
     if $DO_COMPRESS; then
         $GZIP $V $TARFILE
