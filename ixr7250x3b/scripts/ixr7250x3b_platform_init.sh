@@ -40,6 +40,9 @@ file_exists /sys/bus/i2c/devices/i2c-1/new_device
 echo 24c256 0x54 > /sys/bus/i2c/devices/i2c-1/new_device
 
 # take asics out of reset
+/etc/init.d/opennsl-modules stop
 echo 1 > /sys/bus/pci/drivers/cpuctl/0000:05:00.0/jer_reset_seq
+sleep 1
+/etc/init.d/opennsl-modules start
 
 exit 0
