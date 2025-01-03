@@ -11,3 +11,5 @@ chassis/utils/70-persistent-net.rules etc/udev/rules.d
 chassis/utils/blacklist.conf etc/modprobe.d
 common/utils/nokia-asic-thermal.py opt/srlinux/bin
 common/service/nokia-asic-thermal.service lib/systemd/system
+common/utils/nokia-imm-ungraceful-reboot.py opt/srlinux/bin
+common/service/nokia-imm-ungraceful-reboot.service lib/systemd/system
