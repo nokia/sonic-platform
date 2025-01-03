@@ -1,0 +1,15 @@
+[Unit]
+Description=ports_notify Service
+Requires=swss.service database.service
+After=swss.service database.service
+BindsTo=swss.service database.service
+
+
+[Service]
+ExecStart=/usr/local/bin/ports_notify.py
+Restart=always
+RestartSec=10s
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
