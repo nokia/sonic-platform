@@ -37,6 +37,7 @@ typedef struct
 	int minor;
 	int enabled;
 	void __iomem *base;
+	u8 reset_list[36];
 	spinlock_t lock;
 } CTLDEV;
 
@@ -133,6 +134,12 @@ static inline void ctl_reg64_write(CTLDEV *p, unsigned offset, u32 value)
 #define CTL_MISC_IO4_ENA     0x02700044
 #define CTL_BDB_SIGDET  0x02700010
 #define CTL_BDB_ERRDET  0x02700014
+
+#define CTL_A32_MISCIO2_DATA            0x02700048
+#define FPGA_A32_CODE_VER               0x00800070
+#define IO_A32_PORT_MOD_ABS_BASE        0x00807D00
+#define IO_A32_PORT_MOD_RST_BASE        0x00807D40
+#define IO_A32_PORT_MOD_LPMODE_BASE     0x00807D60
 
 #define MISCIO3_IO_VERM_JER0_SYS_RST_BIT        (1 << 0)
 #define MISCIO3_IO_VERM_JER1_SYS_RST_BIT        (1 << 1)
