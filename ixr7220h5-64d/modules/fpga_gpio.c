@@ -1,3 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* FPGA driver
+* 
+* Copyright (C) 2024 Nokia Corporation.
+* Copyright (C) 2024 Delta Networks, Inc.
+*  
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* any later version.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* see <http://www.gnu.org/licenses/>
+*/
+
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/kernel.h>
@@ -36,10 +55,10 @@ static int fpga_gpio_get(struct gpio_chip *gc, unsigned gpio)
     int bit = fpga_gpio_info[gpio].bit;
 
     mutex_lock(&chip->lock);
-    //ret = (chip->buffer[bank] >> pin) & 0x1;
+
     rdata = ioread32(chip->bar + reg);
     ret = (rdata >> bit) & 0x1;
-    //printk(KERN_INFO "gpio = 0x%x chip->bar = 0x%x value = 0x%x", gpio, chip->bar, rdata);
+    dev_info(gc->parent, "gpio = 0x%x chip->bar = 0x%lx value = 0x%x", gpio, (unsigned long)chip->bar, rdata);
 
     mutex_unlock(&chip->lock);
 
@@ -81,14 +100,14 @@ int gpiodev_init(struct pci_dev *dev, struct fpga_dev *fpga)
     fpga->gpio->gpio_chip.label = name;
     fpga->gpio->gpio_chip.owner = THIS_MODULE;
     fpga->gpio->gpio_chip.ngpio = 32;
-    fpga->gpio->gpio_chip.parent = &dev->dev; //(struct devices) fpga
+    fpga->gpio->gpio_chip.parent = &dev->dev; /*(struct devices) fpga */
 
     fpga->gpio->gpio_chip.get = fpga_gpio_get;
     fpga->gpio->gpio_chip.set = fpga_gpio_set;
     err = gpiochip_add_data(&fpga->gpio->gpio_chip, fpga->gpio);
     if (err)
     {
-        printk(KERN_INFO "GPIO registering failed ");
+        dev_info(&dev->dev, "GPIO registering failed ");
         return err;
     }
     return 0;
@@ -98,4 +117,6 @@ void gpiodev_exit(struct pci_dev *dev)
 {
     struct fpga_dev *fpga = pci_get_drvdata(dev);
     gpiochip_remove(&fpga->gpio->gpio_chip);
+    kfree(fpga->gpio);
 }
+

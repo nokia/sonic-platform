@@ -18,8 +18,10 @@ def main():
             print("        Presence: {}, Status: {}, LED: {}".format(fan.get_presence(),
                                                                      fan.get_status(),
                                                                      fan.get_status_led()))
-            print("        Serial#: {}".format(fan.get_serial()))
-            print("        Part#: {}".format(fan.get_part_number()))
+            print("        Model: {}, Serial#: {}".format(fan.get_model(),
+                                                          fan.get_serial()))
+            print("        Part#: {}, Service Tag: {}".format(fan.get_part_number(),
+                                                              fan.get_service_tag()))
             print("        Direction: {}, Speed: {}%, Target Speed: {}%\n".format(fan.get_direction(),
                                                                                     str(fan.get_speed()),
                                                                                     str(fan.get_target_speed())))

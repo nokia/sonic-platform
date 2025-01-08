@@ -1,18 +1,21 @@
-//  FPGA driver
-//  
-//  Copyright (C) 2024 Nokia Corporation.
-//  Copyright (C) 2024 Delta Networks, Inc.
-//   
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  any later version.
-//  
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  see <http://www.gnu.org/licenses/>
+// SPDX-License-Identifier: GPL-2.0-only
+/*  
+* FPGA driver
+* 
+* Copyright (C) 2024 Nokia Corporation.
+* Copyright (C) 2024 Delta Networks, Inc.
+*  
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* any later version.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* see <http://www.gnu.org/licenses/> 
+*/
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -62,7 +65,6 @@ static ssize_t sys_fpga_reg_store(struct device *dev,
                                 struct device_attribute *attr, char *buf,
                                 size_t count)
 {
-    int err;
     fpga_sysfs_attr_st *fpga_container = TO_FPGA_SYSFS_ATTR(attr);
     sys_fpga_reg_st *fpga_reg = fpga_container->fpga_reg;
     int offset = fpga_reg->offset;
@@ -102,7 +104,7 @@ static ssize_t sys_fpga_reg_store(struct device *dev,
     iowrite32(val, bar + offset);
 
     mutex_unlock(&fpga_attr_lock);
-    //return sprintf(buf, "%d\n", val);
+    
     return count;
 
 }
@@ -146,7 +148,7 @@ int fpga_attr_init(struct pci_dev *dev, struct fpga_dev *fpga)
     if (error)
     {
         kobject_put(sys_fpga);
-        pr_info("failed to create the sys_fpga_reg file "
+        dev_info(&dev->dev, "failed to create the sys_fpga_reg file "
                 "in /sys/kernel/sys_fpga\n");
     }
     return 0;
