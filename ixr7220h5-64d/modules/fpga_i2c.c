@@ -1,3 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* FPGA driver
+* 
+* Copyright (C) 2024 Nokia Corporation.
+* Copyright (C) 2024 Delta Networks, Inc.
+*  
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* any later version.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* see <http://www.gnu.org/licenses/>
+*/
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/stddef.h>
@@ -18,15 +37,14 @@ fpga_i2c_s fpga_i2c_info[] = {
     {"FPGA SMBUS - PORT_6"      , 6, DELTA_I2C_BASE(8), FPGA_I2C_MUX_DIS, 0x00, 0},
     {"FPGA SMBUS - PORT_7"      , 7, DELTA_I2C_BASE(9), FPGA_I2C_MUX_DIS, 0x00, 0},
     {"FPGA SMBUS - PORT_8"      , 8, DELTA_I2C_BASE(10), FPGA_I2C_MUX_DIS, 0x00, 0},
-//    {"FPGA SMBUS - PORT_9"      , 9, DELTA_I2C_BASE(9), FPGA_I2C_MUX_DIS, 0x00, 0},
-//    {"FPGA SMBUS - 1588 DPLL"   , 10, DELTA_DPLL_I2C_BASE, FPGA_I2C_MUX_DIS, 0x00, 0},
-//    {"FPGA SMBUS - 1588 FPGA"   , 11, DELTA_FPGA_I2C_BASE, FPGA_I2C_MUX_DIS, 0x00, 0},
 };
 
 static int delta_wait_i2c_complete(struct i2c_bus_dev *i2c);
 static void delta_fpga_i2c_data_reg_set(struct i2c_bus_dev *i2c, int addr, int data);
 static void delta_fpga_i2c_addr_reg_set(struct i2c_bus_dev *i2c, int data);
+#ifdef FPGA_PCA9548
 static void delta_fpga_i2c_conf_reg_set(struct i2c_bus_dev *i2c, int data);
+#endif
 static void delta_fpga_i2c_ctrl_set(struct i2c_bus_dev *i2c, int data);
 static int delta_fpga_i2c_ctrl_get(struct i2c_bus_dev *i2c);
 
@@ -47,17 +65,14 @@ static s32 dni_fpga_i2c_access(struct i2c_adapter *adap, u16 addr,
     int rv = 0;
 
     mutex_lock(&fpga_i2c_lock);
-    //	printk(KERN_INFO "size=%d, read_write=%d addr=0x%x command=0x%x fpga_bus=%d \n",size,read_write,addr,command,i2c->busnum);
     switch (size)
     {
 
     case I2C_SMBUS_QUICK:
-        //		printk(KERN_INFO "I2C_SMBUS_QUICK");
         rv = dni_fpga_i2c_write(i2c, addr, command, 0, &i2c_data, 0);
         goto done;
         break;
     case I2C_SMBUS_BYTE:
-        //		printk(KERN_INFO "I2C_SMBUS_BYTE");
         if (read_write == I2C_SMBUS_WRITE)
         {
             rv = dni_fpga_i2c_write(i2c, addr, command, 1, &i2c_data, 0);
@@ -97,7 +112,6 @@ static s32 dni_fpga_i2c_access(struct i2c_adapter *adap, u16 addr,
         {
             /* TODO: not verify */
             rv = dni_fpga_i2c_write(i2c, addr, command, 1, (uint8_t *)&data->word, 2);
-            //			printk(KERN_INFO "I2C_FUNC_SMBUS_WORD_DATA write");
             goto done;
         }
         else
@@ -121,9 +135,7 @@ static s32 dni_fpga_i2c_access(struct i2c_adapter *adap, u16 addr,
             goto done;
         }
         else
-        {
-            //			dni_fpga_i2c_read(i2c, addr, command, 1, &data->byte, 1);
-            //			len = min_t(u8, data->byte, I2C_SMBUS_BLOCK_MAX);
+        {            
             len = I2C_SMBUS_BLOCK_MAX;
             rv = dni_fpga_i2c_read(i2c, addr, command, 1, &data->block[0], len + 1);
             goto done;
@@ -172,7 +184,7 @@ static int delta_wait_i2c_complete(struct i2c_bus_dev *i2c)
     {
         if (timeout > DELTA_I2C_WAIT_BUS_TIMEOUT)
         {
-            printk(KERN_INFO "i2c wait for complete timeout: time=%lu us status=0x%llx", timeout, status);
+            dev_info(i2c->adapter.dev.parent, "i2c wait for complete timeout: time=%lu us status=0x%llx", timeout, status);
             return -ETIMEDOUT;
         }
         udelay(100);
@@ -262,7 +274,6 @@ static int dni_fpga_i2c_write(struct i2c_bus_dev *i2c, int addr, int raddr, int 
         rw_data = (data[i * 4 + 3] << 24) | (data[i * 4 + 2] << 16) | (data[i * 4 + 1] << 8) | data[i * 4 + 0];
         delta_fpga_i2c_data_reg_set(i2c, offset, rw_data);
     }
-    //	printk(KERN_INFO "four_byte : rw_data = 0x%lx",rw_data);
     rw_data = 0;
     for (i = 0; i < one_byte; i++)
     {
@@ -270,9 +281,7 @@ static int dni_fpga_i2c_write(struct i2c_bus_dev *i2c, int addr, int raddr, int 
     }
     offset = four_byte * 4;
     delta_fpga_i2c_data_reg_set(i2c, offset, rw_data);
-
-    //	printk(KERN_INFO "one_byte : rw_data = 0x%lx",rw_data);
-
+    
     /* Set address register */
     if (rsize == 0)
         addr_data = 0;
@@ -311,17 +320,15 @@ static int dni_fpga_i2c_write(struct i2c_bus_dev *i2c, int addr, int raddr, int 
     /* wait for i2c transaction completion */
     if (delta_wait_i2c_complete(i2c))
     {
-        printk(KERN_INFO "i2c transaction completion timeout");
+        dev_info(i2c->adapter.dev.parent, "i2c transaction completion timeout");
         rv = -EBUSY;
         return rv;
     }
-    /* check status */
-    //DNI_LOG_INFO("check i2c transaction status ...");
+    /* check status */    
     status = io_read(i2c, DELTA_I2C_CTRL(i2c->offset));
-    //	udelay(500);
+    
     if ((status & I2C_TRANS_FAIL))
     {
-        //		printk(KERN_INFO "I2C read failed: status=0x%lx", status);
         rv = -EIO; /* i2c transfer error */
         goto fail;
     }
@@ -383,17 +390,16 @@ static int dni_fpga_i2c_read(struct i2c_bus_dev *i2c, int addr, int raddr, int r
     /* wait for i2c transaction completion */
     if (delta_wait_i2c_complete(i2c))
     {
-        printk(KERN_ERR "i2c transaction completion timeout");
+        dev_warn(i2c->adapter.dev.parent, "i2c transaction completion timeout");
         rv = -EBUSY;
         goto fail;
     }
     /* check status */
-    //DNI_LOG_INFO("check i2c transaction status ...\n");
+    
     udelay(100);
     status = io_read(i2c, DELTA_I2C_CTRL(i2c->offset));
     if ((status & I2C_TRANS_FAIL))
     {
-        //printk(KERN_ERR "I2C read failed:addr_data=0x%lx,  ctrl_data=0x%lx, status=0x%lx ",addr_data, ctrl_data ,status);
         rv = -EIO; /* i2c transfer error */
         goto fail;
     }
@@ -453,11 +459,11 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
 
     fpga->i2c = kzalloc(sizeof(struct i2c_bus_dev) * num_i2c_adapter, GFP_KERNEL);
 
-    if (!fpga)
+    if (!fpga->i2c)
         return -ENOMEM;
 
     pci_set_drvdata(dev, fpga);
-    printk(KERN_INFO "fpga = 0x%x, pci_size = 0x%x \n", fpga, pci_size);
+    dev_info(&dev->dev, "fpga = 0x%lx, pci_size = 0x%x \n", (unsigned long)fpga, pci_size);
     mutex_init(&fpga_i2c_lock);
     /* Create PCIE device */
     for (i = 0; i < num_i2c_master; i++)
@@ -468,10 +474,10 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
 
         (fpga->i2c + bus)->bar = ioremap(pci_resource_start(dev, 0), pci_resource_len(dev, 0));
 
-        printk(KERN_INFO "BAR0 Register[0x%x] = 0x%x\n",
+        dev_info(&dev->dev, "BAR0 Register[0x%x] = 0x%x\n",
                (fpga->i2c + bus)->bar, ioread32((fpga->i2c + bus)->bar));
         /* Create I2C adapter */
-        printk(KERN_INFO "dev-%d, pci_base = 0x%x, dev_offset = 0x%x", i, fpga->pci_base, fpga_i2c_info[i].offset);
+        dev_info(&dev->dev, "dev-%d, pci_base = 0x%x, dev_offset = 0x%x", i, fpga->pci_base, fpga_i2c_info[i].offset);
         (fpga->i2c + bus)->adapter.owner = THIS_MODULE;
         snprintf((fpga->i2c + bus)->adapter.name, sizeof((fpga->i2c + bus)->adapter.name),
                 fpga_i2c_info[i].name, i);
@@ -480,8 +486,7 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
         (fpga->i2c + bus)->adapter.algo_data = fpga->i2c + bus;
         /* set up the sysfs linkage to our parent device */
         (fpga->i2c + bus)->adapter.dev.parent = &dev->dev;
-        /* set i2c adapter number */
-        //		(fpga->i2c+bus)->adapter.nr = i+10;
+        
         /* set up the busnum */
         (fpga->i2c + bus)->busnum = i;
         (fpga->i2c + bus)->offset = fpga_i2c_info[i].offset;
@@ -489,7 +494,6 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
         (fpga->i2c + bus)->mux_ch = 0;
         (fpga->i2c + bus)->mux_en = FPGA_I2C_MUX_DIS;
 
-        //		error = i2c_add_numbered_adapter(&(fpga->i2c+bus)->adapter);
         error = i2c_add_adapter(&(fpga->i2c + bus)->adapter);
         if (error)
             goto out_release_region;
@@ -501,11 +505,11 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
             {
                 (fpga->i2c + bus)->bar = ioremap(pci_resource_start(dev, 0), pci_resource_len(dev, 0));
 
-                printk(KERN_INFO "BAR0 Register[0x%x] = 0x%x\n",
+                dev_info(&dev->dev, "BAR0 Register[0x%x] = 0x%x\n",
                        (fpga->i2c + bus)->bar, ioread32((fpga->i2c + bus)->bar));
 
                 /* Create I2C adapter */
-                printk(KERN_INFO "dev-%d, pci_base = 0x%x, dev_offset = 0x%x", i, fpga->pci_base, fpga_i2c_info[i].offset);
+                dev_info(&dev->dev, "dev-%d, pci_base = 0x%x, dev_offset = 0x%x", i, fpga->pci_base, fpga_i2c_info[i].offset);
                 (fpga->i2c + bus)->adapter.owner = THIS_MODULE;
                 snprintf((fpga->i2c + bus)->adapter.name, sizeof((fpga->i2c + bus)->adapter.name),
                         fpga_i2c_info[i].name, i, j);
@@ -514,8 +518,7 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
                 (fpga->i2c + bus)->adapter.algo_data = fpga->i2c + bus;
                 /* set up the sysfs linkage to our parent device */
                 (fpga->i2c + bus)->adapter.dev.parent = &dev->dev;
-                /* set i2c adapter number */
-                //		(fpga->i2c+bus)->adapter.nr = i+10;
+                
                 /* set up the busnum */
                 (fpga->i2c + bus)->busnum = i;
                 /* set up i2c mux */

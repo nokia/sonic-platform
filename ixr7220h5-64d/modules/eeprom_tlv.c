@@ -294,7 +294,7 @@ int tlv_decode(struct i2c_client *client, const u8 *buffer, const u32 length)
                 break;
         }
 
-        // Cannot parse if length field of TLV entry exceeds the total length of the buffer
+        /* Cannot parse if length field of TLV entry exceeds the total length of the buffer */
         if (offset + L > length)
         {
             dev_err(dev, "Tag 0x%x with length %x exceeds total buffer length %x", T, L, length);
@@ -307,7 +307,7 @@ int tlv_decode(struct i2c_client *client, const u8 *buffer, const u32 length)
 
         offset += L;
 #if VERBOSE
-        // CRC32 should always be the last TLV entry
+        /* CRC32 should always be the last TLV entry */
         if (T == ONIE_TLV_CODE_CRC_32)
         {
             if(debug) {
@@ -356,12 +356,12 @@ int decode_eeprom(struct i2c_client *client)
         return -ENOMEM;
     }
 
-    // i2c_smbus initiate eeprom chip's internel "CURRENT ADDRESS" for reading
-    i2c_smbus_write_byte(client,0);
-    msleep(1);
-
     for (int i = 0; i < read_eeprom_max_len; i++) {
-        raw_data[i]= i2c_smbus_read_byte(client);
+        /* i2c_smbus_read_byte_data initiate eeprom chip's internel "CURRENT ADDRESS" for reading */
+        if(i == 0)
+            raw_data[i] = i2c_smbus_read_byte_data(client,0);
+        else
+            raw_data[i] = i2c_smbus_read_byte(client);
     }
 
     if(debug) {
@@ -488,7 +488,7 @@ static ssize_t show_crc(struct device *dev, struct device_attribute *devattr, ch
     return sprintf(buf, "0x%08x\n", data->crc);
 }
 
-// sysfs attributes
+/* sysfs attributes */
 static SENSOR_DEVICE_ATTR(product_name, S_IRUGO, show_product_name, NULL, 0);
 static SENSOR_DEVICE_ATTR(base_mac, S_IRUGO, show_base_mac, NULL, 0);
 static SENSOR_DEVICE_ATTR(mfg_date, S_IRUGO, show_mfg_date, NULL, 0);

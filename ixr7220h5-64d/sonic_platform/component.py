@@ -57,7 +57,7 @@ class Component(ComponentBase):
 
     CPLD_UPDATE_COMMAND = ['./vme_h5_64d', '', '']
     FPGA_UPDATE_COMMAND = ['./fpga_upg_tool', '-c', '1', '-p', '', '']
-    BIOS_UPDATE_COMMAND = ['./afulnx_64', '', '/P', '/B', '/N', '/K', '/X']
+    BIOS_UPDATE_COMMAND = ['./afulnx_64', '', '/P', '/B', '/N', '/K']
 
     def __init__(self, component_index):
         self.index = component_index

@@ -1,18 +1,21 @@
-//  FPGA driver
-//  
-//  Copyright (C) 2024 Nokia Corporation.
-//  Copyright (C) 2024 Delta Networks, Inc.
-//   
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  any later version.
-//  
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//  see <http://www.gnu.org/licenses/>
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* FPGA driver
+* 
+* Copyright (C) 2024 Nokia Corporation.
+* Copyright (C) 2024 Delta Networks, Inc.
+*  
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* any later version.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* see <http://www.gnu.org/licenses/>
+*/
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -20,7 +23,7 @@
 #include "fpga_attr.h"
 #include "fpga_reg.h"
 
-const sys_fpga_reg_st sys_fpga_reg_table[19] = {
+const sys_fpga_reg_st sys_fpga_reg_table[FPGA_REG_TAB_LEN] = {
     { "scratch", NULL, I2C_DEV_ATTR_SHOW_DEFAULT, I2C_DEV_ATTR_STORE_DEFAULT, 0x00, 0, 32 },
     { "code_ver", NULL, I2C_DEV_ATTR_SHOW_DEFAULT, I2C_DEV_ATTR_STORE_DEFAULT, 0x04, 0, 8 },
     { "code_day", NULL, I2C_DEV_ATTR_SHOW_DEFAULT, I2C_DEV_ATTR_STORE_DEFAULT, 0x08, 8, 8 },

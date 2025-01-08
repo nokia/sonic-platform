@@ -88,6 +88,5 @@ struct fpga_dev
 };
 
 static const size_t BUF_SIZE = PAGE_SIZE;
-static struct pci_driver sys_fpga_driver;
 
 #endif /* __FGPA_H__ */

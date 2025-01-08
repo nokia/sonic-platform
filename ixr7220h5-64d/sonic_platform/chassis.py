@@ -33,7 +33,7 @@ FANS_PER_DRAWER = 2
 PSU_NUM = 2
 THERMAL_NUM = 11
 COMPONENT_NUM = 5
-
+MAX_SELECT_DELAY = 10
 SYSLOG_IDENTIFIER = "chassis"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
 #sonic_logger.set_min_log_priority_info()
