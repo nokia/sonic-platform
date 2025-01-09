@@ -886,7 +886,10 @@ class Chassis(ChassisBase):
 
 
     def reboot_imms(self):
-         nokia_common._reboot_IMMs()
-
+        nokia_common._reboot_IMMs()
+         
+    def force_reboot_imm(self, slot):
+        nokia_common._force_reboot_imm(slot)
+    
     def tx_disable_all_sfps(self):
         nokia_common._tx_disable_all_sfps()

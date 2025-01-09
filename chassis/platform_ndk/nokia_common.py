@@ -354,6 +354,32 @@ def _reboot_IMMs_via_midplane(imm_slot, reboot_type_=None):
     channel_shutdown(channel)
     return rv
 
+def _force_reboot_IMMs_via_midplane(imm_slot, reboot_type_=None):
+    # Use this reboot_reason to trigger the NDK /opt/srlinux/bin/reboot_platform.sh
+    time_now = datetime.now()
+    if reboot_type_ == "PMON_API":
+        user = "PMON_API"
+    else:
+        try:
+            user = os.getlogin()
+        except Exception:
+            user = "Unknown"
+
+    reboot_reason_ = "Unable to reach CPM. Supervisor forces reboot IMM"
+    channel, stub = midplane_channel_setup(NOKIA_GRPC_CHASSIS_SERVICE, imm_slot)
+    if not channel or not stub:
+        return False
+    reboot_cause = platform_ndk_pb2.reboot_cause(reboot_type=reboot_type_, reboot_reason=reboot_reason_)
+    response = stub.RebootSlot(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot,reboot_type_reason=reboot_cause))
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+        print('Force Rebooting IMM {} via midplane failed'.format(imm_slot))
+        rv = False
+    else:
+        print('Force Rebooting - IMM {} - slot reboot requested via midplane'.format(imm_slot))
+        rv = True
+    channel_shutdown(channel)
+    return rv
+
 def _reboot_IMMs(reboot_type=None):
     for imm_slot in range(1, NOKIA_MAX_IMM_SLOTS+1):        
         ret = _reboot_IMMs_via_midplane(imm_slot, reboot_type)
@@ -365,6 +391,14 @@ def _reboot_imm(slot):
     if slot < 1 or slot > NOKIA_MAX_IMM_SLOTS:
         return
     ret = _reboot_IMMs_via_midplane(slot)
+    if ret == False:
+        ret = _cpm_reboot_IMMs(slot)
+    return ret
+
+def _force_reboot_imm(slot):
+    if slot < 1 or slot > NOKIA_MAX_IMM_SLOTS:
+        return
+    ret = _force_reboot_IMMs_via_midplane(slot)
     if ret == False:
         ret = _cpm_reboot_IMMs(slot)
     return ret
