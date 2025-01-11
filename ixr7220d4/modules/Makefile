@@ -1,0 +1,1 @@
+obj-m := d4_cpupld.o d4_cpld1.o d4_cpld2.o d4_cpld3.o fan_cpld.o acton_psu.o

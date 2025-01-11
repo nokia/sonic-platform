@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-IXR7220-D4-36D Platform Service
+After=sysinit.target
+Before=pmon.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/d4_platform_init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
