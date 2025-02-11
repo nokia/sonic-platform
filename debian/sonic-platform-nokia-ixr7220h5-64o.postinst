@@ -1,0 +1,11 @@
+#!/bin/sh
+# postinst script for sonic-platform-nokia-IXR7220-H5-64O
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/h5_64o_platform_init.sh
+chmod a+x /usr/local/bin/ports_notify.py
+systemctl enable h5_64o_platform_init.service
+systemctl start h5_64o_platform_init.service
+systemctl enable ports_notify.service
+systemctl start --no-block ports_notify.service

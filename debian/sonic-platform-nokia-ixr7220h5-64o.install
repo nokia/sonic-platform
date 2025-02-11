@@ -1,0 +1,5 @@
+ixr7220h5-64o/scripts/h5_64o_platform_init.sh usr/local/bin
+ixr7220h5-64o/scripts/ports_notify.py usr/local/bin
+ixr7220h5-64o/service/h5_64o_platform_init.service etc/systemd/system
+ixr7220h5-64o/service/ports_notify.service etc/systemd/system/
+ixr7220h5-64o/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7220_h5_64o-r0
