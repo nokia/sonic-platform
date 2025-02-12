@@ -9,6 +9,11 @@ Package: sonic-platform-nokia-chassis
 Architecture: amd64
 Description: placeholder for hypothetical kernel modules for platform devices
 
+Package: sonic-platform-nokia-ixr7220d4
+Architecture: amd64
+Depends:  ${misc:Depends}
+Description: kernel modules for platform devices such as qsfp, fan, psu, led
+
 Package: sonic-platform-nokia-ixr7220h3
 Architecture: amd64
 Depends:  ${misc:Depends}

@@ -1,0 +1,8 @@
+#!/bin/sh
+# postinst script for sonic-platform-nokia-IXR7220-D4
+#
+# see: dh_installdeb(1)
+
+chmod a+x /usr/local/bin/d4_platform_init.sh
+systemctl enable d4_platform_init.service
+systemctl start d4_platform_init.service
