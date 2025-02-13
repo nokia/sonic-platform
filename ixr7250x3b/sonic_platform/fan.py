@@ -54,6 +54,7 @@ class Fan(FanBase):
             self.get_fan_speed_reg = hwmon_path[0] + f"fan{tach_index}_input"
             self.fan_speed_enable_reg = hwmon_path[0] + f"fan{tach_index}_enable"
             self.pwm_enable_reg = hwmon_path[0] + f"pwm{tach_index}_enable"
+            self.pwm_enabled = False
             
             if tach_index == 1 or tach_index == 2:
                 self.max_fan_speed = MAX_FAN_F_SPEED
@@ -88,10 +89,18 @@ class Fan(FanBase):
         if result == '0': # present
             if not os.path.exists(self.eeprom_dir):
                 os.system(self.new_cmd)
+            if not self.pwm_enabled:
+                result = write_sysfs_file(self.pwm_enable_reg, '1')
+                if (result == 'ERR'):
+                    return False
+                self.pwm_enabled = True
+
             return True
         # not present
         if os.path.exists(self.eeprom_dir):
             os.system(self.del_cmd)
+        if self.pwm_enabled:
+            self.pwm_enabled = False
         return False
 
     def get_model(self):

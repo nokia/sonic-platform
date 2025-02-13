@@ -45,7 +45,7 @@ file_exists() {
     return 0
  }
 
- # Install kernel drivers required for i2c bus access
+# Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
 # Enumerate system eeprom
@@ -81,6 +81,11 @@ echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-14/new_device
 echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-15/new_device
 echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-14/new_device
 echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-15/new_device
+
+for num in {27..62}; do
+    echo 200 > /sys/bus/i2c/devices/${num}-0050/write_timeout
+    sleep 0.1
+done
 
 file_exists /sys/bus/i2c/devices/1-0054/eeprom
 status=$?
