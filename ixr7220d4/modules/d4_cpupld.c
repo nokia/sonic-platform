@@ -35,6 +35,7 @@
 #define SYSTEM_RST_REG          0x04
 #define PWR_RAIL_REG1           0x05
 #define PWR_RAIL_REG2           0x06
+#define MISC_REG                0x07
 #define CPU_STATUS_REG          0x08
 #define LAST_RST_REG            0x24
 
@@ -68,6 +69,7 @@
 #define PWR_RAIL_REG2_PVCCKRHV                0x2
 #define PWR_RAIL_REG2_PVCCIN                  0x3
 #define PWR_RAIL_REG2_P5V_STBY                0x4
+#define MISC_JTAG_SEL                         0x3
 #define CPU_STATUS_REG_LSB_MSK                0xF
 #define CPU_STATUS_REG_MSB                    0x4
 
@@ -291,6 +293,43 @@ static ssize_t show_pwr_rail2(struct device *dev, struct device_attribute *devat
 
 /* ---------------- */
 
+static ssize_t show_misc(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 val = 0;
+    val = cpld_i2c_read(data, MISC_REG);
+
+    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+}
+
+static ssize_t set_misc(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 reg_val = 0;
+    u8 usr_val = 0;
+    u8 mask;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret;
+    }
+    if (usr_val > 1) {
+        return -EINVAL;
+    }
+
+    mask = (~(1 << sda->index)) & 0xFF;
+    reg_val = cpld_i2c_read(data, MISC_REG);
+    reg_val = reg_val & mask;
+    usr_val = usr_val << sda->index;
+    cpld_i2c_write(data, MISC_REG, (reg_val | usr_val));
+
+    return count;
+}
+
+/* ---------------- */
+
 static ssize_t show_lsb_post_code(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -347,6 +386,7 @@ static SENSOR_DEVICE_ATTR(pwr_rail2_pvccscfusesus, S_IRUGO, show_pwr_rail2, NULL
 static SENSOR_DEVICE_ATTR(pwr_rail2_pvcckrhv, S_IRUGO, show_pwr_rail2, NULL, PWR_RAIL_REG2_PVCCKRHV);
 static SENSOR_DEVICE_ATTR(pwr_rail2_p1v8, S_IRUGO, show_pwr_rail2, NULL, PWR_RAIL_REG2_PVCCIN);
 static SENSOR_DEVICE_ATTR(pwr_rail2_p5v, S_IRUGO, show_pwr_rail2, NULL, PWR_RAIL_REG2_P5V_STBY);
+static SENSOR_DEVICE_ATTR(jtag_sel, S_IRUGO | S_IWUSR, show_misc, set_misc, MISC_JTAG_SEL);
 static SENSOR_DEVICE_ATTR(lsb_post_code, S_IRUGO, show_lsb_post_code, NULL, 0);
 static SENSOR_DEVICE_ATTR(msb_post_code, S_IRUGO, show_msb_post_code, NULL, 0);
 static SENSOR_DEVICE_ATTR(reset_cause, S_IRUGO, show_last_rst, NULL, 0);
@@ -381,6 +421,7 @@ static struct attribute *d4_cpupld_attributes[] = {
     &sensor_dev_attr_pwr_rail2_pvcckrhv.dev_attr.attr,
     &sensor_dev_attr_pwr_rail2_p1v8.dev_attr.attr,
     &sensor_dev_attr_pwr_rail2_p5v.dev_attr.attr,
+    &sensor_dev_attr_jtag_sel.dev_attr.attr,
     &sensor_dev_attr_lsb_post_code.dev_attr.attr,
     &sensor_dev_attr_msb_post_code.dev_attr.attr,
     &sensor_dev_attr_reset_cause.dev_attr.attr,

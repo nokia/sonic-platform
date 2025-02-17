@@ -10,8 +10,9 @@ try:
     import os
     import subprocess
     import ntpath
+    import time
     from sonic_platform_base.component_base import ComponentBase
-    from sonic_platform.sysfs import read_sysfs_file
+    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
@@ -153,19 +154,38 @@ class Component(ComponentBase):
                 print("ERROR: the CPLD upgrade tool /tmp/cpldupd_d4 doesn't exist ")
                 return False
             if self.get_name() == "FANPLD":
+                write_sysfs_file("/sys/bus/i2c/devices/1-0065/jtag_sel", str(0))
+                write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_sel", str(1))
+                write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_oe", str(0))
                 self.CPLD_UPDATE_COMMAND[2] = "FAN_CPLD"
             elif self.get_name() == "CPUPLD":
                 self.CPLD_UPDATE_COMMAND[2] = "CPU_CPLD"
-            else:
+            elif self.get_name() in ("SWPLD1", "SWPLD2", "SWPLD3"):
+                write_sysfs_file("/sys/bus/i2c/devices/1-0065/jtag_sel", str(0))
+                write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_sel", str(0))
+                write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_oe", str(0))
                 self.CPLD_UPDATE_COMMAND[2] = "MAIN_CPLD"
+            else:
+                print(f"ERROR: component with {self.get_name()} name was not found")
+                return False
             self.CPLD_UPDATE_COMMAND[3] = image_name
             UPDATE_CMD = self.CPLD_UPDATE_COMMAND
 
         try:
             subprocess.run(UPDATE_CMD, stderr=subprocess.STDOUT)
+            print(f"\n{self.get_name()} upgraded!\n")
+            print("!!!The system will power cycle in 10 sec!!!")
+            time.sleep(10)
+            write_sysfs_file("/sys/bus/i2c/devices/10-0060/psu2_power_ok", str(1))
+            write_sysfs_file("/sys/bus/i2c/devices/10-0060/psu1_power_ok", str(1))
         except subprocess.CalledProcessError as e:
             print(f"ERROR: Failed to upgrade {self.get_name()}: rc={e.returncode}")
-        print(f"\n{self.get_name()} upgraded!\n")
+
+        if self.get_name() in ("FANPLD", "SWPLD1", "SWPLD2", "SWPLD3"):
+            write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_sel", str(0))
+            write_sysfs_file("/sys/bus/i2c/devices/10-0060/jtag_sw_oe", str(1))
+            write_sysfs_file("/sys/bus/i2c/devices/1-0065/jtag_sel", str(1))
+
         return True
 
     def update_firmware(self, _image_path):

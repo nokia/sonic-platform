@@ -45,6 +45,7 @@
 #define MOD_PRSNT_REG3          0x21
 #define MOD_PRSNT_REG4          0x22
 #define MOD_PRSNT_REG5          0x23
+#define MISC2_REG               0x27
 #define SYSTEM_LED_REG1         0x59
 #define SYSTEM_LED_REG2         0x60
 
@@ -73,6 +74,14 @@
 #define PSU2_LED_MASK          0x2
 #define FAN_LED_MASK           0x4
 #define SYSTEM_LED_MASK        0x4
+
+#define I2C_MUX1_S             0x0
+#define I2C_MUX2_S             0x1
+#define JTAG_BUS_SEL           0x2
+#define JTAG_SW_SEL            0x3
+#define JTAG_SW_OE             0x4
+#define EPROM_WP               0x5
+#define BCM81356_SPI_WP        0x6
 
 static const unsigned short cpld1_address_list[] = {0x60, I2C_CLIENT_END};
 
@@ -493,6 +502,41 @@ static ssize_t show_module_prsnt5(struct device *dev, struct device_attribute *d
 
 /* ---------------- */
 
+static ssize_t show_misc2(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+     struct cpld_data *data = dev_get_drvdata(dev);
+     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+     u8 val = 0;
+     val = cpld_i2c_read(data, MISC2_REG);
+
+     return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
+}
+
+static ssize_t set_misc2(struct device *dev, struct device_attribute *devattr,  const char *buf, size_t count)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 reg_val=0, usr_val=0, mask;
+    int ret=kstrtou8(buf,10, &usr_val);
+    if (ret != 0) {
+        return ret;
+    }
+    if (usr_val > 1) {
+        return -EINVAL;
+    }
+
+    mask = (~(0x1 << sda->index)) & 0xFF;
+    reg_val = cpld_i2c_read(data, MISC2_REG);
+    reg_val = reg_val & mask;
+    usr_val = usr_val << sda->index;
+
+    cpld_i2c_write(data, MISC2_REG, (reg_val|usr_val));
+
+    return count;
+}
+
+/* ---------------- */
+
 static ssize_t show_system_led1(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -732,6 +776,13 @@ static SENSOR_DEVICE_ATTR(qsfp33_mod_prsnt, S_IRUGO, show_module_prsnt1, NULL, 4
 static SENSOR_DEVICE_ATTR(qsfp34_mod_prsnt, S_IRUGO, show_module_prsnt1, NULL, 5);
 static SENSOR_DEVICE_ATTR(qsfp35_mod_prsnt, S_IRUGO, show_module_prsnt1, NULL, 6);
 static SENSOR_DEVICE_ATTR(qsfp36_mod_prsnt, S_IRUGO, show_module_prsnt1, NULL, 7);
+static SENSOR_DEVICE_ATTR(i2c_mux1_sel, S_IRUGO | S_IWUSR, show_misc2, set_misc2, I2C_MUX1_S);
+static SENSOR_DEVICE_ATTR(i2c_mux2_sel, S_IRUGO | S_IWUSR, show_misc2, set_misc2, I2C_MUX2_S);
+static SENSOR_DEVICE_ATTR(jtag_bus_sel, S_IRUGO | S_IWUSR, show_misc2, set_misc2, JTAG_BUS_SEL);
+static SENSOR_DEVICE_ATTR(jtag_sw_sel, S_IRUGO | S_IWUSR, show_misc2, set_misc2, JTAG_SW_SEL);
+static SENSOR_DEVICE_ATTR(jtag_sw_oe, S_IRUGO | S_IWUSR, show_misc2, set_misc2, JTAG_SW_OE);
+static SENSOR_DEVICE_ATTR(eeprom_wp, S_IRUGO | S_IWUSR, show_misc2, set_misc2, EPROM_WP);
+static SENSOR_DEVICE_ATTR(bcm_spi_wp, S_IRUGO | S_IWUSR, show_misc2, set_misc2, BCM81356_SPI_WP);
 static SENSOR_DEVICE_ATTR(psu1_led, S_IRUGO | S_IWUSR, show_system_led1, set_system_led1, PSU1_LED_MASK);
 static SENSOR_DEVICE_ATTR(psu2_led, S_IRUGO | S_IWUSR, show_system_led1, set_system_led1, PSU2_LED_MASK);
 static SENSOR_DEVICE_ATTR(fan_led, S_IRUGO | S_IWUSR, show_system_led1, set_system_led1, FAN_LED_MASK);
@@ -864,6 +915,13 @@ static struct attribute *d4_cpld1_attributes[] = {
     &sensor_dev_attr_qsfp34_mod_prsnt.dev_attr.attr,
     &sensor_dev_attr_qsfp35_mod_prsnt.dev_attr.attr,
     &sensor_dev_attr_qsfp36_mod_prsnt.dev_attr.attr,
+    &sensor_dev_attr_i2c_mux1_sel.dev_attr.attr,
+    &sensor_dev_attr_i2c_mux2_sel.dev_attr.attr,
+    &sensor_dev_attr_jtag_bus_sel.dev_attr.attr,
+    &sensor_dev_attr_jtag_sw_sel.dev_attr.attr,
+    &sensor_dev_attr_jtag_sw_oe.dev_attr.attr,
+    &sensor_dev_attr_eeprom_wp.dev_attr.attr,
+    &sensor_dev_attr_bcm_spi_wp.dev_attr.attr,
     &sensor_dev_attr_psu1_led.dev_attr.attr,
     &sensor_dev_attr_psu2_led.dev_attr.attr,
     &sensor_dev_attr_fan_led.dev_attr.attr,
