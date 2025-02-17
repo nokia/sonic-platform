@@ -27,8 +27,7 @@
 #define DRIVER_NAME "d4_cpld3"
 
 // REGISTERS ADDRESS MAP
-#define CPLD3_VER_REG                   0x00
-
+#define CPLD3_VER_REG                   0x01
 #define QSFP28_P18_11_LOOP_REG          0x40
 #define QSFP28_P10_03_LOOP_REG          0x41
 #define QSFP28_P02_01_LOOP_REG          0x42
