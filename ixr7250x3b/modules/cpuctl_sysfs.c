@@ -222,31 +222,6 @@ static ssize_t port_rst_store(struct device *dev, struct device_attribute *devat
 	return count;
 }
 
-static ssize_t port_reset_show(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-	
-	return sprintf(buf, "%d\n", pdev->reset_list[sda->index]);
-}
-
-static ssize_t port_reset_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
-{
-	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-	u8 usr_val = 0;
-
-	int ret = kstrtou8(buf, 10, &usr_val);
-	if (ret != 0) 
-		return ret;
-	if (usr_val > 0xF)
-		return -EINVAL;
-
-	pdev->reset_list[sda->index] = usr_val;
-
-	return count;
-}
-
 static ssize_t port_led_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
