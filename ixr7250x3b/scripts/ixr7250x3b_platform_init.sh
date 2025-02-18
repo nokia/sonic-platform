@@ -18,12 +18,14 @@ load_kernel_drivers() {
     modprobe i2c-dev
     modprobe i2c-mux
     modprobe cpuctl
+    #modprobe rtc_ds1307
     modprobe optoe
     modprobe at24
     modprobe max31790
     modprobe psu_x3b
     modprobe fan_eeprom
     modprobe psu_eeprom
+    #modprobe leds-pca963x
 }
 
 x3b_profile()
@@ -48,9 +50,14 @@ file_exists() {
 # Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
+#echo m41t11 0x68 > /sys/bus/i2c/devices/i2c-7/new_device
+
 # Enumerate system eeprom
 file_exists /sys/bus/i2c/devices/i2c-1/new_device
 echo 24c64 0x54 > /sys/bus/i2c/devices/i2c-1/new_device
+
+#hwclock -s -f /dev/rtc1
+#hwclock -w -f /dev/rtc0
 
 # take asics out of reset
 /etc/init.d/opennsl-modules stop
@@ -83,7 +90,7 @@ echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-14/new_device
 echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-15/new_device
 
 for num in {27..62}; do
-    echo 200 > /sys/bus/i2c/devices/${num}-0050/write_timeout
+    echo 300 > /sys/bus/i2c/devices/${num}-0050/write_timeout
     sleep 0.1
 done
 

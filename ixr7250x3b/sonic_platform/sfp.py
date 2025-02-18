@@ -169,27 +169,10 @@ class Sfp(SfpOptoeBase):
 
         result1 = 'ERR'
         result2 = 'ERR'
-        t = 0
-
-        if self.index <= PORT_NUM:
-            result2 = write_sysfs_file(self.swpld_path+f"port_{self.index}_reset", '1')
-            result2 = write_sysfs_file(self.swpld_path+f"port_{self.index}_lpmod", '1')
-            result1 = write_sysfs_file(self.swpld_path+f"port_{self.index}_rst", '0')
-            time.sleep(0.5)
-            while t < 10:
-                if read_sysfs_file(self.swpld_path+f"port_{self.index}_reset") == '2':
-                    result1 = write_sysfs_file(self.swpld_path+f"port_{self.index}_rst", '1')
-                    time.sleep(2)
-                    break
-                time.sleep(0.5)
-                if t == 8:
-                    sonic_logger.log_info(f"Reset port #{self.index} timeout, reset failed.")
-                    return False
-                t = t + 1
-
-            result2 = write_sysfs_file(self.swpld_path+f"port_{self.index}_reset", '3')
-        else:
-            return False
+        result1 = write_sysfs_file(self.swpld_path+f"port_{self.index}_lpmod", '1')
+        result2 = write_sysfs_file(self.swpld_path+f"port_{self.index}_rst", '0')
+        time.sleep(0.5)
+        result2 = write_sysfs_file(self.swpld_path+f"port_{self.index}_rst", '1')
 
         if result1 != 'ERR' and result2 != 'ERR':
             return True

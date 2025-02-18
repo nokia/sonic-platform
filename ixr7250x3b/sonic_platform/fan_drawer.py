@@ -27,7 +27,7 @@ class NokiaFanDrawer(FanDrawerBase):
         self._index = index + 1
         self.reg_dir = REG_DIR
         self.fan_led_color = ['off', 'green','amber', 'green_blink',
-                            'amber_blink', 'alter_green_amber', 'off', 'off']
+                            'amber_blink']
 
         # Possible fan directions (relative to port-side of device)
         self.fan_direction_intake = "intake"
@@ -60,7 +60,6 @@ class NokiaFanDrawer(FanDrawerBase):
         if os.path.exists(self.eeprom_dir):
             os.system(self.del_cmd)
         return False
-
 
     def get_model(self):
         """
@@ -153,14 +152,11 @@ class NokiaFanDrawer(FanDrawerBase):
         if not self.get_presence():
             return 'N/A'
 
-        # result = read_sysfs_file(FPGA_DIR + f'fan{self._index}_led')
-        # val = int(result, 16) & 0x7
-
-        # if val < len(self.fan_led_color):
-        #     return self.fan_led_color[val]
-
-        return 'N/A'
-
+        if self.get_status():
+            return 'green'
+        else:
+            return 'amber'
+        
     def is_replaceable(self):
         """
         Indicate whether this device is replaceable.

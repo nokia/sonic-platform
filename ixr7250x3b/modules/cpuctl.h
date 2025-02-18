@@ -37,7 +37,6 @@ typedef struct
 	int minor;
 	int enabled;
 	void __iomem *base;
-	u8 reset_list[36];
 	spinlock_t lock;
 } CTLDEV;
 
@@ -115,6 +114,16 @@ static inline void ctl_reg64_write(CTLDEV *p, unsigned offset, u32 value)
 	volatile void __iomem *addr = (p->base + offset);
 	writeq(swab64(value), addr);
 }
+static inline u8 ctl_reg8_read(CTLDEV *p, unsigned offset)
+{
+	volatile void __iomem *addr = (p->base + offset);
+	return readb(addr);
+}
+static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
+{
+	volatile void __iomem *addr = (p->base + offset);
+	writeb(value, addr);
+}
 
 #define NUM_JER_ASICS 2
 #define CTL_CNTR_STA    0x00800000
@@ -136,10 +145,12 @@ static inline void ctl_reg64_write(CTLDEV *p, unsigned offset, u32 value)
 #define CTL_BDB_ERRDET  0x02700014
 
 #define CTL_A32_MISCIO2_DATA            0x02700048
+#define Ctl_A32_LED_STATE_BASE          0x02700140
 #define FPGA_A32_CODE_VER               0x00800070
 #define IO_A32_PORT_MOD_ABS_BASE        0x00807D00
 #define IO_A32_PORT_MOD_RST_BASE        0x00807D40
 #define IO_A32_PORT_MOD_LPMODE_BASE     0x00807D60
+#define IO_A32_LED_STATE_BASE           0x02700080
 
 #define MISCIO3_IO_VERM_JER0_SYS_RST_BIT        (1 << 0)
 #define MISCIO3_IO_VERM_JER1_SYS_RST_BIT        (1 << 1)

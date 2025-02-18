@@ -26,6 +26,7 @@ PORT_START = 1
 PORT_NUM = 36
 PORT_END = 36
 PORT_I2C_START = 27
+REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 # Device counts
 FAN_DRAWERS_NUM = 3
@@ -46,8 +47,8 @@ class Chassis(ChassisBase):
 
     def __init__(self):
         ChassisBase.__init__(self)
-        self.system_led_color = ['off', 'green', 'amber', 'green_blink',
-                                 'amber_blink', 'alter_green_amber', 'off', 'off']
+        self.system_led_supported_color = ['off', 'green', 'amber', 'blue',
+                                           'green_blink', 'amber_blink']
 
         # Port numbers for SFP List Initialization
         self.PORT_START = PORT_START
@@ -55,6 +56,7 @@ class Chassis(ChassisBase):
         self._watchdog = None
         self.sfp_event = None
         self.max_select_event_returned = None
+        self._sys_led = 'blue'
 
         # Verify optoe driver PORT eeprom devices were enumerated and exist
         # then create the sfp nodes
@@ -359,10 +361,24 @@ class Chassis(ChassisBase):
             bool: True if system LED state is set successfully, False if not
         
         """
-        return False
+        if color not in self.system_led_supported_color:
+            return False
+        
+        color_to_value = {
+            'off': '0x0',
+            'green': '0x6400',
+            'amber': '0x88c700',
+            'blue': '0x64',
+            'green_blink': '0x4f006400',
+            'amber_blink': '0x4f88c700'
+        }
+        value = color_to_value.get(color)
+        
         try:
-            value = self.system_led_color.index(color)
-            write_sysfs_file(FPGA_DIR + 'led_sys', str(value))
+            if color == 'green_blink' or color == 'amber_blink':
+                write_sysfs_file(REG_DIR + 'led_sys', '0x0')            
+            write_sysfs_file(REG_DIR + 'led_sys', value)
+            self._sys_led = color
             return True
         except ValueError:
             return False
@@ -374,9 +390,5 @@ class Chassis(ChassisBase):
         Returns:
             A string, one of the valid LED color strings which could be vendor
             specified.
-        """
-        # result = read_sysfs_file(FPGA_DIR + 'led_sys')
-        # val = int(result, 16) & 0x7
-        # if val < len(self.system_led_color):
-        #     return self.system_led_color[val]
-        return 'N/A'
+        """        
+        return self._sys_led

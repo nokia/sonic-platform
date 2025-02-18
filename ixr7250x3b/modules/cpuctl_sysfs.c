@@ -247,12 +247,140 @@ static ssize_t port_reset_store(struct device *dev, struct device_attribute *dev
 	return count;
 }
 
+static ssize_t port_led_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u8 val;
+	u8 offset;
+
+	offset = sda->index % 32 * 4 + sda->index / 32 * 2;
+	val = ctl_reg8_read(pdev, IO_A32_LED_STATE_BASE + offset);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t port_led_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+	u8 offset;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xff)
+		return -EINVAL;
+
+	offset = sda->index % 32 * 4 + sda->index / 32 * 2;
+	spin_lock(&pdev->lock);
+	ctl_reg8_write(pdev, IO_A32_LED_STATE_BASE + offset, usr_val);
+	spin_unlock(&pdev->lock);  
+
+	return count;
+}
+
+static ssize_t led_sys_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 val;
+
+	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t led_sys_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xffffffff)
+		return -EINVAL;
+
+	spin_lock(&pdev->lock);
+	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE, usr_val);
+	spin_unlock(&pdev->lock);  
+
+	return count;
+}
+
+static ssize_t led_fan_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 val;
+
+	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE + 8);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t led_fan_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xffffffff)
+		return -EINVAL;
+
+	spin_lock(&pdev->lock);
+	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 8, usr_val);
+	spin_unlock(&pdev->lock);  
+
+	return count;
+}
+
+static ssize_t led_psu_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 val;
+
+	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE + 12);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t led_psu_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xffffffff)
+		return -EINVAL;
+
+	spin_lock(&pdev->lock);
+	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 12, usr_val);
+	spin_unlock(&pdev->lock);  
+
+	return count;
+}
+
 static DEVICE_ATTR_RW(jer_reset_seq);
 static DEVICE_ATTR_RW(bus_speed);
 
 static SENSOR_DEVICE_ATTR(fandraw_1_prs, S_IRUGO, fandraw_prs_show, NULL, 0);
 static SENSOR_DEVICE_ATTR(fandraw_2_prs, S_IRUGO, fandraw_prs_show, NULL, 1);
 static SENSOR_DEVICE_ATTR(fandraw_3_prs, S_IRUGO, fandraw_prs_show, NULL, 2);
+static DEVICE_ATTR_RW(led_sys);
+static DEVICE_ATTR_RW(led_fan);
+static DEVICE_ATTR_RW(led_psu);
+
 static DEVICE_ATTR_RO(code_ver);
 static DEVICE_ATTR_RO(port_prs_reg1);
 static DEVICE_ATTR_RO(port_prs_reg2);
@@ -364,42 +492,43 @@ static SENSOR_DEVICE_ATTR(port_33_rst, S_IRUGO | S_IWUSR, port_rst_show, port_rs
 static SENSOR_DEVICE_ATTR(port_34_rst, S_IRUGO | S_IWUSR, port_rst_show, port_rst_store, 33);
 static SENSOR_DEVICE_ATTR(port_35_rst, S_IRUGO | S_IWUSR, port_rst_show, port_rst_store, 34);
 static SENSOR_DEVICE_ATTR(port_36_rst, S_IRUGO | S_IWUSR, port_rst_show, port_rst_store, 35);
-static SENSOR_DEVICE_ATTR(port_1_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 0);
-static SENSOR_DEVICE_ATTR(port_2_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 1);
-static SENSOR_DEVICE_ATTR(port_3_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 2);
-static SENSOR_DEVICE_ATTR(port_4_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 3);
-static SENSOR_DEVICE_ATTR(port_5_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 4);
-static SENSOR_DEVICE_ATTR(port_6_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 5);
-static SENSOR_DEVICE_ATTR(port_7_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 6);
-static SENSOR_DEVICE_ATTR(port_8_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 7);
-static SENSOR_DEVICE_ATTR(port_9_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 8);
-static SENSOR_DEVICE_ATTR(port_10_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 9);
-static SENSOR_DEVICE_ATTR(port_11_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 10);
-static SENSOR_DEVICE_ATTR(port_12_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 11);
-static SENSOR_DEVICE_ATTR(port_13_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 12);
-static SENSOR_DEVICE_ATTR(port_14_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 13);
-static SENSOR_DEVICE_ATTR(port_15_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 14);
-static SENSOR_DEVICE_ATTR(port_16_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 15);
-static SENSOR_DEVICE_ATTR(port_17_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 16);
-static SENSOR_DEVICE_ATTR(port_18_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 17);
-static SENSOR_DEVICE_ATTR(port_19_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 18);
-static SENSOR_DEVICE_ATTR(port_20_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 19);
-static SENSOR_DEVICE_ATTR(port_21_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 20);
-static SENSOR_DEVICE_ATTR(port_22_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 21);
-static SENSOR_DEVICE_ATTR(port_23_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 22);
-static SENSOR_DEVICE_ATTR(port_24_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 23);
-static SENSOR_DEVICE_ATTR(port_25_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 24);
-static SENSOR_DEVICE_ATTR(port_26_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 25);
-static SENSOR_DEVICE_ATTR(port_27_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 26);
-static SENSOR_DEVICE_ATTR(port_28_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 27);
-static SENSOR_DEVICE_ATTR(port_29_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 28);
-static SENSOR_DEVICE_ATTR(port_30_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 29);
-static SENSOR_DEVICE_ATTR(port_31_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 30);
-static SENSOR_DEVICE_ATTR(port_32_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 31);
-static SENSOR_DEVICE_ATTR(port_33_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 32);
-static SENSOR_DEVICE_ATTR(port_34_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 33);
-static SENSOR_DEVICE_ATTR(port_35_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 34);
-static SENSOR_DEVICE_ATTR(port_36_reset, S_IRUGO | S_IWUSR, port_reset_show, port_reset_store, 35);
+
+static SENSOR_DEVICE_ATTR(port_1_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 0);
+static SENSOR_DEVICE_ATTR(port_2_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 1);
+static SENSOR_DEVICE_ATTR(port_3_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 2);
+static SENSOR_DEVICE_ATTR(port_4_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 3);
+static SENSOR_DEVICE_ATTR(port_5_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 4);
+static SENSOR_DEVICE_ATTR(port_6_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 5);
+static SENSOR_DEVICE_ATTR(port_7_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 6);
+static SENSOR_DEVICE_ATTR(port_8_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 7);
+static SENSOR_DEVICE_ATTR(port_9_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 8);
+static SENSOR_DEVICE_ATTR(port_10_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 9);
+static SENSOR_DEVICE_ATTR(port_11_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 10);
+static SENSOR_DEVICE_ATTR(port_12_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 11);
+static SENSOR_DEVICE_ATTR(port_13_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 12);
+static SENSOR_DEVICE_ATTR(port_14_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 13);
+static SENSOR_DEVICE_ATTR(port_15_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 14);
+static SENSOR_DEVICE_ATTR(port_16_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 15);
+static SENSOR_DEVICE_ATTR(port_17_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 16);
+static SENSOR_DEVICE_ATTR(port_18_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 17);
+static SENSOR_DEVICE_ATTR(port_19_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 18);
+static SENSOR_DEVICE_ATTR(port_20_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 19);
+static SENSOR_DEVICE_ATTR(port_21_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 20);
+static SENSOR_DEVICE_ATTR(port_22_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 21);
+static SENSOR_DEVICE_ATTR(port_23_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 22);
+static SENSOR_DEVICE_ATTR(port_24_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 23);
+static SENSOR_DEVICE_ATTR(port_25_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 24);
+static SENSOR_DEVICE_ATTR(port_26_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 25);
+static SENSOR_DEVICE_ATTR(port_27_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 26);
+static SENSOR_DEVICE_ATTR(port_28_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 27);
+static SENSOR_DEVICE_ATTR(port_29_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 28);
+static SENSOR_DEVICE_ATTR(port_30_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 29);
+static SENSOR_DEVICE_ATTR(port_31_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 30);
+static SENSOR_DEVICE_ATTR(port_32_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 31);
+static SENSOR_DEVICE_ATTR(port_33_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 32);
+static SENSOR_DEVICE_ATTR(port_34_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 33);
+static SENSOR_DEVICE_ATTR(port_35_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 34);
+static SENSOR_DEVICE_ATTR(port_36_led, S_IRUGO | S_IWUSR, port_led_show, port_led_store, 35);
 
 static struct attribute *cp_vermilion_ctl_attrs[] = {
 	&dev_attr_bus_speed.attr,
@@ -407,6 +536,9 @@ static struct attribute *cp_vermilion_ctl_attrs[] = {
 	&sensor_dev_attr_fandraw_2_prs.dev_attr.attr,
 	&sensor_dev_attr_fandraw_3_prs.dev_attr.attr,
 	&dev_attr_code_ver.attr,
+	&dev_attr_led_sys.attr,
+	&dev_attr_led_fan.attr,
+	&dev_attr_led_psu.attr,
 
 	NULL,
 };
@@ -533,43 +665,42 @@ static struct attribute *io_vermilion_ctl_attrs[] = {
 	&sensor_dev_attr_port_35_rst.dev_attr.attr,
 	&sensor_dev_attr_port_36_rst.dev_attr.attr,
 
-	&sensor_dev_attr_port_1_reset.dev_attr.attr,
-	&sensor_dev_attr_port_2_reset.dev_attr.attr,
-	&sensor_dev_attr_port_3_reset.dev_attr.attr,
-	&sensor_dev_attr_port_4_reset.dev_attr.attr,
-	&sensor_dev_attr_port_5_reset.dev_attr.attr,
-	&sensor_dev_attr_port_6_reset.dev_attr.attr,
-	&sensor_dev_attr_port_7_reset.dev_attr.attr,
-	&sensor_dev_attr_port_8_reset.dev_attr.attr,
-	&sensor_dev_attr_port_9_reset.dev_attr.attr,
-	&sensor_dev_attr_port_10_reset.dev_attr.attr,
-	&sensor_dev_attr_port_11_reset.dev_attr.attr,
-	&sensor_dev_attr_port_12_reset.dev_attr.attr,
-	&sensor_dev_attr_port_13_reset.dev_attr.attr,
-	&sensor_dev_attr_port_14_reset.dev_attr.attr,
-	&sensor_dev_attr_port_15_reset.dev_attr.attr,
-	&sensor_dev_attr_port_16_reset.dev_attr.attr,
-	&sensor_dev_attr_port_17_reset.dev_attr.attr,
-	&sensor_dev_attr_port_18_reset.dev_attr.attr,
-	&sensor_dev_attr_port_19_reset.dev_attr.attr,
-	&sensor_dev_attr_port_20_reset.dev_attr.attr,
-	&sensor_dev_attr_port_21_reset.dev_attr.attr,
-	&sensor_dev_attr_port_22_reset.dev_attr.attr,
-	&sensor_dev_attr_port_23_reset.dev_attr.attr,
-	&sensor_dev_attr_port_24_reset.dev_attr.attr,
-	&sensor_dev_attr_port_25_reset.dev_attr.attr,
-	&sensor_dev_attr_port_26_reset.dev_attr.attr,
-	&sensor_dev_attr_port_27_reset.dev_attr.attr,
-	&sensor_dev_attr_port_28_reset.dev_attr.attr,
-	&sensor_dev_attr_port_29_reset.dev_attr.attr,
-	&sensor_dev_attr_port_30_reset.dev_attr.attr,
-	&sensor_dev_attr_port_31_reset.dev_attr.attr,
-	&sensor_dev_attr_port_32_reset.dev_attr.attr,
-	&sensor_dev_attr_port_33_reset.dev_attr.attr,
-	&sensor_dev_attr_port_34_reset.dev_attr.attr,
-	&sensor_dev_attr_port_35_reset.dev_attr.attr,
-	&sensor_dev_attr_port_36_reset.dev_attr.attr,
-
+	&sensor_dev_attr_port_1_led.dev_attr.attr,
+	&sensor_dev_attr_port_2_led.dev_attr.attr,
+	&sensor_dev_attr_port_3_led.dev_attr.attr,
+	&sensor_dev_attr_port_4_led.dev_attr.attr,
+	&sensor_dev_attr_port_5_led.dev_attr.attr,
+	&sensor_dev_attr_port_6_led.dev_attr.attr,
+	&sensor_dev_attr_port_7_led.dev_attr.attr,
+	&sensor_dev_attr_port_8_led.dev_attr.attr,
+	&sensor_dev_attr_port_9_led.dev_attr.attr,
+	&sensor_dev_attr_port_10_led.dev_attr.attr,
+	&sensor_dev_attr_port_11_led.dev_attr.attr,
+	&sensor_dev_attr_port_12_led.dev_attr.attr,
+	&sensor_dev_attr_port_13_led.dev_attr.attr,
+	&sensor_dev_attr_port_14_led.dev_attr.attr,
+	&sensor_dev_attr_port_15_led.dev_attr.attr,
+	&sensor_dev_attr_port_16_led.dev_attr.attr,
+	&sensor_dev_attr_port_17_led.dev_attr.attr,
+	&sensor_dev_attr_port_18_led.dev_attr.attr,
+	&sensor_dev_attr_port_19_led.dev_attr.attr,
+	&sensor_dev_attr_port_20_led.dev_attr.attr,
+	&sensor_dev_attr_port_21_led.dev_attr.attr,
+	&sensor_dev_attr_port_22_led.dev_attr.attr,
+	&sensor_dev_attr_port_23_led.dev_attr.attr,
+	&sensor_dev_attr_port_24_led.dev_attr.attr,
+	&sensor_dev_attr_port_25_led.dev_attr.attr,
+	&sensor_dev_attr_port_26_led.dev_attr.attr,
+	&sensor_dev_attr_port_27_led.dev_attr.attr,
+	&sensor_dev_attr_port_28_led.dev_attr.attr,
+	&sensor_dev_attr_port_29_led.dev_attr.attr,
+	&sensor_dev_attr_port_30_led.dev_attr.attr,
+	&sensor_dev_attr_port_31_led.dev_attr.attr,
+	&sensor_dev_attr_port_32_led.dev_attr.attr,
+	&sensor_dev_attr_port_33_led.dev_attr.attr,
+	&sensor_dev_attr_port_34_led.dev_attr.attr,
+	&sensor_dev_attr_port_35_led.dev_attr.attr,
+	&sensor_dev_attr_port_36_led.dev_attr.attr,
 	NULL,
 };
 
@@ -614,9 +745,6 @@ void port_init(CTLDEV *pdev)
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE + 4, (reg_val | 0xf));
 	
 	spin_unlock(&pdev->lock);
-	int i;
-	for (i = 0; i < 36; i++) 
-		pdev->reset_list[i] = 0;
 }
 
 int ctl_sysfs_init(CTLDEV *pdev)

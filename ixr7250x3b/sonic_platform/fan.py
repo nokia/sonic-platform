@@ -292,13 +292,10 @@ class Fan(FanBase):
         if not self.get_presence():
             return 'N/A'
 
-        # result = read_sysfs_file(FPGA_DIR + f'fan{self.fan_drawer+1}_led')
-        # val = int(result, 16) & 0x7
-
-        # if val < len(self.fan_led_color):
-        #     return self.fan_led_color[val]
-
-        return 'N/A'
+        if self.get_status():
+            return 'green'
+        else:
+            return 'amber'
 
     def get_target_speed(self):
         """

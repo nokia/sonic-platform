@@ -266,21 +266,8 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        return self.STATUS_LED_COLOR_OFF
-        result = read_sysfs_file(FPGA_DIR + f'led_psu{self.index}')
-        val = int(result, 16) & 0x7
-
-        if val == 7:
-            if self.get_presence():
-                if self.get_status():
-                    return self.STATUS_LED_COLOR_GREEN
-                else:
-                    return self.STATUS_LED_COLOR_AMBER
-            else:
-                return self.STATUS_LED_COLOR_OFF
-        else:
-            return self.psu_led_color[val]
-
+        return 'N/A'
+    
     def set_status_master_led(self, color):
         """
         Sets the state of the front panel PSU status LED

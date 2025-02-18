@@ -57,18 +57,7 @@ class SfpEvent:
         bin_str = bin_str[::-1]
         bool_list = [not bool(int(bit)) for bit in bin_str]
         port_status.extend(bool_list)
-
-        for port in range (PORT_START, PORT_START + PORT_END):
-            if port_status[port-1]:
-                reset_status = read_sysfs_file(REG_DIR+f"port_{port}_reset")
-                if reset_status == '1':
-                    port_status[port-1] = False
-                    write_sysfs_file(REG_DIR+f"port_{port}_reset", '2')
-                elif reset_status == '2':
-                    port_status[port-1] = False
-                elif reset_status == '3':
-                    port_status[port-1] = True
-                    write_sysfs_file(REG_DIR+f"port_{port}_reset", '0')
+        
         return port_status
 
     def check_sfp_status(self, port_change, timeout):
