@@ -47,7 +47,7 @@ DIRECT_TYPE = platform_ndk_pb2.ReqSfpEepromType.SFP_EEPROM_DIRECT
 # Module Direct IPC attributes
 # MDIPC_BASE_NAME = '/dev/shm/MDIPC'
 MDIPC_BASE_NAME = '/var/run/redis/MDIPC'
-MDIPC_NUM_CHANNELS = 6
+MDIPC_NUM_CHANNELS = 10
 
 MDIPC_OWN_NDK = 0x5A5A3C3C
 MDIPC_OWN_NOS = 0X43211234
@@ -57,6 +57,7 @@ MDIPC_OWN_NOS_RSP = 0xCBCBAF5F
 MDIPC_READ  = 0
 MDIPC_WRITE = 1
 MDIPC_PRESENCE = 2
+MDIPC_WRITE_CDB_CHAIN = 3
 MDIPC_RSP_SUCCESS = 0
 MDIPC_RSP_FAIL = 1
 MDIPC_RSP_NOTPRESENT = 2
@@ -265,13 +266,13 @@ class MDIPC():
         msg[28:32] = num_bytes.to_bytes(4, sys.byteorder)
         msg[32:36] = msgID.to_bytes(4, sys.byteorder)       # status validation check
 
-        if (op == MDIPC_WRITE):
+        if (op == MDIPC_WRITE) or (op == MDIPC_WRITE_CDB_CHAIN):
             if (data is None):
-               logger.log_error("msg_send ({},{} {}): MDIPC_WRITE op requested but no data provided!".format(index, pid, tid))
+               logger.log_error("msg_send ({},{} {}): op {} requested but no data provided!".format(index, pid, tid, op))
                logger.log_error("          op {} msgID {} hw_port_id {} pg {} offset {} num_bytes {}".format(op, msgID, hw_port_id, page, offset, num_bytes))
                self.free_channel(index)
                return MDIPC_RSP_FAIL, None
-            msg[36:(36+num_bytes)] = data
+            msg[36:(36+num_bytes)] = data[:num_bytes]
         elif (op == MDIPC_READ):
             pass
         elif (op == MDIPC_PRESENCE):
@@ -309,7 +310,7 @@ class MDIPC():
             return MDIPC_RSP_FAIL, None
         else:
             status = int.from_bytes(msg[32:36],sys.byteorder)
-            if (delta_time >=  200000):
+            if (delta_time >=  300000):
                MDIPC.channels[index].stat_long_rsp += 1
                # logger.log_warning("msg_send ({},{} {}): op {} msgID {} : index {} pg {} offset {} num_bytes {} : rsp status {} starttime {} handofftime {} endtime {} rsptime(us) {}".format(index, pid, tid, op, msgID, hw_port_id, page, offset, num_bytes, status, start_time, handoff_time, done_time, delta_time))
             
@@ -550,6 +551,10 @@ class Sfp(SfpOptoeBase):
         self.page_cache.append(self.cache_page0)        
         for page in range(1, 256):
             self.page_cache.append(CachePage(index, page, 128))
+
+        self.write_cache = bytearray(2048)
+        self.last_write_page = 0
+        self.cdb_chain_pending = False
 
         self.stub = stub
 
@@ -863,19 +868,19 @@ class Sfp(SfpOptoeBase):
         return transceiver_info_dict
     """
 
-    def smart_cache(self, page, offset):
+    def smart_cache(self, page, offset, num_bytes):
         if (page < 256):
            num = self.page_cache[page].get_page_num()
            if (num != page):
               logger.log_error("page_cache[{}] instance shows unmatched page {} : possible corruption {}".format(page, num))
               sys.exit("smart_cache exception")
-           if (page == 3) or (page == 5) or ((page >= 16) and (page <= 18)) or (page == 23) or (page == 44) or (page >= 159):
+           if ((page == 0) and (offset > 2) and (offset+num_bytes < 129)) or (page == 3) or (page == 5) or ((page >= 16) and (page <= 18)) or (page == 23) or (page == 44) or (page >= 159):
               if (Sfp.debug) or (self.debug):
-                 logger.log_warning("###   SFP{} smart_cache skipping page {} offset {}".format(self.index, page, offset))
+                 logger.log_warning("###   SFP{} smart_cache skipping page {} offset {} num_bytes {}".format(self.index, page, offset, num_bytes))
               return
            self.page_cache[page].cache_page(CACHE_NORMAL, self.debug)
         else:
-           logger.log_error("###   SFP{} smart_cache page {} offset {} out of range!".format(self.index, page, offset))
+           logger.log_error("###   SFP{} smart_cache page {} offset {} num_bytes {} out of range!".format(self.index, page, offset, num_bytes))
 
     def override_cache(self, page, offset, num_bytes):
         if (page == 0) and ((offset >= 3) and (offset <= 84)):
@@ -924,7 +929,7 @@ class Sfp(SfpOptoeBase):
             return bytearray(raw)
             # return None
 
-        self.smart_cache(page, page_offset)
+        self.smart_cache(page, page_offset, num_bytes)
         cached_page = self.get_cached_page(page)
         if (cached_page is not None) and (self.cache_override_disable is not True):
             if (self.override_cache(page,page_offset,num_bytes) is True):
@@ -997,18 +1002,71 @@ class Sfp(SfpOptoeBase):
             page = (offset//128) - 1
             page_offset = (offset%128) + 128
 
+        if (((page == 160) and (num_bytes == 128)) or ((page >= 161) and (page <= 175) and (num_bytes <= 128)) and (page_offset == 128)):
+            if (page == 160) or (page == self.last_write_page + 1):
+
+               delta_page = page - 160
+               dst_offset = delta_page * 128
+               self.write_cache[dst_offset:dst_offset + num_bytes] = write_buffer
+
+               if (num_bytes < 128) or (page == 175):
+                  total_bytes = (delta_page * 128) + num_bytes
+                  if (self.debug or Sfp.debug):
+                     l = len(write_buffer)
+                     logger.log_warning("releasing CDB EPL chain for SFP{} at computed page {} num_bytes {} : l {} total_bytes {}".format(self.index, page, num_bytes, l, total_bytes))
+                  self.cdb_chain_pending = False
+                  self.last_write_page = 0
+                  self.cdb_chain_stamp = 0
+
+                  ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_WRITE_CDB_CHAIN, self.index, 160, 128, total_bytes, bytes(self.write_cache))
+                  if (ret != MDIPC_RSP_SUCCESS):
+                     logger.log_error("write_eeprom for CDB EPL chain failed with {} for SFP{} with page 160 offset 128 and total_bytes {} : computed page {} offset {} num_bytes {}".format(ret, self.index, total_bytes, page, page_offset, num_bytes))
+                     return False
+
+                  return True
+               else:
+                  if (self.debug or Sfp.debug):
+                     logger.log_warning("caching CDB EPL op for SFP{} at computed page {} num_bytes {} : dst_offset {}".format(self.index, page, num_bytes, dst_offset))
+                  self.cdb_chain_pending = True
+                  self.last_write_page = page
+                  self.cdb_chain_stamp = int(time.monotonic_ns() / 1000)
+                  return True
+
+        if (self.cdb_chain_pending):
+           if (page != 159):
+              now = int(time.monotonic_ns() / 1000)
+              delta_time = now - self.cdb_chain_stamp
+              if (delta_time > 2000000) or ((page >= 160) and (page <= 175)):
+                  logger.log_error("write_eeprom timeout: discarding pending CDB EPL chain for SFP{} : offset {} and num_bytes {} : computed page {} offset {} : pending {}ms".format(self.index, offset, num_bytes, page, page_offset, delta_time))
+                  self.cdb_chain_pending = False
+                  self.last_write_page = 0
+                  self.cdb_chain_stamp = 0
+           else:
+              delta_page = self.last_write_page - 160
+              total_bytes = (delta_page * 128) + 128
+              ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_WRITE_CDB_CHAIN, self.index, 160, 128, total_bytes, bytes(self.write_cache))
+              if (ret != MDIPC_RSP_SUCCESS):
+                    logger.log_error("write_eeprom deferred CDB EPL chain failed with {} for SFP{} and total_bytes {} : current op is computed page {} offset {} num_bytes {}".format(ret, self.index, total_bytes, page, page_offset, num_bytes))
+              else:
+                    if (self.debug or Sfp.debug):
+                        logger.log_warning("write_eeprom deferred CDB EPL chain succeeded with {} for SFP{} and total_bytes {} : current op is computed page {} offset {} num_bytes {}".format(ret, self.index, total_bytes, page, page_offset, num_bytes))
+              self.cdb_chain_pending = False
+              self.last_write_page = 0
+              self.cdb_chain_stamp = 0
+
+
         ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_WRITE, self.index, page, page_offset, num_bytes, bytes(write_buffer))
 
         if (ret != MDIPC_RSP_SUCCESS):
-            logger.log_info("write_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
+            if (self.debug or Sfp.debug):
+               logger.log_warning("write_eeprom failed with {} for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
             return False
-
-        # self.page_cache_flush(page)
-        self.page_cache_flush()
 
         if (self.debug or Sfp.debug):
             logger.log_warning("write_eeprom (status {}) for SFP{} with offset {} and num_bytes {} : computed page {} offset {}".format(ret, self.index, offset, num_bytes, page, page_offset))
             if (page == 159):
                 logger.log_warning("     data:    {}".format(bytes(write_buffer)))
+
+        self.page_cache_flush()
 
         return True
