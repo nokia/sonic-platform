@@ -21,10 +21,13 @@ static ssize_t jer_reset_seq_show(struct device *dev, struct device_attribute *d
 static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
 	int i;
+	int max_asics;
 	u32 val;
 	CTLDEV *pdev = dev_get_drvdata(dev);
 
 	dev_info(dev, "resetting asics\n");
+
+	max_asics = pdev->ctlv->max_asics;
 
 	/* put jer in reset */
 	dev_dbg(dev, "%s put into reset\n", __FUNCTION__);
@@ -45,9 +48,12 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 	dev_dbg(dev, "%s wrote io4_dat 0x%08x\n", __FUNCTION__, val);
 	msleep(100);
 
+	if (max_asics == 0)
+		dev_warn(dev, "max_asics=0 missing ctlv configuration?\n");
+
 	/* take jer out of reset */
 	dev_dbg(dev, "%s take out of reset\n", __FUNCTION__);
-	for (i = 0; i < NUM_JER_ASICS; i++)
+	for (i = 0; i < max_asics; i++)
 	{
 		/* sysrst */
 		spin_lock(&pdev->lock);

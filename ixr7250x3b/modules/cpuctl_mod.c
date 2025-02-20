@@ -20,6 +20,9 @@
 static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id);
 static void ctl_remove(struct pci_dev *pcidev);
 
+uint board = brd_x3b;
+module_param_named(board, board, uint, S_IRUGO | S_IWUSR);
+
 static LIST_HEAD(ctl_devices);
 
 static CTLDEV *ctl_dev_alloc(void)
@@ -102,6 +105,7 @@ static struct ctlvariant ctls[] = {
 	},
 	[ctl_io_vermilion] = {
 		.ctl_type = ctl_io_vermilion,
+		.max_asics = MAX_NUM_JER_ASICS,
 		.pchanmap = ctl_io_vermilion_chanmap,
 		.nchans = sizeof(ctl_io_vermilion_chanmap)/sizeof(struct chan_map),
 		.bus400 = 0x00ef,
@@ -166,9 +170,13 @@ static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id)
 	pdev->enabled = 1;
 	pcidev->dev.init_name = ctlv->name;
 
-	dev_dbg(&pcidev->dev, "control/status 0x%016llx cardtype 0x%02x\n",
+	dev_dbg(&pcidev->dev, "control/status 0x%016llx cardtype 0x%02x board=%d\n",
 			ctl_reg64_read(pdev, CTL_CNTR_STA),
-			ctl_reg_read(pdev, CTL_CARD_TYPE));
+			ctl_reg_read(pdev, CTL_CARD_TYPE),
+			board);
+
+	if (board == brd_x1b)
+		ctlv->max_asics = 1;
 
 	if (ctlv->miscio3_oe)
 	{

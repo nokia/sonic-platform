@@ -53,6 +53,7 @@ struct chan_map {
 
 struct ctlvariant {
 	const char *name;
+	u8 max_asics;
 	u16 ctl_type;
 	u16 devid;
 	u16 nchans;
@@ -68,6 +69,12 @@ enum ctl_type {
 	ctl_cp_hornet,
 	ctl_cp_vermilion,
 	ctl_io_vermilion,
+};
+
+enum brd_type {
+	brd_x3b,
+	brd_x1b,
+	brd_x4,
 };
 
 struct opi {
@@ -125,7 +132,7 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 	writeb(value, addr);
 }
 
-#define NUM_JER_ASICS 2
+#define MAX_NUM_JER_ASICS 2
 #define CTL_CNTR_STA    0x00800000
 #define CTL_DMA_INT1    0x00800008
 #define CTL_DMA_INT2    0x00800018
