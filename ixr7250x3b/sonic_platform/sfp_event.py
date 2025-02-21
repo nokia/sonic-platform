@@ -20,7 +20,6 @@ SYSTEM_FAIL = 'system_fail'
 # SFP PORT numbers
 PORT_START = 1
 PORT_END = 36
-PORT_NUM = 36
 
 REG_DIR = "/sys/bus/pci/devices/0000:05:00.0/"
 

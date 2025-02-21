@@ -18,6 +18,7 @@ load_kernel_drivers() {
     modprobe i2c-dev
     modprobe i2c-mux
     modprobe cpuctl
+    modprobe rtc_ds1307
     modprobe optoe
     modprobe at24
     modprobe max31790
@@ -45,12 +46,16 @@ file_exists() {
     return 0
  }
 
- # Install kernel drivers required for i2c bus access
+# Install kernel drivers required for i2c bus access
 load_kernel_drivers
+
+echo m41t11 0x68 > /sys/bus/i2c/devices/i2c-7/new_device
 
 # Enumerate system eeprom
 file_exists /sys/bus/i2c/devices/i2c-1/new_device
 echo 24c64 0x54 > /sys/bus/i2c/devices/i2c-1/new_device
+
+hwclock -s -f /dev/rtc1
 
 # take asics out of reset
 /etc/init.d/opennsl-modules stop
