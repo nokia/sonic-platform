@@ -288,20 +288,6 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        # result = read_sysfs_file(CPUPLD_DIR + "reset_cause")
-
-        # if (int(result, 16) & 0x20) >> 5 == 1:
-        #     return (self.REBOOT_CAUSE_WATCHDOG, "CPU_WD")
-
-        # if (int(result, 16) & 0x10) >> 4 == 1:
-        #     return (self.REBOOT_CAUSE_WATCHDOG, "CPLD_WD")
-        
-        # if (int(result, 16) & 0x01) == 1:
-        #     return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")
-
-        # if (int(result, 16) & 0x80) >> 7 == 1:
-        #     return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Cycle")
-
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
     
     def get_watchdog(self):

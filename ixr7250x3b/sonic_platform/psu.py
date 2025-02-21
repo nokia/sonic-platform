@@ -6,7 +6,7 @@
 """
 
 try:
-    from sonic_platform.sysfs import read_sysfs_file
+    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
     from sonic_platform_base.psu_base import PsuBase
     from sonic_py_common import logger
     import os
@@ -19,6 +19,7 @@ PSU_ADDR = '5b'
 PSU_EEPROM_ADDR = '53'
 MAX_VOLTAGE = 13
 MIN_VOLTAGE = 11
+REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 sonic_logger = logger.Logger('psu')
 sonic_logger.set_min_log_priority_error()
@@ -35,8 +36,9 @@ class Psu(PsuBase):
         self.eeprom_dir = f"/sys/bus/i2c/devices/{I2C_BUS[psu_index]}-00{PSU_EEPROM_ADDR}/"
         self.new_cmd = f"echo psu_eeprom 0x{PSU_EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
         self.del_cmd = f"echo 0x{PSU_EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/delete_device"
-        self.psu_led_color = ['off', 'green', 'amber', 'green_blink',
-                            'amber_blink', 'alter_green_amber', 'off', 'by_pin']
+        self.psu_led_color = ['off', 'green', 'amber']
+        self._master_psu_led = 'off'
+        self._master_psu_led_set = False
 
     def _get_active_psus(self):
         """
@@ -266,7 +268,10 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        return 'N/A'
+        if self._master_psu_led_set:
+            return self._master_psu_led
+        else:
+            return 'N/A'
     
     def set_status_master_led(self, color):
         """
@@ -276,4 +281,19 @@ class Psu(PsuBase):
             bool: True if status LED state is set successfully, False if
                   not
         """
-        return False
+        if color not in self.psu_led_color:
+            return False
+        
+        color_to_value = {
+            'off': '0x0',
+            'green': '0x6400',
+            'amber': '0xa4c700'
+        }
+        value = color_to_value.get(color)
+        
+        status = write_sysfs_file(REG_DIR + 'led_psu', value)
+        if status == 'ERR':
+            return False
+        self._master_psu_led = color
+        self._master_psu_led_set = True
+        return True
