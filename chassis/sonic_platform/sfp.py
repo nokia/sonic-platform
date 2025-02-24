@@ -352,9 +352,10 @@ class CachePage():
     def __init__(self, sfp_index, page, size, expiration = 2):
         self.sfp_index          = sfp_index
         self.page_num           = page
-        self.cache_page_data    = bytes([0] * size)
+        self.cache_page_data =  bytearray(size)
         self.cache_page_valid   = False
         self.cache_page_ts      = 0
+        self.cache_page0_admin  = False
         self.expiration         = expiration
         self.pending            = 0
         self.Tmutex = threading.RLock()
@@ -414,20 +415,32 @@ class CachePage():
 
         if (self.page_num == 0):
             if (ret != MDIPC_RSP_SUCCESS) or (data is None):
-                logger.log_info("*** SFP{} cache page0 failed 1st chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
+                logger.log_info("*** ({} {}): SFP{} cache page0 failed 1st chunk for offset {} num_bytes {} ret {}".format(os.getpid(), threading.get_native_id(), self.sfp_index, offset, num_bytes, ret))
                 self.pending = 0
                 return False
-            temp_cache = data
+
+            self.cache_page_data[offset:128] = data
+            if (verbose):
+               logger.log_warning("*** ({} {}): SFP{} cached page0 1st chunk for offset {} num_bytes {} ret {}".format(os.getpid(), threading.get_native_id(), self.sfp_index, offset, num_bytes, ret))
+               logger.log_warning("        raw bytes {}".format(self.cache_page_data[1:4]))
             offset = 128
 
-            ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.sfp_index, self.page_num, offset, num_bytes)
+            if (self.cache_page0_admin != True):
+               ret, data = Sfp.MDIPC_hdl.msg_send(MDIPC_READ, self.sfp_index, self.page_num, offset, num_bytes)
 
-            if (ret != MDIPC_RSP_SUCCESS) or (data is None):
-                logger.log_info("*** SFP{} cache page0 failed 2nd chunk for offset {} num_bytes {} ret {}".format(self.sfp_index, offset, num_bytes, ret))
-                self.pending = 0
-                return False
+               if (ret != MDIPC_RSP_SUCCESS) or (data is None):
+                  logger.log_info("*** ({} {}): SFP{} cache page0 failed 2nd chunk for offset {} num_bytes {} ret {}".format(os.getpid(), threading.get_native_id(), self.sfp_index, offset, num_bytes, ret))
+                  self.pending = 0
+                  return False
 
-            self.cache_page_data = temp_cache + data
+               self.cache_page_data[offset:] = data
+               self.cache_page0_admin = True
+               if (verbose):
+                  logger.log_warning("*** ({} {}): SFP{} cached page0 2nd chunk for offset {} num_bytes {} ret {}".format(os.getpid(), threading.get_native_id(), self.sfp_index, offset, num_bytes, ret))
+                  logger.log_warning("        raw bytes {} {}".format(self.cache_page_data[1:10], self.cache_page_data[offset:offset+10]))
+            elif (verbose):
+               logger.log_warning("*** ({} {}): SFP{} skipping upper page0".format(os.getpid(), threading.get_native_id(), self.sfp_index))
+               logger.log_warning("        raw bytes {} {}".format(self.cache_page_data[1:10], self.cache_page_data[offset:offset+10]))
 
         if (ret != MDIPC_RSP_SUCCESS) or (data is None):
             logger.log_info("*** SFP{} cache page {} failed for offset {} num_bytes {} ret {}".format(self.sfp_index, self.page_num, offset, num_bytes, ret))
@@ -448,6 +461,8 @@ class CachePage():
         return True
 
     def page_flush(self):
+        if (self.page_num == 0):
+           self.cache_page0_admin = False
         self.cache_page_valid = False
 
 
@@ -475,7 +490,7 @@ class Sfp(SfpOptoeBase):
 
         for inst in Sfp.instances:
             if (inst.index == port):
-                inst.page_cache_flush()
+                inst.page_cache_flush(True)
                 lastPresence = Sfp.presence[inst.index]
 
                 if (status == '0'):
@@ -583,7 +598,7 @@ class Sfp(SfpOptoeBase):
         if (lastPresence != status):
             logger.log_warning("MDIPC ({} {}) get_presence status changed for SFP{} from {} to {}".format(os.getpid(), threading.get_native_id(), self.index, lastPresence, status))
             Sfp.presence[self.index] = status
-            self.page_cache_flush()
+            self.page_cache_flush(True)
             if (status) and (Sfp.precache):
                 logger.log_warning("caching page0 for SFP{} due to lastPresence {}".format(self.index, status))
                 self.cache_page0.cache_page()
@@ -606,24 +621,30 @@ class Sfp(SfpOptoeBase):
               logger.log_warning("*** SFP{}: page {} is stale".format(self.index, page))
            return None
 
-    def page_cache_flush(self, page = -1):
+    def page_cache_flush(self, hard = False, page = -1):
         if (page != -1):
             inst = self.page_cache[page]
             num = inst.get_page_num()
             if (num != page):
                 logger.log_error("SFP{}: page_cache[{}] instance reports unmatched page {}".format(self.index, page, num))
                 sys.exit("page_cache_flush exception")
-            inst.cache_page_valid = False
+            if (hard == True):
+               inst.page_flush()
+            else:
+               inst.cache_page_valid = False
             if (self.debug or Sfp.debug):                        
-                logger.log_warning("*** SFP{}: flushing page {} from cache".format(self.index, inst.page_num))
+                logger.log_warning("*** SFP{}: flushing page {} hard {} from cache".format(self.index, hard, inst.page_num))
             return
         # else
         logged_once = False
         for inst in self.page_cache:
-            inst.cache_page_valid = False
+            if (hard == True):
+               inst.page_flush()
+            else:
+               inst.cache_page_valid = False
             if (self.debug or Sfp.debug):
                 if (logged_once == False):                        
-                    logger.log_warning("*** SFP{}: flushing all pages from cache".format(self.index))
+                    logger.log_warning("*** SFP{}: flushing all pages hard {} from cache".format(self.index, hard))
                     logged_once = True
 
     def get_name(self):
@@ -736,7 +757,7 @@ class Sfp(SfpOptoeBase):
                                                                            hw_port_id_begin=self.index,
                                                                            val=leave_in_reset))
         nokia_common.channel_shutdown(channel)
-        self.page_cache_flush()
+        self.page_cache_flush(True)
 
         if ret is False:
             return False
@@ -762,7 +783,7 @@ class Sfp(SfpOptoeBase):
                                                                            hw_port_id_begin=self.index,
                                                                            val=lpmode))
         nokia_common.channel_shutdown(channel)
-        self.page_cache_flush()
+        self.page_cache_flush(True)
 
         if ret is False:
             return False
