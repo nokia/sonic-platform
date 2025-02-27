@@ -150,7 +150,7 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 #define IO_A32_PORT_MOD_ABS_BASE        0x00807D00
 #define IO_A32_PORT_MOD_RST_BASE        0x00807D40
 #define IO_A32_PORT_MOD_LPMODE_BASE     0x00807D60
-#define IO_A32_LED_STATE_BASE           0x02700080
+#define IO_A8_LED_STATE_BASE            0x02700080
 
 #define MISCIO3_IO_VERM_JER0_SYS_RST_BIT        (1 << 0)
 #define MISCIO3_IO_VERM_JER1_SYS_RST_BIT        (1 << 1)

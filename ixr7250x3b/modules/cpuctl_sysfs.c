@@ -230,7 +230,7 @@ static ssize_t port_led_show(struct device *dev, struct device_attribute *devatt
 	u8 offset;
 
 	offset = sda->index % 32 * 4 + sda->index / 32 * 2;
-	val = ctl_reg8_read(pdev, IO_A32_LED_STATE_BASE + offset);
+	val = ctl_reg8_read(pdev, IO_A8_LED_STATE_BASE + offset);
 
 	return sprintf(buf, "0x%x\n", val);
 }
@@ -248,10 +248,8 @@ static ssize_t port_led_store(struct device *dev, struct device_attribute *devat
 	if (usr_val > 0xff)
 		return -EINVAL;
 
-	offset = sda->index % 32 * 4 + sda->index / 32 * 2;
-	spin_lock(&pdev->lock);
-	ctl_reg8_write(pdev, IO_A32_LED_STATE_BASE + offset, usr_val);
-	spin_unlock(&pdev->lock);
+	offset = sda->index % 32 * 4 + sda->index / 32 * 2;	
+	ctl_reg8_write(pdev, IO_A8_LED_STATE_BASE + offset, usr_val);
 
 	return count;
 }
@@ -277,9 +275,7 @@ static ssize_t led_sys_store(struct device *dev, struct device_attribute *devatt
 	if (usr_val > 0xffffffff)
 		return -EINVAL;
 
-	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE, usr_val);
-	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -305,9 +301,7 @@ static ssize_t led_fan_store(struct device *dev, struct device_attribute *devatt
 	if (usr_val > 0xffffffff)
 		return -EINVAL;
 
-	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 8, usr_val);
-	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -333,9 +327,7 @@ static ssize_t led_psu_store(struct device *dev, struct device_attribute *devatt
 	if (usr_val > 0xffffffff)
 		return -EINVAL;
 
-	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 12, usr_val);
-	spin_unlock(&pdev->lock);
 
 	return count;
 }
