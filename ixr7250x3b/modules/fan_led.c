@@ -41,21 +41,6 @@ struct fan_led_data {
 	int fan_led;
 };
 
-static int smbus_i2c_read(struct fan_led_data *data, u8 reg)
-{
-	int val = 0;
-	struct i2c_client *client = data->client;
-
-	mutex_lock(&data->update_lock);
-	val = i2c_smbus_read_byte_data(client, reg);
-	if (val < 0) {
-		dev_err(&client->dev, "I2C READ ERROR: reg(0x%02x) err %d\n", reg, val);
-	}
-	mutex_unlock(&data->update_lock);
-
-	return val;
-}
-
 static void smbus_i2c_write(struct fan_led_data *data, u8 reg, u8 value)
 {
 	int res = 0;

@@ -28,7 +28,7 @@ static const unsigned short normal_i2c[] = { 0x5b, I2C_CLIENT_END };
 struct x3b_psu_data {
 	struct device	*hwmon_dev;
 	struct mutex	update_lock;
-	char		valid;		
+	char		valid;
 	unsigned long	last_updated;	/* In jiffies */
 
 	/* Registers value */
@@ -128,7 +128,7 @@ static ssize_t for_linear_data(struct device *dev, struct device_attribute \
 		break;
 	case PSU_P_IN:
 		value = data->power1_input;
-		multiplier = 1000*1000;		
+		multiplier = 1000*1000;
 		break;
 	case PSU_P_OUT:
 		value = data->power2_input;
@@ -225,7 +225,6 @@ static struct x3b_psu_data *x3b_psu_update_device( \
 
 	if (time_after(jiffies, data->last_updated)) {
 		int i, status;
-		u8 command;
 		struct reg_data_byte regs_byte[] = {
 			{0x20, &data->vout_mode},
 			{0x81, &data->fan_target}

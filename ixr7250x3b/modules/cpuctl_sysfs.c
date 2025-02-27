@@ -180,7 +180,7 @@ static ssize_t port_lpmod_store(struct device *dev, struct device_attribute *dev
 	reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_LPMODE_BASE + (u8)(sda->index / 32 * 4));
 	reg_val = reg_val & mask;
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE + (u8)(sda->index / 32 * 4), (reg_val | usr_val));
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 	
 	return count;
 }
@@ -217,7 +217,7 @@ static ssize_t port_rst_store(struct device *dev, struct device_attribute *devat
 	reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_RST_BASE + (u8)(sda->index / 32 * 4));
 	reg_val = reg_val & mask;
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE + (u8)(sda->index / 32 * 4), (reg_val | usr_val));
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -251,7 +251,7 @@ static ssize_t port_led_store(struct device *dev, struct device_attribute *devat
 	offset = sda->index % 32 * 4 + sda->index / 32 * 2;
 	spin_lock(&pdev->lock);
 	ctl_reg8_write(pdev, IO_A32_LED_STATE_BASE + offset, usr_val);
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -259,7 +259,6 @@ static ssize_t port_led_store(struct device *dev, struct device_attribute *devat
 static ssize_t led_sys_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 val;
 
 	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE);
@@ -270,7 +269,6 @@ static ssize_t led_sys_show(struct device *dev, struct device_attribute *devattr
 static ssize_t led_sys_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 usr_val = 0;
 
 	int ret = kstrtouint(buf, 16, &usr_val);
@@ -281,7 +279,7 @@ static ssize_t led_sys_store(struct device *dev, struct device_attribute *devatt
 
 	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE, usr_val);
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -289,7 +287,6 @@ static ssize_t led_sys_store(struct device *dev, struct device_attribute *devatt
 static ssize_t led_fan_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 val;
 
 	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE + 8);
@@ -300,7 +297,6 @@ static ssize_t led_fan_show(struct device *dev, struct device_attribute *devattr
 static ssize_t led_fan_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 usr_val = 0;
 
 	int ret = kstrtouint(buf, 16, &usr_val);
@@ -311,7 +307,7 @@ static ssize_t led_fan_store(struct device *dev, struct device_attribute *devatt
 
 	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 8, usr_val);
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 
 	return count;
 }
@@ -319,7 +315,6 @@ static ssize_t led_fan_store(struct device *dev, struct device_attribute *devatt
 static ssize_t led_psu_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 val;
 
 	val = ctl_reg_read(pdev, Ctl_A32_LED_STATE_BASE + 12);
@@ -330,7 +325,6 @@ static ssize_t led_psu_show(struct device *dev, struct device_attribute *devattr
 static ssize_t led_psu_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 usr_val = 0;
 
 	int ret = kstrtouint(buf, 16, &usr_val);
@@ -341,7 +335,7 @@ static ssize_t led_psu_store(struct device *dev, struct device_attribute *devatt
 
 	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, Ctl_A32_LED_STATE_BASE + 12, usr_val);
-	spin_unlock(&pdev->lock);  
+	spin_unlock(&pdev->lock);
 
 	return count;
 }
