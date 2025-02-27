@@ -25,6 +25,7 @@ load_kernel_drivers() {
     modprobe psu_x3b
     modprobe fan_eeprom
     modprobe psu_eeprom
+    modprobe fan_led
 }
 
 x3b_profile()
@@ -80,6 +81,9 @@ echo max31790 0x20 > /sys/bus/i2c/devices/i2c-13/new_device
 echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-11/new_device
 echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-12/new_device
 echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-13/new_device
+echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-11/new_device
+echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-12/new_device
+echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-13/new_device
 
 # PSU
 echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-14/new_device

@@ -305,16 +305,15 @@ class Chassis(ChassisBase):
             daemon try opening watchdog when loading and constructing a chassis
             object and fail. By doing so we can eliminate that risk.
         """
-        # try:
-        #     if self._watchdog is None:
-        #         from sonic_platform.watchdog import WatchdogImplBase
-        #         watchdog_device_path = "/dev/watchdog0"
-        #         self._watchdog = WatchdogImplBase(watchdog_device_path)
-        # except Exception as e:
-        #     sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
+        try:
+            if self._watchdog is None:
+                from sonic_platform.watchdog import WatchdogImplBase
+                self._watchdog = WatchdogImplBase()
+        except Exception as e:
+            sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
 
-        # return self._watchdog
-
+        return self._watchdog
+    
     def get_position_in_parent(self):
         """
 		Retrieves 1-based relative physical position in parent device. If the agent

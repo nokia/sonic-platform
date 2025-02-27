@@ -6,7 +6,7 @@
 """
 
 try:
-    import os
+    import time
     import glob
     from sonic_platform_base.fan_base import FanBase
     from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
@@ -26,8 +26,10 @@ I2C_BUS = [11, 12, 13]
 FAN_INDEX_IN_DRAWER = [1, 2, 4, 5]
 CTRLOR_ARRD = '20'
 EEPROM_ADDR = '54'
+LED_ADDR = '60'
 
 sonic_logger = logger.Logger('fan')
+sonic_logger.set_min_log_priority_info()
 
 class Fan(FanBase):
     """Nokia platform-specific Fan class"""
@@ -37,13 +39,10 @@ class Fan(FanBase):
         i2c_bus = I2C_BUS[drawer_index]
         i2c_dev = f"{i2c_bus}-00{CTRLOR_ARRD}"
         hwmon_path = glob.glob(HWMON_DIR.format(i2c_dev))
-        self.fan_led_color = ['off', 'green','amber', 'green_blink',
-                            'amber_blink', 'alter_green_amber', 'off', 'off']        
-        
+        self.fan_led_color = ['off', 'green', 'amber', 'green_blink']
+        self.led_dir = f"/sys/bus/i2c/devices/{i2c_bus}-00{LED_ADDR}/"
         self.eeprom_dir = f"/sys/bus/i2c/devices/{i2c_bus}-00{EEPROM_ADDR}/"
-        self.new_cmd = f"echo fan_eeprom 0x{EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{i2c_bus}/new_device"
-        self.del_cmd = f"echo 0x{EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{i2c_bus}/delete_device"
-
+        
         if not self.is_psu_fan:
             # Fan is 1-based in Nokia platforms
             self.index = drawer_index * FANS_PER_DRAWER + fan_index + 1
@@ -87,18 +86,18 @@ class Fan(FanBase):
         """
         result = read_sysfs_file(self.reg_dir + f'fandraw_{self.fan_drawer+1}_prs')
         if result == '0': # present
-            if not os.path.exists(self.eeprom_dir):
-                os.system(self.new_cmd)
             if not self.pwm_enabled:
-                result = write_sysfs_file(self.pwm_enable_reg, '1')
+                result = write_sysfs_file(self.pwm_enable_reg, '0')
                 if (result == 'ERR'):
                     return False
+                time.sleep(0.1)
+                write_sysfs_file(self.pwm_enable_reg, '1')
+                time.sleep(0.1)
+                write_sysfs_file(self.fan_speed_enable_reg, '1')
                 self.pwm_enabled = True
 
             return True
-        # not present
-        if os.path.exists(self.eeprom_dir):
-            os.system(self.del_cmd)
+        
         if self.pwm_enabled:
             self.pwm_enabled = False
         return False
@@ -206,13 +205,13 @@ class Fan(FanBase):
         if (fan_speed != 'ERR'):
             speed_in_rpm = int(fan_speed)
             if speed_in_rpm == 0:
-                fan_enable = read_sysfs_file(self.fan_speed_enable_reg)
-                if fan_enable == '0':
-                    rv = write_sysfs_file(self.fan_speed_enable_reg, '1')
-                    if (rv == 'ERR'):
-                        return 0
-                    fan_speed = read_sysfs_file(self.get_fan_speed_reg)
-                    speed_in_rpm = int(fan_speed)
+                write_sysfs_file(self.pwm_enable_reg, '0')
+                time.sleep(0.1)
+                write_sysfs_file(self.pwm_enable_reg, '1')
+                time.sleep(0.1)
+                write_sysfs_file(self.fan_speed_enable_reg, '1')
+                fan_speed = read_sysfs_file(self.get_fan_speed_reg)
+                speed_in_rpm = int(fan_speed)
         else:
             speed_in_rpm = 0
 
@@ -292,10 +291,11 @@ class Fan(FanBase):
         if not self.get_presence():
             return 'N/A'
 
-        if self.get_status():
-            return 'green'
-        else:
-            return 'amber'
+        result = read_sysfs_file(self.led_dir + 'fan_led')
+        val = int(result)
+        if val < len(self.fan_led_color):
+            return self.fan_led_color[val]
+        return 'N/A'
 
     def get_target_speed(self):
         """

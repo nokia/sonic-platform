@@ -16,27 +16,31 @@ except ImportError as e:
 FANS_PER_DRAWER = 4
 I2C_BUS = [11, 12, 13]
 FAN_INDEX_IN_DRAWER = [1, 2, 4, 5]
-EEPROM_ADDR = '54'
+EEPROM_INFO = ['54', 'fan_eeprom']
+DRIVER_INFO = ['20', 'max31790']
+LED_INFO = ['60', 'fan_led']
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 sonic_logger = logger.Logger('fan_drawer')
+sonic_logger.set_min_log_priority_info()
 
 class NokiaFanDrawer(FanDrawerBase):
     def __init__(self, index):
         super().__init__()
         self._index = index + 1
         self.reg_dir = REG_DIR
-        self.fan_led_color = ['off', 'green','amber', 'green_blink',
-                            'amber_blink']
+        self.fan_led_color = ['off', 'green', 'amber', 'green_blink']
 
         # Possible fan directions (relative to port-side of device)
         self.fan_direction_intake = "intake"
-        self.fan_direction_exhaust = "exhaust"
-        i2c_bus = I2C_BUS[index]
-        self.eeprom_dir = f"/sys/bus/i2c/devices/{i2c_bus}-00{EEPROM_ADDR}/"
-        self.new_cmd = f"echo fan_eeprom 0x{EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{i2c_bus}/new_device"
-        self.del_cmd = f"echo 0x{EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{i2c_bus}/delete_device"
+        self.i2c_index = I2C_BUS[index]
+        self.eeprom_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{EEPROM_INFO[0]}/"
+        self.driver_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{DRIVER_INFO[0]}/"    
+        self.led_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{LED_INFO[0]}/"
 
+        self.new_cmd = "echo {} 0x{} > /sys/bus/i2c/devices/i2c-{}/new_device"
+        self.del_cmd = "echo 0x{} > /sys/bus/i2c/devices/i2c-{}/delete_device"
+        
     def get_index(self):
         """
         Retrieves the index of the Fan Drawer
@@ -54,11 +58,19 @@ class NokiaFanDrawer(FanDrawerBase):
         result = read_sysfs_file(self.reg_dir + f'fandraw_{self._index}_prs')
         if result == '0': # present
             if not os.path.exists(self.eeprom_dir):
-                os.system(self.new_cmd)
+                os.system(self.new_cmd.format(EEPROM_INFO[1], EEPROM_INFO[0], self.i2c_index))
+            if not os.path.exists(self.driver_dir):
+                os.system(self.new_cmd.format(DRIVER_INFO[1], DRIVER_INFO[0], self.i2c_index))
+            if not os.path.exists(self.led_dir):
+                os.system(self.new_cmd.format(LED_INFO[1], LED_INFO[0], self.i2c_index))
             return True
         # not present
         if os.path.exists(self.eeprom_dir):
-            os.system(self.del_cmd)
+            os.system(self.del_cmd.format(EEPROM_INFO[0], self.i2c_index))
+        if os.path.exists(self.driver_dir):
+            os.system(self.del_cmd.format(DRIVER_INFO[0], self.i2c_index))
+        if os.path.exists(self.led_dir):
+            os.system(self.del_cmd.format(LED_INFO[0], self.i2c_index))
         return False
 
     def get_model(self):
@@ -116,7 +128,7 @@ class NokiaFanDrawer(FanDrawerBase):
         Returns:
             string: direction string
         """
-        return self.fan_direction_intake        
+        return self.fan_direction_intake
 
     def set_status_led(self, color):
         """
@@ -132,15 +144,14 @@ class NokiaFanDrawer(FanDrawerBase):
         if not self.get_presence():
             return False
         
-        return True
-        # try:
-        #     value = self.fan_led_color.index(color)
-        #     result = write_sysfs_file(FPGA_DIR + f'fan{self._index}_led', str(value))
-        #     if result:
-        #         return True
-        #     return False
-        # except ValueError:
-        #     return False
+        try:
+            value = self.fan_led_color.index(color)
+            result = write_sysfs_file(self.led_dir + 'fan_led', str(value))
+            if result:
+                return True
+            return False
+        except ValueError:
+            return False
 
     def get_status_led(self):
         """
@@ -152,11 +163,12 @@ class NokiaFanDrawer(FanDrawerBase):
         if not self.get_presence():
             return 'N/A'
 
-        if self.get_status():
-            return 'green'
-        else:
-            return 'amber'
-        
+        result = read_sysfs_file(self.led_dir + 'fan_led')
+        val = int(result)
+        if val < len(self.fan_led_color):
+            return self.fan_led_color[val]
+        return 'N/A'
+    
     def is_replaceable(self):
         """
         Indicate whether this device is replaceable.
@@ -186,4 +198,3 @@ class RealDrawer(NokiaFanDrawer):
         return module name
         """
         return self._name
-
