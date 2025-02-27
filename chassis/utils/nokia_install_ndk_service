@@ -5,14 +5,8 @@ qfpgamgr=0
 ethmgr=0
 phymgr=0
 asicthermal=0
-imm_ungraceful_reboot=0
 
 source /host/machine.conf
-is_cpm=0
-if [ "${onie_platform}" == "x86_64-nokia_ixr7250_cpm-r0" ] || \
-   [ "${onie_platform}" == "x86_64-nokia_ixr7250e_sup-r0" ] ; then
-     is_cpm=1
-fi
 net_driver_link="/usr/share/sonic/device/${onie_platform}/89-net-by-driver.link"
 if [ -e $net_driver_link ]; then
     cp $net_driver_link  /etc/systemd/network/.
@@ -50,12 +44,6 @@ if [ -e /lib/systemd/system/nokia-asic-thermal.service ]; then
    systemctl enable nokia-asic-thermal.service
    asicthermal=1
 fi
-if [ $is_cpm -eq 0 ]; then
-    if [ -e /lib/systemd/system/nokia-imm-ungraceful-reboot.service ]; then
-        systemctl enable nokia-imm-ungraceful-reboot.service
-        imm_ungraceful_reboot=1
-    fi
-fi
 
 if [[ $devicemgr -eq 1 ]] || [[ $qfpgamgr -eq 1 ]] || [[ $ethmgr -eq 1 ]] || [[ $phymgr -eq 1 ]] || [[ $asicthermal -eq 1 ]]; then
     systemctl daemon-reload
@@ -75,7 +63,4 @@ if [[ $phymgr -eq 1 ]]; then
 fi
 if [[ $asicthermal -eq 1 ]]; then
     systemctl start nokia-asic-thermal.service &
-fi
-if [[ $imm_ungraceful_reboot -eq 1 ]]; then
-    systemctl start nokia-imm-ungraceful-reboot.service &
 fi
