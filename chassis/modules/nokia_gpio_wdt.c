@@ -57,29 +57,34 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
         unsigned int *my_reg = (unsigned int *) io;
         unsigned int read_val, write_val, read_val_again, qdir, qdata;
 
-        read_val = ioread32be(my_reg);
-        iowrite32be(0x0, my_reg);
-        read_val_again = ioread32be(my_reg);
-        pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
+        if (code)
+        {
+            read_val = ioread32be(my_reg);
+            iowrite32be(0x0, my_reg);
+            read_val_again = ioread32be(my_reg);
+            pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
-        my_reg = io + 4;
-        read_val = ioread32be(my_reg);
-        iowrite32be(0x0, my_reg);
-        read_val_again = ioread32be(my_reg);
-        pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
+            my_reg = io + 4;
+            read_val = ioread32be(my_reg);
+            iowrite32be(0x0, my_reg);
+            read_val_again = ioread32be(my_reg);
+            pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
-        my_reg = io + 0x20;
-        read_val = ioread32be(my_reg);
-        iowrite32be(0xffffffff, my_reg);
-        read_val_again = ioread32be(my_reg);
-        pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
+            my_reg = io + 0x20;
+            read_val = ioread32be(my_reg);
+            iowrite32be(0xffffffff, my_reg);
+            read_val_again = ioread32be(my_reg);
+            pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
 
-        my_reg = io + 0x24;
-        read_val = ioread32be(my_reg);
-        iowrite32be(0xffffffff, my_reg);
-        read_val_again = ioread32be(my_reg);
-        pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
-        iounmap(io);
+            my_reg = io + 0x24;
+            read_val = ioread32be(my_reg);
+            iowrite32be(0xffffffff, my_reg);
+            read_val_again = ioread32be(my_reg);
+            pr_warn("*** shutdown hook with code %lu operating on addr 0x%lx : read 0x%x 0x%x", code, (long unsigned int) my_reg, read_val, read_val_again);
+            iounmap(io);
+        }
+        else
+            pr_warn("*** shutdown hook [skipping FP ports reset] : code is %u", code);
 
         base = (void *) (((unsigned long) BAR) & ~0xF) + 0x2700000;
         io = ioremap((unsigned long) base, SZ_128);
@@ -99,10 +104,17 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
 
         my_reg = io + 0x50;
         read_val = ioread32be(my_reg);
+
+#define NOKIA_SHUTDOWN_QFPGA_INTO_RESET
+#ifdef NOKIA_SHUTDOWN_QFPGA_INTO_RESET
         qdata = read_val & ~0x20000000;
         iowrite32be(qdata, my_reg);
         read_val_again = ioread32be(my_reg);
         pr_warn("*** shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x read_again 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
+#else
+        pr_warn("*** shutdown hook [skipping QFPGA reset] addr 0x%lx : orig_read 0x%x", (long unsigned int) my_reg, read_val);
+#endif
+
         iounmap(io);
     }
     else
