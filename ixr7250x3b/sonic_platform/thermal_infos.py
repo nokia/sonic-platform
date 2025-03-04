@@ -72,13 +72,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
         self._num_fan_levels = 3
-        self._level_up_threshold = [[42, 37, 42, 43, 64, 64, 52],
-                                    [51, 44, 51, 50, 74, 74, 62],
-                                    [59, 51, 59, 58, 84, 84, 71]]
+        self._level_up_threshold = [[43, 37, 42, 42, 43, 55, 64, 64, 52],
+                                    [51, 44, 51, 50, 51, 63, 74, 74, 62],
+                                    [59, 51, 59, 58, 59, 72, 84, 84, 71]]
         
-        self._level_down_threshold = [[46, 40, 46, 47, 68, 68, 56],
-                                      [55, 48, 55, 54, 78, 78, 66],
-                                      [63, 55, 63, 62, 88, 88, 75]]
+        self._level_down_threshold = [[47, 40, 46, 46, 47, 58, 68, 68, 56],
+                                      [55, 48, 55, 54, 55, 65, 78, 78, 66],
+                                      [63, 55, 63, 62, 63, 75, 88, 88, 75]]
 
     def collect(self, chassis):
         """

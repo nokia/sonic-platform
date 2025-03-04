@@ -69,6 +69,7 @@ for num in {27..62}; do
     sleep 0.1
 done
 
+echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-1/new_device
 echo tmp421 0x1e > /sys/bus/i2c/devices/i2c-7/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-19/new_device
 echo tmp75 0x4a > /sys/bus/i2c/devices/i2c-19/new_device
