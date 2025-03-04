@@ -18,7 +18,7 @@ FANS_PER_DRAWER = 4
 MAX_FAN_F_SPEED = 27000
 MAX_FAN_R_SPEED = 23000
 FAN_TOLERANCE = 50
-WORKING_FAN_SPEED = 2205
+WORKING_FAN_SPEED = 2300
 
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
@@ -242,16 +242,15 @@ class Fan(FanBase):
             return False
 
         speed_to_duty = {
-            range(0, 10): 0x00,
-            range(10, 20): 40,   # 15%
-            range(20, 30): 64,   # 25%
-            range(30, 40): 90,   # 35%
-            range(40, 54): 115,  # 45%
-            range(54, 66): 153,  # 60%
-            range(66, 76): 179,  # 70%
-            range(76, 86): 204,  # 80%
-            range(86, 96): 230,  # 90%
-            range(96, 101): 255  # 100%
+            range(0, 20): 0,
+            range(20, 31): 95,
+            range(31, 45): 128,
+            range(45, 55): 152,
+            range(55, 66): 173,
+            range(66, 76): 195,
+            range(76, 86): 215,
+            range(86, 96): 235,
+            range(96, 101): 255
         }
 
         fan_duty_cycle = None
@@ -307,14 +306,13 @@ class Fan(FanBase):
         """
         duty_to_speed = {
             0: 0,
-            40: 15,
-            64: 25,
-            90: 35,
-            115: 45,
-            153: 60,
-            179: 70,
-            204: 80,
-            230: 90,
+            95: 25,
+            128: 40,
+            152: 50,
+            173: 60,
+            195: 70,
+            215: 80,
+            235: 90,
             255: 100
         }
 
