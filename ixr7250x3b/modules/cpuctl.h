@@ -71,6 +71,7 @@ enum ctl_type {
 	ctl_io_vermilion,
 };
 
+extern uint board;
 enum brd_type {
 	brd_x3b,
 	brd_x1b,
@@ -164,6 +165,7 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 #define MISCIO3_IO_VERM_JER0_SYS_PCI_BIT        (1 << 2)
 #define MISCIO3_IO_VERM_JER1_SYS_PCI_BIT        (1 << 3)
 
+#define MISCIO4_IO_VERM_IMM_RGB_RST_N_BIT       (0xff << 16)
 #define MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT       (1 << 24)
 #define MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT      (1 << 25)
 

@@ -22,7 +22,7 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 {
 	int i;
 	int max_asics;
-	u32 val;
+	u32 val,bits;
 	CTLDEV *pdev = dev_get_drvdata(dev);
 
 	dev_info(dev, "resetting asics\n");
@@ -39,12 +39,15 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 	spin_unlock(&pdev->lock);
 	msleep(100);
 
-	/* take plls out of reset */
-	spin_lock(&pdev->lock);
+	/* take plls/rgb out of reset */
+	bits = MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT | MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT |
+		MISCIO4_IO_VERM_IMM_RGB_RST_N_BIT;
 	val = ctl_reg_read(pdev, CTL_MISC_IO4_DAT);
-	val |= MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT | MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT;
+	val &= ~bits;
 	ctl_reg_write(pdev, CTL_MISC_IO4_DAT, val);
-	spin_unlock(&pdev->lock);
+	udelay(100);
+	val |= bits;
+	ctl_reg_write(pdev, CTL_MISC_IO4_DAT, val);
 	dev_dbg(dev, "%s wrote io4_dat 0x%08x\n", __FUNCTION__, val);
 	msleep(100);
 
@@ -73,6 +76,7 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 
 		msleep(10);
 	}
+
 	dev_dbg(dev, "%s wrote io3_dat 0x%08x\n", __FUNCTION__, val);
 
 	return count;
