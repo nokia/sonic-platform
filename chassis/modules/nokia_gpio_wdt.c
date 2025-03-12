@@ -18,6 +18,15 @@
 #include <asm/io.h>
 #include <linux/pci.h>
 #include <linux/sizes.h>
+#include <linux/kprobes.h>
+
+static struct kprobe kp =
+{
+    .symbol_name = "kallsyms_lookup_name"
+};
+typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
+
+bool (*nokia_pci_aer_enabled)(void) = NULL;
 
 struct nokia_gpio_wdt_priv {
 	struct watchdog_device wdd;
@@ -57,6 +66,7 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
         unsigned int *my_reg = (unsigned int *) io;
         unsigned int read_val, write_val, read_val_again, qdir, qdata;
 
+        // stuff any/all NIF port transceiver modules into reset on typical shutdown, but not on panic/oops (ungraceful shutdown)
         if (code)
         {
             read_val = ioread32be(my_reg);
@@ -84,7 +94,7 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
             iounmap(io);
         }
         else
-            pr_warn("*** shutdown hook [skipping FP ports reset] : code is %u", code);
+            pr_warn("*** shutdown hook [skipping FP ports reset] : code is %lu", code);
 
         base = (void *) (((unsigned long) BAR) & ~0xF) + 0x2700000;
         io = ioremap((unsigned long) base, SZ_128);
@@ -105,16 +115,18 @@ static int nokia_gpio_wdt_notify_sys(struct notifier_block *this, unsigned long 
         my_reg = io + 0x50;
         read_val = ioread32be(my_reg);
 
-#define NOKIA_SHUTDOWN_QFPGA_INTO_RESET
-#ifdef NOKIA_SHUTDOWN_QFPGA_INTO_RESET
-        qdata = read_val & ~0x20000000;
-        iowrite32be(qdata, my_reg);
-        read_val_again = ioread32be(my_reg);
-        pr_warn("*** shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x read_again 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
-#else
-        pr_warn("*** shutdown hook [skipping QFPGA reset] addr 0x%lx : orig_read 0x%x", (long unsigned int) my_reg, read_val);
-#endif
-
+        // determine dynamically whether global kernel AER is in play and stuff QFPGA into reset if safe to do
+        if ((nokia_pci_aer_enabled) && (!nokia_pci_aer_enabled()))
+        {
+           qdata = read_val & ~0x20000000;
+           iowrite32be(qdata, my_reg);
+           read_val_again = ioread32be(my_reg);
+           pr_warn("*** kernel PCIe AER is disabled - shutdown hook operating on addr 0x%lx : orig_read 0x%x qdata 0x%x read_again 0x%x", (long unsigned int) my_reg, read_val, qdata, read_val_again);
+        }
+        else
+        {
+           pr_warn("*** kernel PCIe AER is enabled - shutdown hook [skipping QFPGA reset] addr 0x%lx : orig_read 0x%x", (long unsigned int) my_reg, read_val);
+        }
         iounmap(io);
     }
     else
@@ -209,6 +221,17 @@ static int __init nokia_gpio_wdt_init_driver(void)
        pr_warn("cannot locate IOCTL device!\n");
     }
 
+    kallsyms_lookup_name_t kallsyms_lookup_name;
+    register_kprobe(&kp);
+    kallsyms_lookup_name = (kallsyms_lookup_name_t) kp.addr;
+    unregister_kprobe(&kp);
+    nokia_pci_aer_enabled = kallsyms_lookup_name("pci_aer_available");
+
+    if (nokia_pci_aer_enabled)
+       pr_info("nokia_gpio_wdt:  pci_aer_available() found at %p\n", (void *) nokia_pci_aer_enabled);
+    else
+       pr_warn("nokia_gpio_wdt:  could not locate pci_aer_available()\n");
+
     // crash_kexec_post_notifiers = true;
     return platform_driver_register(&nokia_gpio_wdt_driver);
 }
@@ -220,6 +243,8 @@ static void __exit nokia_gpio_wdt_exit_driver(void)
     atomic_notifier_chain_unregister(&panic_notifier_list, &nokia_gpio_wdt_notifier);
     platform_driver_unregister(&nokia_gpio_wdt_driver);
 }
+
+
 module_exit(nokia_gpio_wdt_exit_driver);
 
 MODULE_AUTHOR("SR Sonic <sr-sonic@nokia.com>");
