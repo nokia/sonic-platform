@@ -1,12 +1,11 @@
 [Unit]
 Description=Nokia IXR-7250 IMM Ungraceful reboot service
-Requires=database.service config-setup.service
-After=database.service config-setup.service
 
 [Service]
 Restart=on-failure
 RestartSec=30
 TimeoutStartSec=infinity
+ExecStartPre=/usr/bin/sleep 180
 ExecStart=/usr/bin/python3 /opt/srlinux/bin/nokia-imm-ungraceful-reboot.py
 
 [Install]
