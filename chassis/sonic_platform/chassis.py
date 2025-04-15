@@ -34,6 +34,10 @@ NOKIA_MODULE_EEPROM_INFO_TABLE = 'NOKIA_MODULE_EEPROM_INFO_TABLE'
 NOKIA_LINECARD_INFO_KEY_TEMPLATE = 'LINE-CARD'
 NOKIA_SUPERVISOR_INFO_KEY_TEMPLATE = 'SUPERVISOR'
 NOKIA_MODULE_EEPROM_INFO_FIELD = 'eeprom_info'
+REBOOT_CAUSE_DIR = "/host/reboot-cause/"
+REBOOT_CAUSE_FILE = os.path.join(REBOOT_CAUSE_DIR, "reboot-cause.txt")
+REBOOT_CAUSE_UNKNOWN = "Unknown"
+HEARTBEAT_WITH_SUPERVISOR_LOST = "Heartbeat with the Supervisor card lost"
 
 class Chassis(ChassisBase):
     """
@@ -127,17 +131,32 @@ class Chassis(ChassisBase):
             return module.get_status()
         return False
 
+    def _find_software_reboot_cause_from_reboot_cause_file(self):
+        software_reboot_cause = REBOOT_CAUSE_UNKNOWN
+        if os.path.isfile(REBOOT_CAUSE_FILE):
+            with open(REBOOT_CAUSE_FILE) as cause_file:
+                software_reboot_cause = cause_file.readline().rstrip('\n')
+        return software_reboot_cause
+    
     def get_reboot_cause(self):
         reason = (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
         my_hw_slot = self._get_my_hw_slot()
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_CHASSIS_SERVICE)
         if not channel or not stub:
-          return reason
+            return reason
         response = stub.GetRebootReason(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=my_hw_slot))
         nokia_common.channel_shutdown(channel)
         if response.response_status.status_code == platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
-          if response.reboot_reason != 'None':
-            reason = (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, response.reboot_reason)
+            if response.reboot_reason != 'None':
+                # If watch_dog and other (kernel Pain), NDK alo generate reboot reason.
+                # if /host/reboot-cause/reboot-cause.txt already contains a valid reason
+                # return None to avoid overwrite the valid reason
+                reboot_cause = self._find_software_reboot_cause_from_reboot_cause_file()
+                if "Unknown (watchdog or others)" in response.reboot_reason and "Kernel Panic" in reboot_cause:
+                    return reason
+                elif HEARTBEAT_WITH_SUPERVISOR_LOST in response.reboot_reason and HEARTBEAT_WITH_SUPERVISOR_LOST in reboot_cause:
+                    return reason
+                reason = (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, response.reboot_reason)
         return reason
 
     def _get_my_module(self):
