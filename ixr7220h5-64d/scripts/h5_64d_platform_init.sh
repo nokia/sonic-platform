@@ -101,8 +101,8 @@ for num in {34..97}; do
 	echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-${num}/new_device
 	sleep 0.1
 done
-echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-98/new_device
-echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-99/new_device
+echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-98/new_device
+echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-99/new_device
 
 # Set the PCA9548 mux behavior
 echo -2 > /sys/bus/i2c/devices/4-0070/idle_state
@@ -130,7 +130,7 @@ if [ "$status" == "1" ]; then
     chmod 644 /sys/bus/i2c/devices/4-0054/eeprom
     h5_64d_profile
 else
-    echo "SYSEEPROM file not foud"
+    echo "SYSEEPROM file not found"
 fi
 
 #Enumerate GPIO port
