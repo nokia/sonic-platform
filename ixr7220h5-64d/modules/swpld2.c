@@ -140,7 +140,6 @@ static const unsigned short cpld_address_list[] = {0x41, I2C_CLIENT_END};
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
-    int reset_list[32];
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -179,7 +178,6 @@ static void dump_reg(struct cpld_data *data)
     u8 val2 = 0;
     u8 val3 = 0;
 
-      
     val0 = cpld_i2c_read(data, QSFP_RST_REG0);
     val1 = cpld_i2c_read(data, QSFP_RST_REG1);
     val2 = cpld_i2c_read(data, QSFP_RST_REG2);
@@ -919,32 +917,6 @@ static ssize_t show_code_year(struct device *dev, struct device_attribute *devat
     return sprintf(buf, "%d\n", val);
 }
 
-static ssize_t show_qsfp_reset(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-
-    return sprintf(buf, "%d\n", data->reset_list[sda->index]);
-}
-
-static ssize_t set_qsfp_reset(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 usr_val = 0;
-
-    int ret = kstrtou8(buf, 10, &usr_val);
-    if (ret != 0) {
-        return ret; 
-    }
-    if (usr_val > 0xFF) {
-        return -EINVAL;
-    }
-
-    data->reset_list[sda->index] = usr_val;
-    return count;
-}
-
 static ssize_t show_qsfp_led(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
@@ -1188,39 +1160,6 @@ static SENSOR_DEVICE_ATTR(code_day, S_IRUGO, show_code_day, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_month, S_IRUGO, show_code_month, NULL, 0);
 static SENSOR_DEVICE_ATTR(code_year, S_IRUGO, show_code_year, NULL, 0);
 
-static SENSOR_DEVICE_ATTR(port_1_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 0);
-static SENSOR_DEVICE_ATTR(port_2_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 1);
-static SENSOR_DEVICE_ATTR(port_3_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 2);
-static SENSOR_DEVICE_ATTR(port_4_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 3);
-static SENSOR_DEVICE_ATTR(port_5_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 4);
-static SENSOR_DEVICE_ATTR(port_6_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 5);
-static SENSOR_DEVICE_ATTR(port_7_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 6);
-static SENSOR_DEVICE_ATTR(port_8_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 7);
-static SENSOR_DEVICE_ATTR(port_9_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 8);
-static SENSOR_DEVICE_ATTR(port_10_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 9);
-static SENSOR_DEVICE_ATTR(port_11_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 10);
-static SENSOR_DEVICE_ATTR(port_12_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 11);
-static SENSOR_DEVICE_ATTR(port_13_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 12);
-static SENSOR_DEVICE_ATTR(port_14_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 13);
-static SENSOR_DEVICE_ATTR(port_15_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 14);
-static SENSOR_DEVICE_ATTR(port_16_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 15);
-static SENSOR_DEVICE_ATTR(port_33_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 16);
-static SENSOR_DEVICE_ATTR(port_34_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 17);
-static SENSOR_DEVICE_ATTR(port_35_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 18);
-static SENSOR_DEVICE_ATTR(port_36_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 19);
-static SENSOR_DEVICE_ATTR(port_37_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 20);
-static SENSOR_DEVICE_ATTR(port_38_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 21);
-static SENSOR_DEVICE_ATTR(port_39_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 22);
-static SENSOR_DEVICE_ATTR(port_40_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 23);
-static SENSOR_DEVICE_ATTR(port_41_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 24);
-static SENSOR_DEVICE_ATTR(port_42_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 25);
-static SENSOR_DEVICE_ATTR(port_43_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 26);
-static SENSOR_DEVICE_ATTR(port_44_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 27);
-static SENSOR_DEVICE_ATTR(port_45_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 28);
-static SENSOR_DEVICE_ATTR(port_46_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 29);
-static SENSOR_DEVICE_ATTR(port_47_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 30);
-static SENSOR_DEVICE_ATTR(port_48_reset, S_IRUGO | S_IWUSR, show_qsfp_reset, set_qsfp_reset, 31);
-
 static SENSOR_DEVICE_ATTR(port_1_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 0);
 static SENSOR_DEVICE_ATTR(port_2_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 1);
 static SENSOR_DEVICE_ATTR(port_3_led, S_IRUGO | S_IWUSR, show_qsfp_led, set_qsfp_led, 2);
@@ -1294,7 +1233,7 @@ static struct attribute *swpld2_attributes[] = {
     &sensor_dev_attr_led_test_amb.dev_attr.attr,
     &sensor_dev_attr_led_test_grn.dev_attr.attr,
     &sensor_dev_attr_led_test_blink.dev_attr.attr,
-    &sensor_dev_attr_led_test_src_sel.dev_attr.attr,    
+    &sensor_dev_attr_led_test_src_sel.dev_attr.attr,
     &sensor_dev_attr_rst_pld_soft.dev_attr.attr,
 
     &sensor_dev_attr_port_1_rst.dev_attr.attr,
@@ -1361,7 +1300,7 @@ static struct attribute *swpld2_attributes[] = {
     &sensor_dev_attr_port_45_lpmod.dev_attr.attr,
     &sensor_dev_attr_port_46_lpmod.dev_attr.attr,
     &sensor_dev_attr_port_47_lpmod.dev_attr.attr,
-    &sensor_dev_attr_port_48_lpmod.dev_attr.attr,    
+    &sensor_dev_attr_port_48_lpmod.dev_attr.attr,
 
     &sensor_dev_attr_port_1_modsel.dev_attr.attr,
     &sensor_dev_attr_port_2_modsel.dev_attr.attr,
@@ -1378,7 +1317,7 @@ static struct attribute *swpld2_attributes[] = {
     &sensor_dev_attr_port_13_modsel.dev_attr.attr,
     &sensor_dev_attr_port_14_modsel.dev_attr.attr,
     &sensor_dev_attr_port_15_modsel.dev_attr.attr,
-    &sensor_dev_attr_port_16_modsel.dev_attr.attr,    
+    &sensor_dev_attr_port_16_modsel.dev_attr.attr,
     &sensor_dev_attr_port_33_modsel.dev_attr.attr,
     &sensor_dev_attr_port_34_modsel.dev_attr.attr,
     &sensor_dev_attr_port_35_modsel.dev_attr.attr,
@@ -1394,7 +1333,7 @@ static struct attribute *swpld2_attributes[] = {
     &sensor_dev_attr_port_45_modsel.dev_attr.attr,
     &sensor_dev_attr_port_46_modsel.dev_attr.attr,
     &sensor_dev_attr_port_47_modsel.dev_attr.attr,
-    &sensor_dev_attr_port_48_modsel.dev_attr.attr,    
+    &sensor_dev_attr_port_48_modsel.dev_attr.attr,
 
     &sensor_dev_attr_port_1_prs.dev_attr.attr,
     &sensor_dev_attr_port_2_prs.dev_attr.attr,
@@ -1436,7 +1375,7 @@ static struct attribute *swpld2_attributes[] = {
 
     &sensor_dev_attr_port_65_tx_fault.dev_attr.attr,
     &sensor_dev_attr_port_65_rx_los.dev_attr.attr,
-    &sensor_dev_attr_port_65_prs.dev_attr.attr,    
+    &sensor_dev_attr_port_65_prs.dev_attr.attr,
     &sensor_dev_attr_port_66_tx_fault.dev_attr.attr,
     &sensor_dev_attr_port_66_rx_los.dev_attr.attr,
     &sensor_dev_attr_port_66_prs.dev_attr.attr,
@@ -1448,39 +1387,6 @@ static struct attribute *swpld2_attributes[] = {
     &sensor_dev_attr_code_day.dev_attr.attr,
     &sensor_dev_attr_code_month.dev_attr.attr,
     &sensor_dev_attr_code_year.dev_attr.attr,
-
-    &sensor_dev_attr_port_1_reset.dev_attr.attr,
-    &sensor_dev_attr_port_2_reset.dev_attr.attr,
-    &sensor_dev_attr_port_3_reset.dev_attr.attr,
-    &sensor_dev_attr_port_4_reset.dev_attr.attr,
-    &sensor_dev_attr_port_5_reset.dev_attr.attr,
-    &sensor_dev_attr_port_6_reset.dev_attr.attr,
-    &sensor_dev_attr_port_7_reset.dev_attr.attr,
-    &sensor_dev_attr_port_8_reset.dev_attr.attr,
-    &sensor_dev_attr_port_9_reset.dev_attr.attr,
-    &sensor_dev_attr_port_10_reset.dev_attr.attr,
-    &sensor_dev_attr_port_11_reset.dev_attr.attr,
-    &sensor_dev_attr_port_12_reset.dev_attr.attr,
-    &sensor_dev_attr_port_13_reset.dev_attr.attr,
-    &sensor_dev_attr_port_14_reset.dev_attr.attr,
-    &sensor_dev_attr_port_15_reset.dev_attr.attr,
-    &sensor_dev_attr_port_16_reset.dev_attr.attr,
-    &sensor_dev_attr_port_33_reset.dev_attr.attr,
-    &sensor_dev_attr_port_34_reset.dev_attr.attr,
-    &sensor_dev_attr_port_35_reset.dev_attr.attr,
-    &sensor_dev_attr_port_36_reset.dev_attr.attr,
-    &sensor_dev_attr_port_37_reset.dev_attr.attr,
-    &sensor_dev_attr_port_38_reset.dev_attr.attr,
-    &sensor_dev_attr_port_39_reset.dev_attr.attr,
-    &sensor_dev_attr_port_40_reset.dev_attr.attr,
-    &sensor_dev_attr_port_41_reset.dev_attr.attr,
-    &sensor_dev_attr_port_42_reset.dev_attr.attr,
-    &sensor_dev_attr_port_43_reset.dev_attr.attr,
-    &sensor_dev_attr_port_44_reset.dev_attr.attr,
-    &sensor_dev_attr_port_45_reset.dev_attr.attr,
-    &sensor_dev_attr_port_46_reset.dev_attr.attr,
-    &sensor_dev_attr_port_47_reset.dev_attr.attr,
-    &sensor_dev_attr_port_48_reset.dev_attr.attr,
 
     &sensor_dev_attr_port_1_led.dev_attr.attr,
     &sensor_dev_attr_port_2_led.dev_attr.attr,
@@ -1609,8 +1515,7 @@ static int swpld2_probe(struct i2c_client *client,
     dev_info(&client->dev, "[SWPLD2]PORTs reset done.\n");
     cpld_i2c_write(data, SFP_CTRL_REG, 0x0);
     dump_reg(data);
-    for (i=0;i<32;i++) data->reset_list[i] = 0;    
-    
+
     return 0;
 
 exit:
@@ -1666,4 +1571,3 @@ MODULE_LICENSE("GPL");
 
 module_init(swpld2_init);
 module_exit(swpld2_exit);
-

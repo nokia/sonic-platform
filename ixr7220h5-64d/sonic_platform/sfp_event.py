@@ -18,7 +18,6 @@ SYSTEM_FAIL = 'system_fail'
 # SFP PORT numbers
 PORT_START = 1
 PORT_END = 66
-PORT_NUM = 64
 
 SWPLD2_DIR = "/sys/bus/i2c/devices/21-0041/"
 SWPLD3_DIR = "/sys/bus/i2c/devices/21-0045/"
@@ -65,30 +64,12 @@ class SfpEvent:
             bool_list = [not bool(int(bit)) for bit in bin_str]
             port_status.extend(bool_list)
 
-        for port in range (PORT_START, PORT_START + PORT_END):
-            if port <= PORT_NUM:
-                if port_status[port-1]:
-                    if (port >= 17 and port <= 32) or (port >= 49 and port <= 64):
-                        swpld_path = SWPLD3_DIR
-                    else:
-                        swpld_path = SWPLD2_DIR
-                    
-                    reset_status = read_sysfs_file(swpld_path+f"port_{port}_reset")
-                    if reset_status == '1':                        
-                        port_status[port-1] = False
-                        write_sysfs_file(swpld_path+f"port_{port}_reset", '2')
-                    elif reset_status == '2':
-                        port_status[port-1] = False
-                    elif reset_status == '3':
-                        port_status[port-1] = True
-                        write_sysfs_file(swpld_path+f"port_{port}_reset", '0')
-
+        for port in range (PORT_END-1, PORT_END+1):
+            status = read_sysfs_file(SWPLD2_DIR+f"port_{port}_prs")
+            if status == '0':
+                port_status.append(True)
             else:
-                status = read_sysfs_file(SWPLD2_DIR+f"port_{port}_prs")
-                if status == '0':
-                    port_status.append(True)
-                else:
-                    port_status.append(False)
+                port_status.append(False)
 
         return port_status
 

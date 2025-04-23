@@ -1,10 +1,10 @@
-#include <linux/kernel.h>
 //  An hwmon driver for delta PSU
 //  
 //  Copyright (C) 2024 Delta Network Technology Corporation
 //  Copyright (C) 2024 Nokia Corporation.
 // 
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
@@ -31,7 +31,7 @@
 #define PSU_REG_RO_TEMP3                (0x8f)
 #define PSU_REG_RO_MFR_MODEL            (0x9a)
 #define PSU_REG_RO_MFR_SERIAL           (0x9e)
-#define PSU_MFR_MODELNAME_LENGTH        (11)
+#define PSU_MFR_MODELNAME_LENGTH        (16)
 #define PSU_MFR_SERIALNUM_LENGTH        (20)
 #define PSU_DRIVER_NAME                 "dni_psu"
 
@@ -63,8 +63,6 @@ struct psu_data
     u16 temp_input[PSU_THERMAL_NUMBER];
     u8  fan_fault;
     u16 fan_speed[PSU_FAN_NUMBER];
-    u8  mfr_model[PSU_MFR_MODELNAME_LENGTH+1]; 
-    u8  mfr_serial[PSU_MFR_SERIALNUM_LENGTH+1];
 };
 
 static int     two_complement_to_int(u16 data, u8 valid_bit, int mask);
@@ -215,24 +213,44 @@ static ssize_t for_fan_fault(struct device *dev, struct device_attribute *dev_at
     return sprintf(buf, "%d\n", data->fan_fault >> shift);
 }
 
-static ssize_t for_serial(struct device *dev, struct device_attribute *dev_attr, char *buf)
-{
-    struct psu_data *data = dev_get_drvdata(dev);
-
-    if (!data->valid)
-        return 0;
-
-    return sprintf(buf, "%s\n", data->mfr_serial);
-}
-
 static ssize_t for_model(struct device *dev, struct device_attribute *dev_attr, char *buf)
 {
-    struct psu_data *data = dev_get_drvdata(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    u8  mfr_model[PSU_MFR_MODELNAME_LENGTH+1];
+    int status;
 
-    if (!data->valid)
-        return 0;
+    status = psu_read_block(client, PSU_REG_RO_MFR_MODEL, mfr_model);
+    if (status < 0)
+    {
+        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_MODEL, status);
+        mfr_model[1] = '\0';
+    }
+    else
+    {
+        mfr_model[ARRAY_SIZE(mfr_model) - 1] = '\0';
+    }
 
-    return sprintf(buf, "%s\n", data->mfr_model);
+    return sprintf(buf, "%s\n", mfr_model);
+}
+
+static ssize_t for_serial(struct device *dev, struct device_attribute *dev_attr, char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    u8  mfr_serial[PSU_MFR_SERIALNUM_LENGTH+1];
+    int status;
+
+    status = psu_read_block(client, PSU_REG_RO_MFR_SERIAL, mfr_serial);
+    if (status < 0)
+    {
+        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_SERIAL, status);
+        mfr_serial[1] = '\0';
+    }
+    else
+    {
+        mfr_serial[ARRAY_SIZE(mfr_serial) - 1] = '\0';
+    }
+
+    return sprintf(buf, "%s\n", mfr_serial);
 }
 
 static int psu_read_byte(struct i2c_client *client, u8 reg)
@@ -423,24 +441,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
     }
 
     dev_info(&client->dev, "%s: psu '%s'\n",
-        dev_name(data->hwmon_dev), client->name);
-
-    // PSU mfr_model 
-    status = psu_read_block(client, PSU_REG_RO_MFR_MODEL, data->mfr_model);
-    data->mfr_model[ARRAY_SIZE(data->mfr_model) - 1] = '\0';
-    if (status < 0) 
-    {
-        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_MODEL, status);
-        data->mfr_model[1] = '\0';
-    }
-    // PSU mfr_serial 
-    status = psu_read_block(client, PSU_REG_RO_MFR_SERIAL, data->mfr_serial);
-    data->mfr_serial[ARRAY_SIZE(data->mfr_serial) - 1] = '\0';
-    if (status < 0) 
-    {
-        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_SERIAL, status);
-        data->mfr_serial[1] = '\0';
-    }
+    dev_name(data->hwmon_dev), client->name);
 
     return 0;
 
