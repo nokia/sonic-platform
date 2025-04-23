@@ -129,7 +129,7 @@ if [ "$status" == "1" ]; then
     chmod 644 /sys/bus/i2c/devices/4-0054/eeprom
     h5_64o_profile
 else
-    echo "SYSEEPROM file not foud"
+    echo "SYSEEPROM file not found"
 fi
 
 #Enumerate GPIO port
