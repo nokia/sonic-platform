@@ -1,10 +1,10 @@
-#include <linux/kernel.h>
 //  An hwmon driver for delta PSU
-//
+//  
 //  Copyright (C) 2024 Delta Network Technology Corporation
 //  Copyright (C) 2024 Nokia Corporation.
-//
+// 
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
@@ -31,7 +31,7 @@
 #define PSU_REG_RO_TEMP3                (0x8f)
 #define PSU_REG_RO_MFR_MODEL            (0x9a)
 #define PSU_REG_RO_MFR_SERIAL           (0x9e)
-#define PSU_MFR_MODELNAME_LENGTH        (11)
+#define PSU_MFR_MODELNAME_LENGTH        (16)
 #define PSU_MFR_SERIALNUM_LENGTH        (20)
 #define PSU_DRIVER_NAME                 "dni_psu"
 
@@ -46,7 +46,7 @@
 static const unsigned short normal_i2c[] = { 0x58, 0x59, I2C_CLIENT_END };
 
 /* This is additional data */
-struct psu_data
+struct psu_data 
 {
     struct device *hwmon_dev;
     struct mutex update_lock;
@@ -63,8 +63,6 @@ struct psu_data
     u16 temp_input[PSU_THERMAL_NUMBER];
     u8  fan_fault;
     u16 fan_speed[PSU_FAN_NUMBER];
-    u8  mfr_model[PSU_MFR_MODELNAME_LENGTH+1];
-    u8  mfr_serial[PSU_MFR_SERIALNUM_LENGTH+1];
 };
 
 static int     two_complement_to_int(u16 data, u8 valid_bit, int mask);
@@ -87,7 +85,7 @@ static struct  psu_data *psu_update_device(struct device *dev, u8 reg);
 static ssize_t for_serial(struct device *dev, struct device_attribute *dev_attr, char *buf);
 static ssize_t for_model(struct device *dev, struct device_attribute *dev_attr, char *buf);
 
-enum psu_sysfs_attributes
+enum psu_sysfs_attributes 
 {
     PSU_V_IN,
     PSU_V_OUT,
@@ -209,30 +207,50 @@ static ssize_t for_fan_fault(struct device *dev, struct device_attribute *dev_at
 {
     struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
     struct psu_data *data = psu_update_device(dev, PSU_REG_RO_FAN_STATUS);
-
+    
     u8 shift = (attr->index == PSU_FAN1_FAULT) ? PSU_FAN1_FAULT_BIT : (PSU_FAN1_FAULT_BIT - (attr->index - PSU_FAN1_FAULT));
 
     return sprintf(buf, "%d\n", data->fan_fault >> shift);
 }
 
-static ssize_t for_serial(struct device *dev, struct device_attribute *dev_attr, char *buf)
-{
-    struct psu_data *data = dev_get_drvdata(dev);
-
-    if (!data->valid)
-        return 0;
-
-    return sprintf(buf, "%s\n", data->mfr_serial);
-}
-
 static ssize_t for_model(struct device *dev, struct device_attribute *dev_attr, char *buf)
 {
-    struct psu_data *data = dev_get_drvdata(dev);
+    struct i2c_client *client = to_i2c_client(dev);
+    u8  mfr_model[PSU_MFR_MODELNAME_LENGTH+1];
+    int status;
 
-    if (!data->valid)
-        return 0;
+    status = psu_read_block(client, PSU_REG_RO_MFR_MODEL, mfr_model);
+    if (status < 0)
+    {
+        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_MODEL, status);
+        mfr_model[1] = '\0';
+    }
+    else
+    {
+        mfr_model[ARRAY_SIZE(mfr_model) - 1] = '\0';
+    }
 
-    return sprintf(buf, "%s\n", data->mfr_model);
+    return sprintf(buf, "%s\n", mfr_model);
+}
+
+static ssize_t for_serial(struct device *dev, struct device_attribute *dev_attr, char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    u8  mfr_serial[PSU_MFR_SERIALNUM_LENGTH+1];
+    int status;
+
+    status = psu_read_block(client, PSU_REG_RO_MFR_SERIAL, mfr_serial);
+    if (status < 0)
+    {
+        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_SERIAL, status);
+        mfr_serial[1] = '\0';
+    }
+    else
+    {
+        mfr_serial[ARRAY_SIZE(mfr_serial) - 1] = '\0';
+    }
+
+    return sprintf(buf, "%s\n", mfr_serial);
 }
 
 static int psu_read_byte(struct i2c_client *client, u8 reg)
@@ -256,13 +274,13 @@ abort:
     return result;
 }
 
-struct reg_data_byte
+struct reg_data_byte 
 {
     u8 reg;
     u8 *value;
 };
 
-struct reg_data_word
+struct reg_data_word 
 {
     u8 reg;
     u16 *value;
@@ -272,10 +290,10 @@ static struct psu_data *psu_update_device(struct device *dev, u8 reg)
 {
     struct i2c_client *client = to_i2c_client(dev);
     struct psu_data *data = i2c_get_clientdata(client);
-
+    
     mutex_lock(&data->update_lock);
 
-    if (time_after(jiffies, data->last_updated))
+    if (time_after(jiffies, data->last_updated)) 
     {
         int i, status;
 
@@ -302,36 +320,36 @@ static struct psu_data *psu_update_device(struct device *dev, u8 reg)
         /* one milliseconds from now */
         data->last_updated = jiffies + HZ / 1000;
 
-        for (i = 0; i < ARRAY_SIZE(regs_byte); i++)
+        for (i = 0; i < ARRAY_SIZE(regs_byte); i++) 
         {
             if (reg != regs_byte[i].reg)
                 continue;
 
             status = psu_read_byte(client, regs_byte[i].reg);
-            if (status < 0)
+            if (status < 0) 
             {
                 dev_info(&client->dev, "reg %d, err %d\n", regs_byte[i].reg, status);
                 *(regs_byte[i].value) = 0;
-            }
-            else
+            } 
+            else 
             {
                 *(regs_byte[i].value) = status;
             }
             break;
         }
 
-        for (i = 0; i < ARRAY_SIZE(regs_word); i++)
+        for (i = 0; i < ARRAY_SIZE(regs_word); i++) 
         {
             if (reg != regs_word[i].reg)
                 continue;
 
             status = psu_read_word(client, regs_word[i].reg);
-            if (status < 0)
+            if (status < 0) 
             {
                 dev_info(&client->dev, "reg %d, err %d\n", regs_word[i].reg, status);
                 *(regs_word[i].value) = 0;
-            }
-            else
+            } 
+            else 
             {
                 *(regs_word[i].value) = status;
             }
@@ -386,7 +404,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
     struct psu_data *data;
     int status;
 
-    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_WORD_DATA | I2C_FUNC_SMBUS_BLOCK_DATA))
+    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_WORD_DATA | I2C_FUNC_SMBUS_BLOCK_DATA)) 
     {
         dev_info(&client->dev, "i2c_check_functionality failed!!!\n");
         status = -EIO;
@@ -394,7 +412,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
     }
 
     data = kzalloc(sizeof(*data), GFP_KERNEL);
-    if (!data)
+    if (!data) 
     {
         status = -ENOMEM;
         goto exit;
@@ -415,7 +433,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
     }
 
     data->hwmon_dev = hwmon_device_register_with_groups(&client->dev, PSU_DRIVER_NAME, NULL, NULL);
-    if (IS_ERR(data->hwmon_dev))
+    if (IS_ERR(data->hwmon_dev)) 
     {
 	    dev_info(&client->dev, "hwmon_device_register failed!!!\n");
         status = PTR_ERR(data->hwmon_dev);
@@ -423,24 +441,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
     }
 
     dev_info(&client->dev, "%s: psu '%s'\n",
-        dev_name(data->hwmon_dev), client->name);
-
-    // PSU mfr_model
-    status = psu_read_block(client, PSU_REG_RO_MFR_MODEL, data->mfr_model);
-    data->mfr_model[ARRAY_SIZE(data->mfr_model) - 1] = '\0';
-    if (status < 0)
-    {
-        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_MODEL, status);
-        data->mfr_model[1] = '\0';
-    }
-    // PSU mfr_serial
-    status = psu_read_block(client, PSU_REG_RO_MFR_SERIAL, data->mfr_serial);
-    data->mfr_serial[ARRAY_SIZE(data->mfr_serial) - 1] = '\0';
-    if (status < 0)
-    {
-        dev_info(&client->dev, "reg %d, err %d\n", PSU_REG_RO_MFR_SERIAL, status);
-        data->mfr_serial[1] = '\0';
-    }
+    dev_name(data->hwmon_dev), client->name);
 
     return 0;
 
@@ -458,7 +459,7 @@ static void psu_remove(struct i2c_client *client)
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &psu_group);
     kfree(data);
-
+    
     return;
 }
 

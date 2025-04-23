@@ -231,11 +231,12 @@ class Fan(FanBase):
             return False
 
         speed_to_duty = {
-            range(0, 10): 0x00,
+            range(0, 10): 26,
             range(10, 20): 40,
             range(20, 30): 64,
             range(30, 40): 90,
-            range(40, 54): 115,
+            range(40, 47): 115,
+            range(47, 54): 128,
             range(54, 66): 153,
             range(66, 76): 179,
             range(76, 86): 204,
@@ -294,11 +295,12 @@ class Fan(FanBase):
             (off) to 100 (full speed)
         """
         duty_to_speed = {
-            0: 0,
+            26: 10,
             40: 15,
             64: 25,
             90: 35,
             115: 45,
+            128: 50,
             153: 60,
             179: 70,
             204: 80,
