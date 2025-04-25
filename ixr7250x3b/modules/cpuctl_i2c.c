@@ -15,6 +15,7 @@
 #define CTL_I2C_CNTR_seq_err_det   (1 << 26)
 #define CTL_I2C_CNTR_seq_err_det16 (CTL_I2C_CNTR_seq_err_det >> 16)
 #define CTL_I2C_CNTR_slave_ack_not (1 << 25)
+#define CTL_I2C_CNTR_slave_ack_not16 (CTL_I2C_CNTR_slave_ack_not >> 16)
 #define CTL_I2C_CNTR_busy          (1 << 24)
 #define CTL_I2C_CNTR_busy16        (CTL_I2C_CNTR_busy >> 16)
 #define CTL_I2C_CNTR_base_timer_m  0x00ff0000
@@ -51,31 +52,32 @@ static void ctl_i2c_abort(CTLDEV *pdev)
 
 static int ctl_i2c_check_status(CTLDEV *pdev)
 {
-	u32 val;
+	u16 val;
 	int rc;
 
-	rc = read_poll_timeout_atomic(ctl_reg_read, val,
-								  ((val & CTL_I2C_CNTR_busy) == 0),
-								  5, 100 * USEC_PER_MSEC, 1, pdev, CTL_I2C_CNTR);
+	rc = read_poll_timeout_atomic(ctl_reg16_read, val,
+		((val & CTL_I2C_CNTR_busy16 ) == 0),
+		10, 100 * USEC_PER_MSEC, 1, pdev, CTL_I2C_CNTR);
 
 	if (rc)
 	{
-		dev_err(&pdev->pcidev->dev, "i2c timeout error 0x%08x\n", val);
+		dev_err(&pdev->pcidev->dev, "i2c timeout error 0x%04x\n", val);
 		ctl_i2c_abort(pdev);
 		return -ETIMEDOUT;
 	}
 
-	val = ctl_reg_read(pdev, CTL_I2C_CNTR);
-	if (val & CTL_I2C_CNTR_seq_err_det)
+	if (val & CTL_I2C_CNTR_seq_err_det16)
 	{
-		dev_err(&pdev->pcidev->dev, "i2c CTL_I2C_CNTR_seq_err_det 0x%08x\n", val);
+		dev_err(&pdev->pcidev->dev, "i2c CTL_I2C_CNTR_seq_err_det 0x%04x\n", val);
 		ctl_i2c_abort(pdev);
 		return -EIO;
 	}
-	if (val & CTL_I2C_CNTR_slave_ack_not)
+
+	if (val & CTL_I2C_CNTR_slave_ack_not16)
 	{
-		dev_dbg(&pdev->pcidev->dev, "i2c CTL_I2C_CNTR_slave_ack_not 0x%08x\n", val);
-		return -ENXIO;
+		if(debug & CTL_DEBUG_I2C)
+			dev_dbg(&pdev->pcidev->dev, "i2c CTL_I2C_CNTR_slave_ack_not 0x%04x\n",val);
+		return -ENODEV;
 	}
 
 	return 0;
@@ -112,18 +114,20 @@ static int ctl_i2c_read(CTLDEV *pdev, u8 addr, u8 *data, u16 len)
 		val |= CTL_I2C_CNTR_read_req_b | (((rlen - 1) << CTL_I2C_CNTR_rcv_cnt_o) & CTL_I2C_CNTR_rcv_cnt_m);
 	}
 	ctl_reg_write(pdev, CTL_I2C_CNTR, val);
-	dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x rlen %d\n", __FUNCTION__, val, rlen);
-	udelay(10);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x rlen %d\n", __FUNCTION__, val, rlen);
 
 	status = ctl_i2c_check_status(pdev);
 	if (status < 0)
 	{
-		dev_dbg(&pdev->pcidev->dev, "%s status %d\n", __FUNCTION__, status);
+		if (debug & CTL_DEBUG_I2C)
+			dev_dbg(&pdev->pcidev->dev, "%s status %d\n", __FUNCTION__, status);
 		return status;
 	}
 
 	val = ctl_reg_read(pdev, CTL_I2C_DATA);
-	dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x \n", __FUNCTION__, val);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x \n", __FUNCTION__, val);
 	switch (rlen)
 	{
 	case 1:
@@ -200,7 +204,8 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	}
 
 	ctl_reg_write(pdev, CTL_I2C_DATA, data);
-	dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x \n", __FUNCTION__, data);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x \n", __FUNCTION__, data);
 
 	val = pdev->phys_chan & CTL_I2C_CNTR_bus_sel_m;
 	val |= ctl_i2c_bus_speed_get(pdev) << CTL_I2C_CNTR_freq_400_o;
@@ -208,8 +213,8 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	val |= ((xlen - 1) << CTL_I2C_CNTR_xmt_cnt_o) | CTL_I2C_CNTR_write_req_b |
 		   CTL_I2C_CNTR_no_restart | start | end;
 	ctl_reg_write(pdev, CTL_I2C_CNTR, val);
-	udelay(10);
-	dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x \n", __FUNCTION__, val);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x \n", __FUNCTION__, val);
 
 	rc = ctl_i2c_check_status(pdev);
 	if (rc == 0)
@@ -226,9 +231,13 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 
 	for (i = 0; i < num; i++)
 	{
-		dev_dbg(&pdev->pcidev->dev, "%s msg%d: addr 0x%02x %s len %d flags 0x%04x\n", __FUNCTION__,
-				i, msgs[i].addr, (msgs[i].flags & 1) ? "rd" : "wr",
-				msgs[i].len, msgs[i].flags);
+		u64 start;
+		unsigned dur;
+		unsigned bus = adap->nr + pdev->virt_chan + 1;
+		dev_dbg(&pdev->pcidev->dev, "%s msg%d: dev %d-%04x %s len %d\n", __FUNCTION__,
+				i, bus, msgs[i].addr, (msgs[i].flags & 1) ? "rd" : "wr",
+				msgs[i].len);
+		start = ktime_get_ns();
 		if (msgs[i].flags & I2C_M_RD)
 		{
 			unsigned rdbytes = msgs[i].len;
@@ -248,7 +257,7 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 			unsigned wrbytes = msgs[i].len;
 			u8 *wbuf = msgs[i].buf;
 			if (wrbytes == 0) {
-				/* ack poll */
+				/* ackpoll */
 				rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, 1, 1);
 			}
 			else
@@ -273,6 +282,9 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 				}
 			}
 		}
+		dur = (ktime_get_ns() - start)/1000;
+		dev_dbg(&pdev->pcidev->dev, "%s msg%d: dev %d-%04x time %dus rc=%d\n", __FUNCTION__, i, 
+			bus, msgs[i].addr, dur,rc);
 		if (rc < 0)
 			break;
 	}
@@ -283,7 +295,8 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 		rc = i;
 	}
 
-	dev_dbg(&pdev->pcidev->dev, "%s returning %d\n", __FUNCTION__, rc);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s returning %d\n", __FUNCTION__, rc);
 	return rc;
 }
 
@@ -314,16 +327,19 @@ static int ctl_select_chan(struct i2c_mux_core *muxc, u32 chan)
 	CTLDEV *pdev = data->pdev;
 	struct chan_map *pchan;
 
-	dev_dbg(&pdev->pcidev->dev, "%s chan %d\n", __FUNCTION__, chan);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s chan %d\n", __FUNCTION__, chan);
 
 	pchan = &pdev->ctlv->pchanmap[chan];
 	pdev->phys_chan = pchan->phys_chan;
+	pdev->virt_chan = chan;
 	if (pchan->modsel >= 0) {
 		/* phys_chan has modsel */
 		if (pchan->modsel != pdev->current_modsel) {
 			unsigned int offset;
 			u32 val;
-			dev_dbg(&pdev->pcidev->dev, "%s chan %d modsel %d\n", __FUNCTION__, chan,pchan->modsel);
+			if (debug & CTL_DEBUG_I2C)
+				dev_dbg(&pdev->pcidev->dev, "%s chan %d modsel %d\n", __FUNCTION__, chan,pchan->modsel);
 			offset = pchan->modsel < 32 ? CTL_A32_VX_IMM_QSFP_MODSEL_N_BASE : (CTL_A32_VX_IMM_QSFP_MODSEL_N_BASE + 4);
 			/* deselect all */
 			ctl_reg_write(pdev,CTL_A32_VX_IMM_QSFP_MODSEL_N_BASE,0xffffffff);
@@ -345,7 +361,8 @@ static int ctl_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 	CTLDEV *pdev = data->pdev;
 	struct chan_map *pchan;
 	
-	dev_dbg(&pdev->pcidev->dev, "%s chan %d\n", __FUNCTION__, chan);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s chan %d\n", __FUNCTION__, chan);
 
 	pchan = &pdev->ctlv->pchanmap[chan];
 	pdev->phys_chan = 0;

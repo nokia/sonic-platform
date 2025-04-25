@@ -21,11 +21,19 @@ static ssize_t jer_reset_seq_show(struct device *dev, struct device_attribute *d
 static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
 	int i;
-	u32 val;
+	int num_asics,num_asic_if;
+	u32 val,bits;
 	CTLDEV *pdev = dev_get_drvdata(dev);
 
-	dev_info(dev, "resetting asics\n");
+	num_asics = pdev->ctlv->num_asics;
+	num_asic_if = pdev->ctlv->num_asic_if;
+	if (num_asic_if == 0) {
+		dev_warn(dev, "num_asic_if=0 missing configuration for board=%d?\n",board);
+		return -EINVAL;
+	}
 
+	dev_info(dev, "resetting asics/if (%d/%d)\n",num_asics,num_asic_if);
+	
 	/* put jer in reset */
 	dev_dbg(dev, "%s put into reset\n", __FUNCTION__);
 	spin_lock(&pdev->lock);
@@ -36,18 +44,22 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 	spin_unlock(&pdev->lock);
 	msleep(100);
 
-	/* take plls out of reset */
-	spin_lock(&pdev->lock);
+	/* take plls/rgb out of reset */
+	bits = MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT | MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT;
+
+	if (board == brd_x1b)
+		bits |= MISCIO4_IO_VERM_IMM_RGB_RST_N_BIT;
 	val = ctl_reg_read(pdev, CTL_MISC_IO4_DAT);
-	val |= MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT | MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT;
+	val &= ~bits;
 	ctl_reg_write(pdev, CTL_MISC_IO4_DAT, val);
-	spin_unlock(&pdev->lock);
+	msleep(10);
+	val |= bits;
+	ctl_reg_write(pdev, CTL_MISC_IO4_DAT, val);
 	dev_dbg(dev, "%s wrote io4_dat 0x%08x\n", __FUNCTION__, val);
 	msleep(100);
 
 	/* take jer out of reset */
-	dev_dbg(dev, "%s take out of reset\n", __FUNCTION__);
-	for (i = 0; i < NUM_JER_ASICS; i++)
+	for (i = 0; i < num_asic_if; i++)
 	{
 		/* sysrst */
 		spin_lock(&pdev->lock);
@@ -64,9 +76,11 @@ static ssize_t jer_reset_seq_store(struct device *dev, struct device_attribute *
 		val |= (MISCIO3_IO_VERM_JER0_SYS_PCI_BIT << i);
 		ctl_reg_write(pdev, CTL_MISC_IO3_DAT, val);
 		spin_unlock(&pdev->lock);
+		dev_dbg(dev, "%s take out of reset asic%d\n", __FUNCTION__,i);
 
 		msleep(10);
 	}
+
 	dev_dbg(dev, "%s wrote io3_dat 0x%08x\n", __FUNCTION__, val);
 
 	return count;
@@ -82,6 +96,14 @@ static ssize_t uint_store(const char *buf, size_t count, u32 *pval)
 	if (kstrtouint(buf, 0, pval) < 0)
 		return -EINVAL;
 	return count;
+}
+
+static ssize_t jer_avs_show(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	u32 val;
+	val = ctl_reg_read(pdev, CTL_A32_IO_MISCIO2_DATA);
+	return uint_show(buf, val & 0xffff);
 }
 
 static ssize_t bus_speed_show(struct device *dev, struct device_attribute *devattr, char *buf)
@@ -102,7 +124,7 @@ static ssize_t fandraw_prs_show(struct device *dev, struct device_attribute *dev
 	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 val;
 
-	val = ctl_reg_read(pdev, CTL_A32_MISCIO2_DATA);
+	val = ctl_reg_read(pdev, CTL_A32_CP_MISCIO2_DATA);
 
 	return sprintf(buf, "%d\n", val>>(u8)sda->index & 0x1 ? 1:0);
 }
@@ -334,6 +356,7 @@ static ssize_t led_psu_store(struct device *dev, struct device_attribute *devatt
 
 static DEVICE_ATTR_RW(jer_reset_seq);
 static DEVICE_ATTR_RW(bus_speed);
+static DEVICE_ATTR_RO(jer_avs);
 
 static SENSOR_DEVICE_ATTR(fandraw_1_prs, S_IRUGO, fandraw_prs_show, NULL, 0);
 static SENSOR_DEVICE_ATTR(fandraw_2_prs, S_IRUGO, fandraw_prs_show, NULL, 1);
@@ -510,6 +533,7 @@ static const struct attribute_group cp_vermilion_ctl_group = {
 
 static struct attribute *io_vermilion_ctl_attrs[] = {
 	&dev_attr_jer_reset_seq.attr,
+	&dev_attr_jer_avs.attr,
 	&dev_attr_bus_speed.attr,
 	&dev_attr_port_prs_reg1.attr,
 	&dev_attr_port_prs_reg2.attr,

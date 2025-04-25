@@ -20,6 +20,18 @@
 static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id);
 static void ctl_remove(struct pci_dev *pcidev);
 
+uint board = brd_x3b;
+module_param_named(board, board, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(board,
+	" enum: x3b=0 (default), x1b=1, x4=2\n"
+);
+uint debug = 0;
+module_param_named(debug, debug, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(debug,
+	" bitmask\n"
+	"  0x0001 i2c\n"
+);
+
 static LIST_HEAD(ctl_devices);
 
 static CTLDEV *ctl_dev_alloc(void)
@@ -97,6 +109,7 @@ static struct ctlvariant ctls[] = {
 		.bus400 = 0x040a,
 		.devid = PCI_DEVICE_ID_NOKIA_CPUCTL_VERMILION,
 		.name = "ctl_cp_vermilion",
+		.miscio1_oe = 0x08080200,
 		.miscio3_oe = 0x00000000,
 		.miscio4_oe = 0x00000000,
 	},
@@ -104,7 +117,7 @@ static struct ctlvariant ctls[] = {
 		.ctl_type = ctl_io_vermilion,
 		.pchanmap = ctl_io_vermilion_chanmap,
 		.nchans = sizeof(ctl_io_vermilion_chanmap)/sizeof(struct chan_map),
-		.bus400 = 0x00ef,
+		.bus400 = 0x7eef,
 		.devid = PCI_DEVICE_ID_NOKIA_IOCTL_VERMILION,
 		.name = "ctl_io_vermilion",
 		.miscio3_oe = 0x0000000f,
@@ -166,10 +179,31 @@ static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id)
 	pdev->enabled = 1;
 	pcidev->dev.init_name = ctlv->name;
 
-	dev_dbg(&pcidev->dev, "control/status 0x%016llx cardtype 0x%02x\n",
+	dev_dbg(&pcidev->dev, "control/status 0x%016llx cardtype 0x%02x board=%d\n",
 			ctl_reg64_read(pdev, CTL_CNTR_STA),
-			ctl_reg_read(pdev, CTL_CARD_TYPE));
+			ctl_reg_read(pdev, CTL_CARD_TYPE),
+			board);
 
+	switch (board) {
+		case brd_x3b:
+		ctlv->num_asics = 2;
+		ctlv->num_asic_if = 2;
+		break;
+		case brd_x1b:
+		ctlv->num_asics = 1;
+		ctlv->num_asic_if = 1;
+		break;
+		case brd_x4:
+		ctlv->num_asics = 1;
+		ctlv->num_asic_if = 2;
+		break;
+	}
+
+	if (ctlv->miscio1_oe)
+	{
+		/* init io output enable mask */
+		ctl_reg_write(pdev, CTL_MISC_IO1_ENA, ctlv->miscio1_oe);
+	}
 	if (ctlv->miscio3_oe)
 	{
 		/* init io output enable mask */
