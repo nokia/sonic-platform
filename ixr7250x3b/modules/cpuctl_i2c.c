@@ -77,7 +77,7 @@ static int ctl_i2c_check_status(CTLDEV *pdev)
 	{
 		if(debug & CTL_DEBUG_I2C)
 			dev_dbg(&pdev->pcidev->dev, "i2c CTL_I2C_CNTR_slave_ack_not 0x%04x\n",val);
-		return -ENODEV;
+		return -ENXIO;
 	}
 
 	return 0;
