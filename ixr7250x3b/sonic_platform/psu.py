@@ -140,7 +140,10 @@ class Psu(PsuBase):
         if int(result, 10) < 0:
             return False        
         elif (int(result, 10) & (1 << 11)):
-            return True
+            result = read_sysfs_file(self.psu_dir + "in2_input")
+            psu_voltage = (float(result))/1000
+            if psu_voltage < MAX_VOLTAGE and psu_voltage > MIN_VOLTAGE:
+                return True
         return False
 
     def get_voltage(self):

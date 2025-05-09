@@ -17,16 +17,16 @@ except ImportError as e:
 
 sonic_logger = logger.Logger('thermal')
 sonic_logger.set_min_log_priority_info()
-THERMAL_NUM = 9
+THERMAL_NUM = 15
 
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
     HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
-    I2C_DEV_LIST = ["7-001e", "19-0049", "19-004a", "19-004b", "1-0049"]
-    THERMAL_NAME = ["FPGA", "MB Left", "MB Right", "MB Center", "MB CPU", "Max Temp. of SFPs", "ASIC0", "ASIC1", "CPU"]
-    THRESHHOLD = [68.0, 68.0, 68.0, 68.0, 68.0, 75.0, 90.0, 90.0, 80.0]
-    CRITICAL_THRESHHOLD = [75.0, 75.0, 75.0, 75.0, 75.0, 80.0, 93.0, 93.0, 83.0]
+    I2C_DEV_LIST = ["7-001e", "19-0049", "19-004a", "19-004b", "1-0049", "0-0018", "0-0019"]
+    THERMAL_NAME = ["FPGA", "MB Left", "MB Right", "MB Center", "MB CPU", "DDR1", "DDR2", "Max Port Temp.",
+                    "ASIC0_DRAM0", "ASIC0_DRAM1", "ASIC1_DRAM0", "ASIC1_DRAM1", "ASIC0", "ASIC1", "CPU"]
+    THRESHHOLD = [68.0, 68.0, 68.0, 68.0, 68.0, 68.0, 68.0, 75.0, 83.0, 83.0, 83.0, 83.0, 93.0, 93.0, 68.0]
 
     def __init__(self, thermal_index, sfps):
         ThermalBase.__init__(self)
@@ -43,11 +43,11 @@ class Thermal(ThermalBase):
         if self.index == THERMAL_NUM:    # CPU
             self.device_path = glob.glob("/sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon*/")
             self.thermal_temperature_file = self.device_path[0] + "temp1_input"
-        elif self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-2:    # MAC internal sensor
+        elif self.index >= THERMAL_NUM-6 and self.index <= THERMAL_NUM-1:    # MAC internal sensor
             self.thermal_temperature_file = None
             if not swsscommon.SonicDBConfig.isGlobalInit():
                 swsscommon.SonicDBConfig.initializeGlobalConfig()
-        elif self.index == THERMAL_NUM-3:    # Max temperature of all optics
+        elif self.index == THERMAL_NUM-7:    # Max temperature of all optics
             self.thermal_temperature_file = None
             self.sfps = sfps
         else:
@@ -112,21 +112,29 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to
             nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        if self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-2:
-            if self.index == THERMAL_NUM-1:
+        if self.index >= THERMAL_NUM-6 and self.index <= THERMAL_NUM-1:
+            if self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-3 or self.index == THERMAL_NUM-4:
                 namespace = 'asic1'
-            if self.index == THERMAL_NUM-2:
+            if self.index == THERMAL_NUM-2 or self.index == THERMAL_NUM-5 or self.index == THERMAL_NUM-6:
                 namespace = 'asic0'
             
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db.connect(db.STATE_DB)
             data_dict = db.get_all(db.STATE_DB, 'ASIC_TEMPERATURE_INFO')
-            thermal_temperature = float(data_dict['maximum_temperature'])
-        elif self.index == THERMAL_NUM-3:
+            if self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-2:
+                thermal_temperature = float(data_dict['maximum_temperature'])
+            elif self.index == THERMAL_NUM-6 or self.index == THERMAL_NUM-4:
+                thermal_temperature = float(data_dict['temperature_9'])
+            elif self.index == THERMAL_NUM-5 or self.index == THERMAL_NUM-3:
+                thermal_temperature = float(data_dict['temperature_10'])
+        elif self.index == THERMAL_NUM-7:
             thermal_temperature = 0
             for sfp in self.sfps:
                 try:
-                    temp = sfp.get_temperature()
+                    if sfp.get_presence():
+                        temp = sfp.get_temperature()
+                    else:
+                        temp = None
                 except:
                     temp = None
                 if (temp is not None) and (temp > thermal_temperature):
@@ -135,6 +143,8 @@ class Thermal(ThermalBase):
             thermal_temperature = read_sysfs_file(self.thermal_temperature_file)
             if (thermal_temperature != 'ERR'):
                 thermal_temperature = float(thermal_temperature) / 1000
+                if self.index == THERMAL_NUM:
+                    thermal_temperature += 10.0
             else:
                 thermal_temperature = 0
         
@@ -178,7 +188,7 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return self.CRITICAL_THRESHHOLD[self.index - 1]
+        return 'N/A'
 
     def set_high_critical_threshold(self):
         """

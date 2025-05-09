@@ -6,6 +6,7 @@ except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_actions')
+#sonic_logger.set_min_log_priority_info()
 
 class SetFanSpeedAction(ThermalPolicyActionBase):
     """
@@ -14,18 +15,14 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
     # JSON field definition
     JSON_FIELD_SPEED = 'speed'
     JSON_FIELD_DEFAULT_SPEED = 'default_speed'
-    JSON_FIELD_THRESHOLD1_SPEED = 'threshold1_speed'
-    JSON_FIELD_THRESHOLD2_SPEED = 'threshold2_speed'
     JSON_FIELD_HIGHTEMP_SPEED = 'hightemp_speed'
 
     def __init__(self):
         """
         Constructor of SetFanSpeedAction
         """
-        self.default_speed = 45
-        self.threshold1_speed=60
-        self.threshold2_speed=70
-        self.hightemp_speed = 90
+        self.default_speed = 60
+        self.hightemp_speed = 100
         self.speed = self.default_speed
 
     def load_from_json(self, json_obj):
@@ -97,26 +94,6 @@ class ThermalRecoverAction(SetFanSpeedAction):
             raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
                              format(SetFanSpeedAction.JSON_FIELD_DEFAULT_SPEED))
 
-        if SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED in json_obj:
-            threshold1_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED])
-            if threshold1_speed < 0 or threshold1_speed > 100:
-                raise ValueError('SetFanSpeedAction invalid default speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(threshold1_speed))
-            self.threshold1_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED])
-        else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_THRESHOLD1_SPEED))
-
-        if SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED in json_obj:
-            threshold2_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED])
-            if threshold2_speed < 0 or threshold2_speed > 100:
-                raise ValueError('SetFanSpeedAction invalid default speed value {} in JSON policy file, valid value should be [0, 100]'.
-                                 format(threshold2_speed))
-            self.threshold2_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED])
-        else:
-            raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
-                             format(SetFanSpeedAction.JSON_FIELD_THRESHOLD2_SPEED))
-
         if SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED in json_obj:
             hightemp_speed = float(json_obj[SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED])
             if hightemp_speed < 0 or hightemp_speed > 100:
@@ -127,7 +104,7 @@ class ThermalRecoverAction(SetFanSpeedAction):
             raise ValueError('SetFanSpeedAction missing mandatory field {} in JSON policy file'.
                              format(SetFanSpeedAction.JSON_FIELD_HIGHTEMP_SPEED))
 
-        sonic_logger.log_warning("ThermalRecoverAction: default: {}, threshold1: {}, threshold2: {}, hightemp: {}".format(self.default_speed, self.threshold1_speed, self.threshold2_speed, self.hightemp_speed))
+        sonic_logger.log_warning("ThermalRecoverAction: default: {}, hightemp: {}".format(self.default_speed, self.hightemp_speed))
 
     def execute(self, thermal_info_dict):
         """
@@ -142,12 +119,15 @@ class ThermalRecoverAction(SetFanSpeedAction):
             thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
             if thermal_info_obj.is_set_fan_high_temp_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
-            elif thermal_info_obj.is_set_fan_threshold_two_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold2_speed)
-            elif thermal_info_obj.is_set_fan_threshold_one_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold1_speed)
             elif thermal_info_obj.is_set_fan_default_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
+            elif thermal_info_obj.is_set_fan_ctl_speed():
+                fanctl_speed = thermal_info_obj.get_fanctl_speed()
+                if fanctl_speed != 0:
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, fanctl_speed)
+                else:
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
+                    sonic_logger.log_warning(f"Wrong fanctl_speed, use default fan speed {self.default_speed}")
 
 @thermal_json_object('switch.shutdown')
 class SwitchPolicyAction(ThermalPolicyActionBase):

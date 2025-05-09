@@ -22,17 +22,11 @@ load_kernel_drivers() {
     modprobe optoe
     modprobe at24
     modprobe max31790
+    modprobe jc42
     modprobe psu_x3b
     modprobe fan_eeprom
     modprobe psu_eeprom
     modprobe fan_led
-}
-
-x3b_profile()
-{
-    MAC_ADDR=$(sudo decode-syseeprom -m)
-    sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g" /usr/share/sonic/device/x86_64-nokia_ixr7250_x3b-r0/Nokia-IXR7250-X3B/profile.ini
-    echo "Nokia-IXR7250-X3B: Updated switch mac address ${MAC_ADDR}"
 }
 
 file_exists() {
@@ -64,11 +58,8 @@ echo 1 > /sys/bus/pci/drivers/cpuctl/0000:05:00.0/jer_reset_seq
 sleep 1
 /etc/init.d/opennsl-modules start
 
-for num in {27..62}; do
-    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-${num}/new_device
-    sleep 0.1
-done
-
+echo jc42 0x18 > /sys/bus/i2c/devices/i2c-0/new_device
+echo jc42 0x19 > /sys/bus/i2c/devices/i2c-0/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-1/new_device
 echo tmp421 0x1e > /sys/bus/i2c/devices/i2c-7/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-19/new_device
@@ -93,17 +84,13 @@ echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-14/new_device
 echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-15/new_device
 
 for num in {27..62}; do
-    echo 300 > /sys/bus/i2c/devices/${num}-0050/write_timeout
+    echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-${num}/new_device
     sleep 0.1
 done
 
-file_exists /sys/bus/i2c/devices/1-0054/eeprom
-status=$?
-if [ "$status" == "1" ]; then
-    chmod 644 /sys/bus/i2c/devices/1-0054/eeprom
-    x3b_profile
-else
-    echo "SYSEEPROM file not foud"
-fi
+for num in {27..62}; do
+    echo 300 > /sys/bus/i2c/devices/${num}-0050/write_timeout
+    sleep 0.1
+done
 
 exit 0
