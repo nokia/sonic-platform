@@ -98,6 +98,13 @@ static ssize_t uint_store(const char *buf, size_t count, u32 *pval)
 	return count;
 }
 
+static void flush_delay(CTLDEV *pdev)
+{
+    u32 val;
+	val = ctl_reg_read(pdev, A32_IO_MISCIO4_DATA);
+	udelay(556);
+}
+
 static ssize_t jer_avs_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
@@ -203,6 +210,7 @@ static ssize_t port_lpmod_store(struct device *dev, struct device_attribute *dev
 	reg_val = reg_val & mask;
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE + (u8)(sda->index / 32 * 4), (reg_val | usr_val));
 	spin_unlock(&pdev->lock);
+	flush_delay(pdev);
 	
 	return count;
 }
@@ -240,6 +248,7 @@ static ssize_t port_rst_store(struct device *dev, struct device_attribute *devat
 	reg_val = reg_val & mask;
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE + (u8)(sda->index / 32 * 4), (reg_val | usr_val));
 	spin_unlock(&pdev->lock);
+	flush_delay(pdev);
 
 	return count;
 }
@@ -354,6 +363,62 @@ static ssize_t led_psu_store(struct device *dev, struct device_attribute *devatt
 	return count;
 }
 
+static ssize_t led_mgmt_link_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u8 val;
+
+	val = ctl_reg8_read(pdev, IO_A8_LED_STATE_BASE + 4);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t led_mgmt_link_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xff)
+		return -EINVAL;
+
+	ctl_reg8_write(pdev, IO_A8_LED_STATE_BASE + 4, usr_val);
+
+	return count;
+}
+
+static ssize_t led_mgmt_actv_show(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u8 val;
+
+	val = ctl_reg8_read(pdev, IO_A8_LED_STATE_BASE);
+
+	return sprintf(buf, "0x%x\n", val);
+}
+
+static ssize_t led_mgmt_actv_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+	u32 usr_val = 0;
+
+	int ret = kstrtouint(buf, 16, &usr_val);
+	if (ret != 0) 
+		return ret;
+	if (usr_val > 0xff)
+		return -EINVAL;
+
+	ctl_reg8_write(pdev, IO_A8_LED_STATE_BASE, usr_val);
+
+	return count;
+}
+
 static DEVICE_ATTR_RW(jer_reset_seq);
 static DEVICE_ATTR_RW(bus_speed);
 static DEVICE_ATTR_RO(jer_avs);
@@ -364,6 +429,8 @@ static SENSOR_DEVICE_ATTR(fandraw_3_prs, S_IRUGO, fandraw_prs_show, NULL, 2);
 static DEVICE_ATTR_RW(led_sys);
 static DEVICE_ATTR_RW(led_fan);
 static DEVICE_ATTR_RW(led_psu);
+static DEVICE_ATTR_RW(led_mgmt_link);
+static DEVICE_ATTR_RW(led_mgmt_actv);
 
 static DEVICE_ATTR_RO(code_ver);
 static DEVICE_ATTR_RO(port_prs_reg1);
@@ -523,6 +590,8 @@ static struct attribute *cp_vermilion_ctl_attrs[] = {
 	&dev_attr_led_sys.attr,
 	&dev_attr_led_fan.attr,
 	&dev_attr_led_psu.attr,
+	&dev_attr_led_mgmt_link.attr,
+	&dev_attr_led_mgmt_actv.attr,
 
 	NULL,
 };
@@ -718,18 +787,27 @@ void port_init(CTLDEV *pdev)
 	dev_info(&pdev->pcidev->dev, "MOD_SEL+4: 0x%08x\n", reg_val);
 
 	spin_lock(&pdev->lock);
+	if (board == brd_x1b) {
+		ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE, 0xff000000);
+		reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4);
+		reg_val = reg_val & 0xfffffff0;
+		ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4, (reg_val | 0xf));
+	} else {
+		ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE, 0xffffffff);
+		reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4);
+		reg_val = reg_val & 0xfffffff0;
+		ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4, (reg_val | 0xf));
+	}
+	spin_unlock(&pdev->lock);
+	flush_delay(pdev);
 
-	ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE, 0xffffffff);
-	reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4);
-	reg_val = reg_val & 0xfffffff0;
-	ctl_reg_write(pdev, IO_A32_PORT_MOD_LPMODE_BASE + 4, (reg_val | 0xf));
-
+	spin_lock(&pdev->lock);
 	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE, 0xffffffff);
 	reg_val = ctl_reg_read(pdev, IO_A32_PORT_MOD_RST_BASE + 4);
 	reg_val = reg_val & 0xfffffff0;
-	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE + 4, (reg_val | 0xf));
-	
+	ctl_reg_write(pdev, IO_A32_PORT_MOD_RST_BASE + 4, (reg_val | 0xf));	
 	spin_unlock(&pdev->lock);
+	flush_delay(pdev);
 }
 
 int ctl_sysfs_init(CTLDEV *pdev)

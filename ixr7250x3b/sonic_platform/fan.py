@@ -18,7 +18,7 @@ FANS_PER_DRAWER = 4
 MAX_FAN_F_SPEED = 27000
 MAX_FAN_R_SPEED = 23000
 FAN_TOLERANCE = 50
-WORKING_FAN_SPEED = 2205
+WORKING_FAN_SPEED = 2300
 
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
@@ -240,26 +240,13 @@ class Fan(FanBase):
         """
         if self.is_psu_fan:
             return False
-
-        speed_to_duty = {
-            range(0, 10): 0x00,
-            range(10, 20): 40,   # 15%
-            range(20, 30): 64,   # 25%
-            range(30, 40): 90,   # 35%
-            range(40, 54): 115,  # 45%
-            range(54, 66): 153,  # 60%
-            range(66, 76): 179,  # 70%
-            range(76, 86): 204,  # 80%
-            range(86, 96): 230,  # 90%
-            range(96, 101): 255  # 100%
-        }
-
-        fan_duty_cycle = None
-
-        for speed_range, duty in speed_to_duty.items():
-            if speed in speed_range:
-                fan_duty_cycle = duty
-                break
+        
+        if speed >= 70 and speed <= 100:
+            fan_duty_cycle = round(2 * speed + 55)
+        elif speed >= 20 and speed < 70:
+            fan_duty_cycle = round(2.25 * speed + 38)
+        else:
+            fan_duty_cycle = 0
 
         pwm_enable = read_sysfs_file(self.pwm_enable_reg)
         if pwm_enable == '0':
@@ -305,21 +292,16 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0
             (off) to 100 (full speed)
         """
-        duty_to_speed = {
-            0: 0,
-            40: 15,
-            64: 25,
-            90: 35,
-            115: 45,
-            153: 60,
-            179: 70,
-            204: 80,
-            230: 90,
-            255: 100
-        }
-
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':
             dutyspeed = int(fan_duty)
-            return duty_to_speed.get(dutyspeed, 0)
+            if dutyspeed >= 195 and dutyspeed <= 255:
+                target_speed = round((dutyspeed - 55) / 2)
+            elif dutyspeed >= 83 and dutyspeed < 195:
+                target_speed = round((dutyspeed - 38) / 2.25)
+            else:
+                target_speed = 0
+            return target_speed
         return 0
+
+        
