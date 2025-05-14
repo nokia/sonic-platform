@@ -240,25 +240,13 @@ class Fan(FanBase):
         """
         if self.is_psu_fan:
             return False
-
-        speed_to_duty = {
-            range(0, 20): 0,
-            range(20, 31): 95,
-            range(31, 45): 128,
-            range(45, 55): 152,
-            range(55, 66): 173,
-            range(66, 76): 195,
-            range(76, 86): 215,
-            range(86, 96): 235,
-            range(96, 101): 255
-        }
-
-        fan_duty_cycle = None
-
-        for speed_range, duty in speed_to_duty.items():
-            if speed in speed_range:
-                fan_duty_cycle = duty
-                break
+        
+        if speed >= 70 and speed <= 100:
+            fan_duty_cycle = round(2 * speed + 55)
+        elif speed >= 20 and speed < 70:
+            fan_duty_cycle = round(2.25 * speed + 38)
+        else:
+            fan_duty_cycle = 0
 
         pwm_enable = read_sysfs_file(self.pwm_enable_reg)
         if pwm_enable == '0':
@@ -304,20 +292,15 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0
             (off) to 100 (full speed)
         """
-        duty_to_speed = {
-            0: 0,
-            95: 25,
-            128: 40,
-            152: 50,
-            173: 60,
-            195: 70,
-            215: 80,
-            235: 90,
-            255: 100
-        }
-
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':
             dutyspeed = int(fan_duty)
-            return duty_to_speed.get(dutyspeed, 0)
+            if dutyspeed >= 195 and dutyspeed <= 255:
+                target_speed = round((dutyspeed - 55) / 2)
+            elif dutyspeed >= 83 and dutyspeed < 195:
+                target_speed = round((dutyspeed - 38) / 2.25)
+            else:
+                target_speed = 0
+            return target_speed
         return 0
+        

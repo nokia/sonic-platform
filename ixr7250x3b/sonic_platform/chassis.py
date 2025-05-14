@@ -32,7 +32,7 @@ REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 FAN_DRAWERS_NUM = 3
 FANS_PER_DRAWER = 4
 PSU_NUM = 2
-THERMAL_NUM = 7
+THERMAL_NUM = 15
 COMPONENT_NUM = 3
 MAX_SELECT_DELAY = 10
 SYSLOG_IDENTIFIER = "chassis"
@@ -76,7 +76,7 @@ class Chassis(ChassisBase):
         
         # Construct lists fans, power supplies, thermals & components
         for i in range(THERMAL_NUM):
-            thermal = Thermal(i)
+            thermal = Thermal(i, self._sfp_list)
             self._thermal_list.append(thermal)
 
         drawer_num = FAN_DRAWERS_NUM
