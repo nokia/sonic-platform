@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-IXR7220-H5-32D Platform Service
+After=sysinit.target
+Before=database.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/h5_32d_platform_init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
