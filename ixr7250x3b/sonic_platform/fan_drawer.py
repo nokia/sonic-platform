@@ -114,6 +114,8 @@ class NokiaFanDrawer(FanDrawerBase):
             bool: True if Fan is operating properly, False if not
         """
         good_fan = 0
+        if not self.get_presence():
+            return False
         for fan in self._fan_list:
             if fan.get_status():
                 good_fan = good_fan + 1

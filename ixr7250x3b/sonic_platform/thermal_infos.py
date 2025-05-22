@@ -8,7 +8,7 @@ except ImportError as e:
 sonic_logger = logger.Logger('thermal_info')
 sonic_logger.set_min_log_priority_warning()
 
-FM = 5
+FM = 3
 TI = 5
 
 @thermal_json_object('fan_info')
@@ -106,15 +106,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
 
         good_fan = 0
         fan_speed_sum = 0
-        fan_not_good = False
         for fan in chassis.get_all_fans():
             if fan.get_presence():
                 fan_speed = fan.get_speed()
                 if (fan_speed >= self.nc) or (fan_speed <= self.mc):
                     fan_speed_sum += fan_speed
                     good_fan += 1
-                else:
-                    fan_not_good = True
+        
         avg_fan_speed = round(fan_speed_sum / good_fan)
 
         diff = self.fc(t_min-FM, avg_fan_speed)
@@ -125,10 +123,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         else:
             self.fanctl_speed = avg_fan_speed - diff
 
-        if fan_not_good:
-            self._set_fan_high_temp_speed = True
-        else:
-            self._set_fan_ctl_speed = True
+        self._set_fan_ctl_speed = True
 
     def is_set_fan_default_speed(self):
         """
