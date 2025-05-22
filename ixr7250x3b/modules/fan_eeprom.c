@@ -55,10 +55,13 @@ int cache_eeprom(struct i2c_client *client)
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 	int status;
 
-	status = i2c_smbus_write_word_data(client, 0, 0);
+	status = i2c_smbus_write_byte_data(client, 0, 0);
 	msleep(1);
 	for (int i = 0; i < EEPROM_LEN; i++) {
-		ee_data->eeprom[i] = i2c_smbus_read_byte(client);
+		if(i == 0)
+			ee_data->eeprom[i] = i2c_smbus_read_byte_data(client, 0);
+		else
+			ee_data->eeprom[i] = i2c_smbus_read_byte(client);
 	}
 
 	if (debug)
@@ -119,6 +122,7 @@ int decode_eeprom(struct i2c_client *client)
 			break;
 		case kHwType:
 			i++;
+			len = ee_data->eeprom[i++];
 			memcpy(&ee_data->hw_type, &ee_data->eeprom[i], 1);
 			i++;
 			break;
@@ -145,7 +149,15 @@ int decode_eeprom(struct i2c_client *client)
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	struct menuee_data *data = dev_get_drvdata(dev);
-	return sprintf(buf, "%s\n", data->eeprom);
+	int i = 0;
+	int len;
+	for (i = 0; i < EEPROM_LEN; i++) {
+		if (data->eeprom[i] == 0)
+			len += sprintf(buf + len, ".");
+		else
+			len += sprintf(buf + len, "%c", data->eeprom[i]);
+	}
+	return len;
 }
 
 static ssize_t part_number_show(struct device *dev, struct device_attribute *devattr, char *buf)

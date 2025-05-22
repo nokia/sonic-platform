@@ -28,7 +28,7 @@ CTRLOR_ARRD = '20'
 EEPROM_ADDR = '54'
 LED_ADDR = '60'
 
-sonic_logger = logger.Logger('fan')
+sonic_logger = logger.Logger('nokia_fan')
 sonic_logger.set_min_log_priority_info()
 
 class Fan(FanBase):
@@ -37,8 +37,7 @@ class Fan(FanBase):
     def __init__(self, fan_index, drawer_index, drawer_eeprom=None, psu_fan=False, dependency=None):
         self.is_psu_fan = psu_fan
         i2c_bus = I2C_BUS[drawer_index]
-        i2c_dev = f"{i2c_bus}-00{CTRLOR_ARRD}"
-        hwmon_path = glob.glob(HWMON_DIR.format(i2c_dev))
+        self.i2c_dev = f"{i2c_bus}-00{CTRLOR_ARRD}"
         self.fan_led_color = ['off', 'green', 'amber', 'green_blink']
         self.led_dir = f"/sys/bus/i2c/devices/{i2c_bus}-00{LED_ADDR}/"
         self.eeprom_dir = f"/sys/bus/i2c/devices/{i2c_bus}-00{EEPROM_ADDR}/"
@@ -48,14 +47,10 @@ class Fan(FanBase):
             self.index = drawer_index * FANS_PER_DRAWER + fan_index + 1
             self.reg_dir = REG_DIR
             self.fan_drawer = drawer_index
-            tach_index = FAN_INDEX_IN_DRAWER[fan_index]
-            self.set_fan_speed_reg = hwmon_path[0] + f"pwm{tach_index}"
-            self.get_fan_speed_reg = hwmon_path[0] + f"fan{tach_index}_input"
-            self.fan_speed_enable_reg = hwmon_path[0] + f"fan{tach_index}_enable"
-            self.pwm_enable_reg = hwmon_path[0] + f"pwm{tach_index}_enable"
-            self.pwm_enabled = False
+            self.tach_index = FAN_INDEX_IN_DRAWER[fan_index]
+            self.fan_inited = False
             
-            if tach_index == 1 or tach_index == 2:
+            if self.tach_index == 1 or self.tach_index == 2:
                 self.max_fan_speed = MAX_FAN_F_SPEED
             else:
                 self.max_fan_speed = MAX_FAN_R_SPEED
@@ -77,6 +72,35 @@ class Fan(FanBase):
         else:
             return f"PSU{self.index}_Fan"
 
+    def fan_init(self):
+        """
+        Retrieves the presence of the Fan Unit
+
+        Returns:
+            bool: True if Fan is present, False if not
+        """
+        hwmon_path = glob.glob(HWMON_DIR.format(self.i2c_dev))
+        self.set_fan_speed_reg = hwmon_path[0] + f"pwm{self.tach_index}"
+        self.get_fan_speed_reg = hwmon_path[0] + f"fan{self.tach_index}_input"
+        self.fan_speed_enable_reg = hwmon_path[0] + f"fan{self.tach_index}_enable"
+        self.pwm_enable_reg = hwmon_path[0] + f"pwm{self.tach_index}_enable"
+        
+        fan_speed = read_sysfs_file(self.get_fan_speed_reg)
+        if (fan_speed != 'ERR'):
+            if (int(fan_speed) > WORKING_FAN_SPEED):
+                self.fan_inited = True
+                return True
+            
+        result = write_sysfs_file(self.pwm_enable_reg, '0')
+        if (result == 'ERR'):
+            return False
+        time.sleep(0.1)
+        write_sysfs_file(self.pwm_enable_reg, '1')
+        time.sleep(0.1)
+        write_sysfs_file(self.fan_speed_enable_reg, '1')
+        self.fan_inited = True
+        return True
+
     def get_presence(self):
         """
         Retrieves the presence of the Fan Unit
@@ -86,20 +110,13 @@ class Fan(FanBase):
         """
         result = read_sysfs_file(self.reg_dir + f'fandraw_{self.fan_drawer+1}_prs')
         if result == '0': # present
-            if not self.pwm_enabled:
-                result = write_sysfs_file(self.pwm_enable_reg, '0')
-                if (result == 'ERR'):
-                    return False
-                time.sleep(0.1)
-                write_sysfs_file(self.pwm_enable_reg, '1')
-                time.sleep(0.1)
-                write_sysfs_file(self.fan_speed_enable_reg, '1')
-                self.pwm_enabled = True
+            if not self.fan_inited:
+                self.fan_init()
 
             return True
         
-        if self.pwm_enabled:
-            self.pwm_enabled = False
+        if self.fan_inited:
+            self.fan_inited = False
         return False
 
     def get_model(self):
@@ -159,6 +176,11 @@ class Fan(FanBase):
         """
         status = False
 
+        if not self.fan_inited:
+            if self.fan_init():
+                status = True
+            return status
+        
         fan_speed = read_sysfs_file(self.get_fan_speed_reg)
         if (fan_speed != 'ERR'):
             if (int(fan_speed) > WORKING_FAN_SPEED):
@@ -201,6 +223,9 @@ class Fan(FanBase):
         """
         speed = 0
 
+        if not self.fan_inited:
+            return speed
+
         fan_speed = read_sysfs_file(self.get_fan_speed_reg)
         if (fan_speed != 'ERR'):
             speed_in_rpm = int(fan_speed)
@@ -239,6 +264,8 @@ class Fan(FanBase):
             bool: True if set success, False if fail.
         """
         if self.is_psu_fan:
+            return False
+        if not self.fan_inited:
             return False
         
         if speed >= 70 and speed <= 100:
@@ -292,6 +319,9 @@ class Fan(FanBase):
             An integer, the percentage of full fan speed, in the range 0
             (off) to 100 (full speed)
         """
+        if not self.fan_inited:
+            return 0
+        
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':
             dutyspeed = int(fan_duty)
@@ -303,4 +333,4 @@ class Fan(FanBase):
                 target_speed = 0
             return target_speed
         return 0
-        
+

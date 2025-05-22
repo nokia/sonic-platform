@@ -12,24 +12,12 @@ class FanCondition(ThermalPolicyConditionBase):
         else:
             return None
 
-@thermal_json_object('fan.any.absence')
-class AnyFanAbsenceCondition(FanCondition):
-    def is_match(self, thermal_info_dict):
-        fan_info_obj = self.get_fan_info(thermal_info_dict)
-        return len(fan_info_obj.get_absence_fans()) > 0 if fan_info_obj else False
-
-@thermal_json_object('fan.all.absence')
-class AllFanAbsenceCondition(FanCondition):
-    def is_match(self, thermal_info_dict):
-        fan_info_obj = self.get_fan_info(thermal_info_dict)
-        return len(fan_info_obj.get_presence_fans()) == 0 if fan_info_obj else False
-
-@thermal_json_object('fan.all.presence')
+@thermal_json_object('fan.any.presence')
 class AllFanPresenceCondition(FanCondition):
     def is_match(self, thermal_info_dict):
         fan_info_obj = self.get_fan_info(thermal_info_dict)
-        return len(fan_info_obj.get_absence_fans()) == 0 if fan_info_obj else False
-
+        return len(fan_info_obj.get_presence_fans()) > 0 if fan_info_obj else False
+    
 class ThermalCondition(ThermalPolicyConditionBase):
     def get_thermal_info(self, thermal_info_dict):
         from .thermal_infos import ThermalInfo

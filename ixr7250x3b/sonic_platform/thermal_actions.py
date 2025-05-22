@@ -6,7 +6,7 @@ except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_actions')
-#sonic_logger.set_min_log_priority_info()
+sonic_logger.set_min_log_priority_info()
 
 class SetFanSpeedAction(ThermalPolicyActionBase):
     """

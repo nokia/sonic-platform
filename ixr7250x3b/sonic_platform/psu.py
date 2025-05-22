@@ -127,6 +127,10 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
+        if self.get_presence():
+            result = read_sysfs_file(self.eeprom_dir + "part_number")
+            return result.strip()
+
         return 'N/A'
 
     def get_status(self):
