@@ -292,7 +292,7 @@ class Fan(FanBase):
         if self.get_direction() == self.FAN_DIRECTION_INTAKE:
             duty_to_speed = {
                 0x0: 25,
-                0x4: 36,
+                0x4: 38,
                 0x5: 45,
                 0x6: 50,
                 0x7: 56,
@@ -308,7 +308,7 @@ class Fan(FanBase):
         else:
             duty_to_speed = {
                 0x0: 25,
-                0x4: 36,
+                0x4: 38,
                 0x5: 45,
                 0x6: 50,
                 0x7: 56,
