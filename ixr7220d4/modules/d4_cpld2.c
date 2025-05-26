@@ -1,5 +1,5 @@
 
-//  * CPLD driver for Nokia-7220-IXR-H4-32D
+//  * CPLD driver for Nokia-7220-IXR-D4
 //  *
 //  * Copyright (C) 2024 Nokia Corporation.
 //  *
