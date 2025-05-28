@@ -31,17 +31,18 @@ class FanInfo(ThermalPolicyInfoBase):
         :return:
         """
         self._status_changed = False
-        for fan in chassis.get_all_fans():
-            if fan.get_presence() and fan not in self._presence_fans:
-                self._presence_fans.add(fan)
+        for fandrawer in chassis.get_all_fan_drawers():
+            fandrawer_pres = fandrawer.get_presence()
+            if fandrawer_pres and fandrawer not in self._presence_fans:
+                self._presence_fans.add(fandrawer)
                 self._status_changed = True
-                if fan in self._absence_fans:
-                    self._absence_fans.remove(fan)
-            elif not fan.get_presence() and fan not in self._absence_fans:
-                self._absence_fans.add(fan)
+                if fandrawer in self._absence_fans:
+                    self._absence_fans.remove(fandrawer)
+            elif not fandrawer_pres and fandrawer not in self._absence_fans:
+                self._absence_fans.add(fandrawer)
                 self._status_changed = True
-                if fan in self._presence_fans:
-                    self._presence_fans.remove(fan)
+                if fandrawer in self._presence_fans:
+                    self._presence_fans.remove(fandrawer)
 
     def get_absence_fans(self):
         """
@@ -81,6 +82,8 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self.ps = 1
         self.mc = 100
         self.nc = 38
+        self.last_drawer_event = False
+        self._fan_drawer = 0
 
     def collect(self, chassis):
         """
@@ -104,16 +107,19 @@ class ThermalInfo(ThermalPolicyInfoBase):
             
         t_min = min(self._t)
 
-        good_fan = 0
+        self.good_fan = 0
         fan_speed_sum = 0
-        for fan in chassis.get_all_fans():
-            if fan.get_presence():
-                fan_speed = fan.get_speed()
-                if (fan_speed >= self.nc) or (fan_speed <= self.mc):
-                    fan_speed_sum += fan_speed
-                    good_fan += 1
+        self.fan_drawer = 0
+        for fandrawer in chassis.get_all_fan_drawers():
+            if fandrawer.get_presence():
+                self.fan_drawer += 1
+                for fan in fandrawer.get_all_fans():
+                    fan_speed = fan.get_speed()
+                    if (fan_speed >= (self.nc - 5)) or (fan_speed <= self.mc):
+                        fan_speed_sum += fan_speed
+                        self.good_fan += 1
         
-        avg_fan_speed = round(fan_speed_sum / good_fan)
+        avg_fan_speed = round(fan_speed_sum / self.good_fan)
 
         diff = self.fc(t_min-FM, avg_fan_speed)
         if (avg_fan_speed - diff <= self.nc):
@@ -124,6 +130,12 @@ class ThermalInfo(ThermalPolicyInfoBase):
             self.fanctl_speed = avg_fan_speed - diff
 
         self._set_fan_ctl_speed = True
+
+        if self._fan_drawer == 2 and self.fan_drawer == 3:
+            self.last_drawer_insert = True
+        else:
+            self.last_drawer_insert = False
+        self._fan_drawer = self.fan_drawer
 
     def is_set_fan_default_speed(self):
         """
@@ -179,6 +191,9 @@ class ThermalInfo(ThermalPolicyInfoBase):
             return self.fanctl_speed
         else:
             return 0
+        
+    def get_last_drawer_event(self):
+        return self.last_drawer_insert
 
 @thermal_json_object('psu_info')
 class PsuInfo(ThermalPolicyInfoBase):

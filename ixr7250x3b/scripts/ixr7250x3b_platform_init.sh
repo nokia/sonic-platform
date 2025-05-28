@@ -67,6 +67,9 @@ echo tmp75 0x4a > /sys/bus/i2c/devices/i2c-19/new_device
 echo tmp75 0x4b > /sys/bus/i2c/devices/i2c-19/new_device
 
 #fan
+i2cset -y 11 0x20 0x0 0x26
+i2cset -y 12 0x20 0x0 0x26
+i2cset -y 13 0x20 0x0 0x26
 echo max31790 0x20 > /sys/bus/i2c/devices/i2c-11/new_device
 echo max31790 0x20 > /sys/bus/i2c/devices/i2c-12/new_device
 echo max31790 0x20 > /sys/bus/i2c/devices/i2c-13/new_device
