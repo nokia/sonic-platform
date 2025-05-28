@@ -53,7 +53,6 @@ def main():
             hw_directives = read_sysfs_file(fandraw.eeprom_dir + "hw_directives")
             print("        hw_type: {}, hw_directives: {}".format(hw_type.strip(), hw_directives.strip()))
             for fan in fandraw.get_all_fans():
-                fan.fan_init()
                 print("        {} Status: {}, Target Speed: {}%,  Speed: {}%".format(fan.get_name(), 
                                                                                      fandraw.get_status(),
                                                                                     str(fan.get_target_speed()),

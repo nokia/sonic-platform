@@ -224,7 +224,8 @@ class Fan(FanBase):
         speed = 0
 
         if not self.fan_inited:
-            return speed
+            if not self.get_presence():
+                return speed
 
         fan_speed = read_sysfs_file(self.get_fan_speed_reg)
         if (fan_speed != 'ERR'):
@@ -266,7 +267,8 @@ class Fan(FanBase):
         if self.is_psu_fan:
             return False
         if not self.fan_inited:
-            return False
+            if not self.get_presence():
+                return False
         
         if speed >= 70 and speed <= 100:
             fan_duty_cycle = round(2 * speed + 55)
@@ -320,7 +322,8 @@ class Fan(FanBase):
             (off) to 100 (full speed)
         """
         if not self.fan_inited:
-            return 0
+            if not self.get_presence():
+                return False
         
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':

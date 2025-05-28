@@ -2,11 +2,12 @@ try:
     from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
     from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
     from sonic_py_common import logger
+    import time
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_actions')
-sonic_logger.set_min_log_priority_info()
+sonic_logger.set_min_log_priority_warning()
 
 class SetFanSpeedAction(ThermalPolicyActionBase):
     """
@@ -50,8 +51,9 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         from .thermal_infos import FanInfo
         if FanInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[FanInfo.INFO_NAME], FanInfo):
             fan_info_obj = thermal_info_dict[FanInfo.INFO_NAME]
-            for fan in fan_info_obj.get_presence_fans():
-                fan.set_speed(int(speed))
+            for fandrawer in fan_info_obj.get_presence_fans():
+                for fan in fandrawer.get_all_fans():
+                    fan.set_speed(int(speed))
 
 @thermal_json_object('fan.all.set_speed')
 class SetAllFanSpeedAction(SetFanSpeedAction):
@@ -112,6 +114,9 @@ class ThermalRecoverAction(SetFanSpeedAction):
         :param thermal_info_dict: A dictionary stores all thermal information.
         :return:
         """
+        SPEED_FOR_HOT_START = 40
+        TIME_FOR_HOT_START = 15
+
         from .thermal_infos import ThermalInfo
         if ThermalInfo.INFO_NAME in thermal_info_dict and \
            isinstance(thermal_info_dict[ThermalInfo.INFO_NAME], ThermalInfo):
@@ -123,11 +128,18 @@ class ThermalRecoverAction(SetFanSpeedAction):
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
             elif thermal_info_obj.is_set_fan_ctl_speed():
                 fanctl_speed = thermal_info_obj.get_fanctl_speed()
-                if fanctl_speed != 0:
-                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, fanctl_speed)
+                last_drawer_event = thermal_info_obj.get_last_drawer_event()
+                if last_drawer_event:
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, SPEED_FOR_HOT_START)
+                    sonic_logger.log_warning(f"Last fan drawer inserted, set fan speed to {SPEED_FOR_HOT_START}% for {TIME_FOR_HOT_START} sec")
+                    time.sleep(TIME_FOR_HOT_START)
                 else:
-                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
-                    sonic_logger.log_warning(f"Wrong fanctl_speed, use default fan speed {self.default_speed}")
+                    if fanctl_speed != 0:
+                        ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, fanctl_speed)
+                    else:
+                        ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
+                        sonic_logger.log_warning(f"Wrong fanctl_speed, use default fan speed {self.default_speed}")
+
 
 @thermal_json_object('switch.shutdown')
 class SwitchPolicyAction(ThermalPolicyActionBase):

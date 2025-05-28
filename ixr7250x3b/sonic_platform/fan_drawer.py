@@ -38,6 +38,7 @@ class NokiaFanDrawer(FanDrawerBase):
         self.driver_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{DRIVER_INFO[0]}/"    
         self.led_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{LED_INFO[0]}/"
 
+        self.fan_wd_en = "i2cset -y {} 0x20 0x0 0x26"
         self.new_cmd = "echo {} 0x{} > /sys/bus/i2c/devices/i2c-{}/new_device"
         self.del_cmd = "echo 0x{} > /sys/bus/i2c/devices/i2c-{}/delete_device"
         
@@ -60,6 +61,7 @@ class NokiaFanDrawer(FanDrawerBase):
             if not os.path.exists(self.eeprom_dir):
                 os.system(self.new_cmd.format(EEPROM_INFO[1], EEPROM_INFO[0], self.i2c_index))
             if not os.path.exists(self.driver_dir):
+                os.system(self.fan_wd_en.format(self.i2c_index))
                 os.system(self.new_cmd.format(DRIVER_INFO[1], DRIVER_INFO[0], self.i2c_index))
             if not os.path.exists(self.led_dir):
                 os.system(self.new_cmd.format(LED_INFO[1], LED_INFO[0], self.i2c_index))
