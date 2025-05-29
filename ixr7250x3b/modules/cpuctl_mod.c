@@ -9,11 +9,13 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/cdev.h>
+#include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/dmapool.h>
 #include <linux/netdevice.h>
 #include <linux/rtnetlink.h>
+#include <linux/platform_device.h>
 #include <asm/uaccess.h>
 #include "cpuctl.h"
 
@@ -30,9 +32,8 @@ module_param_named(debug, debug, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(debug,
 	" bitmask\n"
 	"  0x0001 i2c\n"
+	"  0x0002 spi\n"
 );
-
-static LIST_HEAD(ctl_devices);
 
 static CTLDEV *ctl_dev_alloc(void)
 {
@@ -42,8 +43,8 @@ static CTLDEV *ctl_dev_alloc(void)
 	{
 		memset(pdev, 0, sizeof(CTLDEV));
 		INIT_LIST_HEAD(&pdev->list);
-		list_add_tail(&pdev->list, &ctl_devices);
 		spin_lock_init(&pdev->lock);
+		spin_lock_init(&pdev->spi.lock);
 	}
 	return pdev;
 }
@@ -105,8 +106,9 @@ static struct ctlvariant ctls[] = {
 	[ctl_cp_vermilion] = {
 		.ctl_type = ctl_cp_vermilion,
 		.pchanmap = ctl_cp_vermilion_chanmap,
-		.nchans = sizeof(ctl_cp_vermilion_chanmap)/sizeof(struct chan_map),
+		.nchans = sizeof(ctl_cp_vermilion_chanmap) / sizeof(struct chan_map),
 		.bus400 = 0x040a,
+		.spi_bus = 0,
 		.devid = PCI_DEVICE_ID_NOKIA_CPUCTL_VERMILION,
 		.name = "ctl_cp_vermilion",
 		.miscio1_oe = 0x08080200,
@@ -118,6 +120,7 @@ static struct ctlvariant ctls[] = {
 		.pchanmap = ctl_io_vermilion_chanmap,
 		.nchans = sizeof(ctl_io_vermilion_chanmap)/sizeof(struct chan_map),
 		.bus400 = 0x7eef,
+		.spi_bus = 1,
 		.devid = PCI_DEVICE_ID_NOKIA_IOCTL_VERMILION,
 		.name = "ctl_io_vermilion",
 		.miscio3_oe = 0x0000000f,
@@ -215,6 +218,8 @@ static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id)
 		ctl_reg_write(pdev, CTL_MISC_IO4_ENA, ctlv->miscio4_oe);
 	}
 
+	ctl_clk_reset(pdev);
+
 	/* i2c stuff */
 	rc = ctl_i2c_probe(pdev);
 	if (rc)
@@ -224,12 +229,15 @@ static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id)
 		return rc;
 	}
 
+	if (id->device == 0x0030)
+		spi_device_create(pdev);
+
 	/* tbd: set instance name e.g. /sys/bus/pci/drivers/cpuctl/ctl_io_vermilion
 	kobject_set_name(&pcidev->dev.kobj, ctlv->name); */
 
 	ctl_sysfs_init(pdev);
 
-	dev_info(&pcidev->dev, "probe done\n");
+	dev_dbg(&pcidev->dev, "probe done\n");
 
 	return rc;
 }
@@ -247,10 +255,36 @@ static void ctl_remove(struct pci_dev *pcidev)
 
 	pci_disable_device(pcidev);
 	pcim_iounmap(pcidev, pdev->base);
+	spi_device_remove(pdev);
 	ctl_dev_free(pdev);
+}
+
+static int __init cpuctl_init(void)
+{
+	int rc;
+
+	printk(KERN_INFO MODULE_NAME " %s\n", __FUNCTION__);
+
+	rc = pci_register_driver(&ctl_pci_driver);
+	if (rc < 0)
+	{
+		printk(KERN_ERR MODULE_NAME " pci_register_driver failed %d\n", rc);
+		return rc;
+	}
+
+	return rc;
+}
+
+static void __exit cpuctl_exit(void)
+{
+	// spi_driver_exit();
+	pci_unregister_driver(&ctl_pci_driver);
 }
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("jon.goldberg@nokia.com");
 MODULE_DESCRIPTION("ctl driver");
-module_pci_driver(ctl_pci_driver);
+MODULE_DEVICE_TABLE(pci, ctl_ids);
+
+module_init(cpuctl_init);
+module_exit(cpuctl_exit);

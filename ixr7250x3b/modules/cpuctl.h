@@ -12,6 +12,9 @@
 #include <linux/pci.h>
 #include <linux/i2c.h>
 #include <linux/i2c-mux.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
+#include <linux/spi/spi.h>
 
 #define MODULE_NAME     "cpuctl"
 #define PCI_VENDOR_ID_NOKIA 0x1064
@@ -23,6 +26,7 @@
 
 #define CPUCTL_NUM_MEM_REGIONS 1
 #define CPUCTL_MINORS_MAX 1
+#define N_SPI_MINORS 3
 
 typedef struct
 {
@@ -39,6 +43,10 @@ typedef struct
 	int enabled;
 	void __iomem *base;
 	spinlock_t lock;
+	struct {
+		spinlock_t lock;
+		struct spi_controller spis[N_SPI_MINORS];
+	}spi;
 } CTLDEV;
 
 struct ctlmux {
@@ -56,6 +64,7 @@ struct ctlvariant {
 	const char *name;
 	u8 num_asics;
 	u8 num_asic_if;
+	u8 spi_bus;
 	u16 ctl_type;
 	u16 devid;
 	u16 nchans;
@@ -85,14 +94,19 @@ enum brd_type {
 /* module_param */
 extern uint debug;
 #define CTL_DEBUG_I2C 0x0001
+#define CTL_DEBUG_SPI 0x0002
 
-struct opi {
-	struct list_head        list;
-	CTLDEV                 *pdev;
-	pid_t                   pid;
-	wait_queue_head_t       wait_queue;
-	int                     minor;
-};
+static inline int ctlv_is_cp(enum ctl_type t) {
+	switch (t) {
+		case ctl_cp:
+		case ctl_cp_hornet:
+		case ctl_cp_vermilion:
+			return 1;
+		default:
+			return 0;
+	}
+	return 0;
+}
 
 int ctl_i2c_probe(CTLDEV *pdev);
 void ctl_i2c_remove(CTLDEV *pdev);
@@ -159,6 +173,8 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 #define CTL_MISC_IO4_ENA     0x02700044
 #define CTL_BDB_SIGDET  0x02700010
 #define CTL_BDB_ERRDET  0x02700014
+#define A32_SPI_DATA_SR (0x014FFFF8)
+#define A32_SPI_CTRL_SR (0x014FFFFC)
 
 #define A32_GEN_CONFIG              0x02700000
 #define A32_CP_MISCIO1_DATA            (A32_GEN_CONFIG+0x08)  /* I/O bits */
@@ -196,5 +212,12 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 #define MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT      (1 << 25)
 
 #define CTL_MAX_I2C_CHANS   32
+
+#define IS_HW_CARD_TYPE_HORNET_R2 0
+
+extern void ctl_clk_reset(CTLDEV * pdev);
+
+extern int spi_device_create(CTLDEV* pdev);
+extern void spi_device_remove(CTLDEV* pdev);
 
 #endif /* CPUCTL_MOD_H */
