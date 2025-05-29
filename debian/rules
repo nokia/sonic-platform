@@ -22,12 +22,16 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS:= chassis ixr7220h3 ixr7220h4-32d ixr7220h5-64d ixr7220h4-64d \
   ixr7220h5-64o ixr7250x3b ixr7220d4
+BRIDGE_DRIVER_TARGETS :=ixr7250x3b
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
 PLATFORM_DIR := sonic_platform
 CONF_DIR := conf
 BLDENV := $(shell lsb_release -cs)
+
+DO_BRIDGE_PACKAGE=$(BRIDGE_DRIVER_TARGETS)
+ACTIVE_MODULE_DIRS=$(MODULE_DIRS)
 
 %:
 	dh $@ --with systemd,python3 --buildsystem=pybuild
@@ -47,9 +51,12 @@ build:
 		fi \
 	fi
 
+ifneq (,$(DO_BRIDGE_PACKAGE))
+	KERNEL_SRC=$(KERNEL_SRC) $(MAKE) -C $(MOD_SRC_DIR)/mackinac
+endif
 	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
-	(for mod in $(MODULE_DIRS); do \
-		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+	(for mod in $(ACTIVE_MODULE_DIRS); do \
+		$(MAKE) modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
 		$(PYTHON3) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 		cd $(MOD_SRC_DIR); \
@@ -78,6 +85,13 @@ binary-indep:
 		$(PYTHON3) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 		cd $(MOD_SRC_DIR); \
 	done)
+
+	# bridge code pulled in
+	# cp $(MOD_SRC_DIR)/mackinac/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTL_MOD_DIR);
+	(for mod in $(DO_BRIDGE_PACKAGE); do \
+		DEST=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod}/ KERNEL_SRC=$(KERNEL_SRC) $(MAKE) -C $(MOD_SRC_DIR)/mackinac install; \
+	done)
+
 	# Resuming debhelper scripts
 	dh_testroot
 	dh_install
