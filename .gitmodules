@@ -1,0 +1,3 @@
+[submodule "mackinac/fmt"]
+	path = mackinac/fmt
+	url = https://github.com/fmtlib/fmt.git
