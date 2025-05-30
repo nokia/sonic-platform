@@ -308,25 +308,23 @@ class Chassis(ChassisBase):
                 pcon_cause_lines = pcon_cause_file.readlines()
 
             reboot_type = pcon_cause_lines[0].strip()
+            outtime = "N/A"
+            if (len(pcon_cause_lines) > 1):
+                timestamp = pcon_cause_lines[1].strip()
+                dateobj = datetime.strptime(timestamp, "%a %b %d %H:%M:%S %Y").replace(
+                    tzinfo=timezone.utc)
+                outtime = dateobj.strftime("%a %b %d %I:%M:%S %p %Z %Y")
 
             if reboot_type == "Power Loss":
-                if (len(pcon_cause_lines) > 1):
-                    timestamp = pcon_cause_lines[1].strip()
-                    dateobj = datetime.strptime(timestamp, "%a %b %d %H:%M:%S %Y").replace(
-                        tzinfo=timezone.utc)
-                    outtime = dateobj.strftime("%a %b %d %I:%M:%S %p %Z %Y")
-                    return (self.REBOOT_CAUSE_HARDWARE_OTHER,
-                            CAUSE_FORMAT.format(reboot_type, "Unknown", outtime))
-                else:
-                    return (self.REBOOT_CAUSE_HARDWARE_OTHER,
-                            CAUSE_FORMAT_NOTIME.format(reboot_type, "Unknown"))
+                return (self.REBOOT_CAUSE_HARDWARE_OTHER,
+                        CAUSE_FORMAT.format(reboot_type, "Unknown", outtime))
             else:
                 reboot_cause = self._find_software_reboot_cause_from_reboot_cause_file()
-                if "Kernel Panic" in reboot_cause or "reboot" in reboot_cause:
-                    return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
-                else:
-                    return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, "Unknown (watchdog or others)")
+                if "Unknown" in reboot_cause:
+                    return (self.REBOOT_CAUSE_HARDWARE_OTHER,
+                            CAUSE_FORMAT.format("Unknown (watchdog or others)", "Unknown", outtime))
         except Exception:
+            sonic_logger.log_warning("Failed to parse platform reboot-cause file")
             return (self.REBOOT_CAUSE_NON_HARDWARE, None)
 
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
