@@ -223,20 +223,117 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	return rc;
 }
 
+static int ctl_i2c_write_read(CTLDEV *pdev, u8 addr, u8 *wbuf, u16 wlen, u8* rdbuf, u16 rlen)
+{
+	int rc;
+	u32 val;
+	u32 data = 0;
+	u32 shift = 24;
+	u32 xlen = 0;
+	u32 start,end,restart;
+	u32 rcvlen;
+
+	/* first byte for device address */
+	start = CTL_I2C_CNTR_gen_start_b;
+	data = (addr << 1) << 24;
+	shift -= 8;
+	xlen += 1;
+	xlen += wlen;
+	end = CTL_I2C_CNTR_gen_end_b;
+
+	switch (wlen)
+	{
+	case 1:
+		data |= wbuf[0] << shift;
+		shift -= 8;
+		break;
+	case 2:
+		data |= wbuf[0] << shift;
+		shift -= 8;
+		data |= wbuf[1] << shift;
+		shift -= 8;
+		break;
+	default:
+		break;
+	}
+
+	/* subsequent read req */
+	data |= ((addr << 1) | 1) << shift;
+	restart = (xlen - 1) << CTL_I2C_CNTR_restart_b;
+	xlen += 1;
+	rcvlen = (rlen - 1) << CTL_I2C_CNTR_rcv_cnt_o;
+
+	ctl_reg_write(pdev, CTL_I2C_DATA, data);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x\n", __FUNCTION__, data);
+
+	val = pdev->phys_chan & CTL_I2C_CNTR_bus_sel_m;
+	val |= ctl_i2c_bus_speed_get(pdev) << CTL_I2C_CNTR_freq_400_o;
+	val |= (0x1f << CTL_I2C_CNTR_base_timer_o);
+	val |= ((xlen - 1) << CTL_I2C_CNTR_xmt_cnt_o) | CTL_I2C_CNTR_write_req_b |
+		   CTL_I2C_CNTR_read_req_b | rcvlen | restart | start | end;
+	ctl_reg_write(pdev, CTL_I2C_CNTR, val);
+	if (debug & CTL_DEBUG_I2C)
+		dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x\n", __FUNCTION__, val);
+
+	rc = ctl_i2c_check_status(pdev);
+	if (rc == 0) {
+		val = ctl_reg_read(pdev, CTL_I2C_DATA);
+		if (debug & CTL_DEBUG_I2C)
+			dev_dbg(&pdev->pcidev->dev, "%s data 0x%08x\n", __FUNCTION__, val);
+		switch (rlen)
+		{
+		case 1:
+			rdbuf[0] = (u8)val;
+			break;
+		case 2:
+			rdbuf[0] = (u8)(val >> 8);
+			rdbuf[1] = (u8)(val);
+			break;
+		case 3:
+			put_unaligned_be24(val, rdbuf);
+			break;
+		case 4:
+			put_unaligned_be32(val, rdbuf);
+			break;
+		default:
+			break;
+		}
+		rc = 2; /* num messages processed */
+	}
+
+	return rc;
+}
+
 static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
 	int i;
 	CTLDEV *pdev = i2c_get_adapdata(adap);
 	int rc;
+	u64 start;
+	unsigned dur;
+	unsigned bus = adap->nr + pdev->virt_chan + 1;
+
+	if ((num == 2) && ((msgs[0].flags & I2C_M_RD) == 0) && (msgs[0].flags & I2C_CLIENT_SCCB) &&
+	    (msgs[0].len <= 2) && ((msgs[1].flags & I2C_M_RD) == 1) && (msgs[1].len <= 4) )
+	{
+		/* if SCCB flag special access for PSU, then combine write of 2 bytes or less and
+		 read of 4 bytes or less into one xfer */
+		dev_dbg(&pdev->pcidev->dev, "%s msg1/2: dev %d-%04x wlen %d rlen %d\n", __FUNCTION__,
+			bus, msgs[i].addr, msgs[0].len, msgs[1].len);
+		start = ktime_get_ns();
+		rc = ctl_i2c_write_read(pdev,msgs[0].addr,msgs[0].buf,msgs[0].len,msgs[1].buf,msgs[1].len);
+		dur = (ktime_get_ns() - start)/1000;
+		dev_dbg(&pdev->pcidev->dev, "%s msg1/2: dev %d-%04x time %dus rc=%d\n", __FUNCTION__,
+			bus, msgs[i].addr, dur,rc);
+		return rc;
+	}
 
 	for (i = 0; i < num; i++)
 	{
-		u64 start;
-		unsigned dur;
-		unsigned bus = adap->nr + pdev->virt_chan + 1;
-		dev_dbg(&pdev->pcidev->dev, "%s msg%d: dev %d-%04x %s len %d\n", __FUNCTION__,
+		dev_dbg(&pdev->pcidev->dev, "%s msg%d: dev %d-%04x %s len %d flags=0x%x\n", __FUNCTION__,
 				i, bus, msgs[i].addr, (msgs[i].flags & 1) ? "rd" : "wr",
-				msgs[i].len);
+				msgs[i].len,msgs[i].flags);
 		start = ktime_get_ns();
 		if (msgs[i].flags & I2C_M_RD)
 		{
