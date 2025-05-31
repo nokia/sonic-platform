@@ -120,6 +120,9 @@ static ssize_t for_linear_data(struct device *dev, struct device_attribute \
 	case PSU_V_IN:
 		value = data->in1_input;
 		break;
+	case PSU_V_OUT:
+		value = data->in2_input;
+		break;
 	case PSU_I_IN:
 		value = data->curr1_input;
 		break;
@@ -172,16 +175,16 @@ static ssize_t for_vout_data(struct device *dev, struct device_attribute \
 		 					*dev_attr, char *buf)
 {
 	struct x3b_psu_data *data = x3b_psu_update_device(dev);
-	int exponent, mantissa, value;
-		
+	int exponent = 0;
+	int mantissa = 0;
+	int multiplier = 1000;
+
+	exponent = two_complement_to_int(data->vout_mode, 5, 0x1f);
 	mantissa = data->in2_input;
-	exponent = ((int16_t)((data->vout_mode & 0x1F) << 11)) >> 11;
-	if (exponent >= 0) 
-		value = mantissa << exponent;
-	else 
-		value = mantissa << -exponent;
-	
-	return sprintf(buf, "%d\n", value);
+ 
+	return (exponent > 0) ? sprintf(buf, "%d\n", \
+		mantissa * (1 << exponent)) : \
+		sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
 }
 
 static int x3b_psu_read_byte(struct i2c_client *client, u8 reg)
@@ -343,6 +346,7 @@ static int x3b_psu_probe(struct i2c_client *client,
 	}
 
 	i2c_set_clientdata(client, data);
+	client->flags |= I2C_CLIENT_SCCB;
 	data->valid = 0;
 	mutex_init(&data->update_lock);
 	

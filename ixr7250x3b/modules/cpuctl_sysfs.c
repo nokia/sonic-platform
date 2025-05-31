@@ -366,7 +366,6 @@ static ssize_t led_psu_store(struct device *dev, struct device_attribute *devatt
 static ssize_t led_mgmt_link_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u8 val;
 
 	val = ctl_reg8_read(pdev, IO_A8_LED_STATE_BASE + 4);
@@ -377,7 +376,6 @@ static ssize_t led_mgmt_link_show(struct device *dev, struct device_attribute *d
 static ssize_t led_mgmt_link_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 usr_val = 0;
 
 	int ret = kstrtouint(buf, 16, &usr_val);
@@ -394,7 +392,6 @@ static ssize_t led_mgmt_link_store(struct device *dev, struct device_attribute *
 static ssize_t led_mgmt_actv_show(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u8 val;
 
 	val = ctl_reg8_read(pdev, IO_A8_LED_STATE_BASE);
@@ -405,7 +402,6 @@ static ssize_t led_mgmt_actv_show(struct device *dev, struct device_attribute *d
 static ssize_t led_mgmt_actv_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
-	struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
 	u32 usr_val = 0;
 
 	int ret = kstrtouint(buf, 16, &usr_val);

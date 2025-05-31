@@ -141,9 +141,8 @@ class Psu(PsuBase):
             bool: True if PSU is operating properly, False if not
         """
         result = read_sysfs_file(self.psu_dir + "psu_status")
-        if int(result, 10) < 0:
-            return False        
-        elif (int(result, 10) & (1 << 11)):
+        
+        if (int(result, 16) & 0x400) >> 10 == 0:
             result = read_sysfs_file(self.psu_dir + "in2_input")
             psu_voltage = (float(result))/1000
             if psu_voltage < MAX_VOLTAGE and psu_voltage > MIN_VOLTAGE:
@@ -159,7 +158,7 @@ class Psu(PsuBase):
             e.g. 12.1
         """
         if self.get_presence():
-            result = read_sysfs_file(self.psu_dir + "in2_input")
+            result = read_sysfs_file(self.psu_dir + "in1_input")
             psu_voltage = (float(result))/1000
         else:
             psu_voltage = 0.0
@@ -174,7 +173,7 @@ class Psu(PsuBase):
             A float number, the electric current in amperes, e.g 15.4
         """
         if self.get_presence():
-            result = read_sysfs_file(self.psu_dir + "curr2_input")
+            result = read_sysfs_file(self.psu_dir + "curr1_input")
             psu_current = (float(result))/1000
         else:
             psu_current = 0.0
