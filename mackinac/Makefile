@@ -10,7 +10,7 @@ all: kmods userspace
 
 
 install:
-	cp  modules/*.ko $(DEST)/$(KERNEL_SRC)/$(INSTL_MOD_DIR)
+	$(MAKE) modules_install -C $(KERNEL_SRC)/build M=$(PACKAGE_SRC_DIR)/modules INSTALL_MOD_PATH=$(DEST)
 	DESTDIR=$(DEST) $(MAKE) -C $(CCAUTOCONF_PROJ_DIR)/$(CONFIGURED_ARCH) install
 
 kmods:
