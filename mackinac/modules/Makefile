@@ -1,1 +1,2 @@
-obj-m := pcon.o
+cpuctl-y := cpuctl_mod.o cpuctl_i2c.o cpuctl_sysfs.o sys_clk.o cpuctl_spi.o
+obj-m := cpuctl.o pcon.o
