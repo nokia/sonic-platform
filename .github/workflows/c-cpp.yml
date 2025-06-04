@@ -21,5 +21,5 @@ jobs:
         git submodule update --init --recursive
         export KVERSION=$(find /lib/modules/ -name 6.1.0* | awk -F '/' '{print$4}')
         export CONFIGURED_ARCH=amd64
-        dpkg-buildpackage -rfakeroot -b -us -uc -tc
+        dpkg-buildpackage -rfakeroot -b -us -uc -tc -j$(nproc)
         
