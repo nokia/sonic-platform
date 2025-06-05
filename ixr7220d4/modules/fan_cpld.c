@@ -33,33 +33,32 @@
 #define FAN_PRESENCE_REG            0x0F
 #define FAN_DIR_REG                 0x10
 #define FAN_PWM_REG                 0x11
-#define FAN1_SPEED_REG              0x12
-#define FAN2_SPEED_REG              0x13
-#define FAN3_SPEED_REG              0x14
-#define FAN4_SPEED_REG              0x15
-#define FAN5_SPEED_REG              0x16
-#define FAN6_SPEED_REG              0x17
+#define FAN6_SPEED_REG              0x12
+#define FAN5_SPEED_REG              0x13
+#define FAN4_SPEED_REG              0x14
+#define FAN3_SPEED_REG              0x15
+#define FAN2_SPEED_REG              0x16
+#define FAN1_SPEED_REG              0x17
 #define LED1_DISPLAY_REG            0x1C
 #define LED2_DISPLAY_REG            0x1D
-#define FAN1_R_SPEED_REG            0x22
-#define FAN2_R_SPEED_REG            0x23
-#define FAN3_R_SPEED_REG            0x24
-#define FAN4_R_SPEED_REG            0x25
-#define FAN5_R_SPEED_REG            0x26
-#define FAN6_R_SPEED_REG            0x27
-#define FAN_POWER_REG               0x30
+#define FAN6_R_SPEED_REG            0x22
+#define FAN5_R_SPEED_REG            0x23
+#define FAN4_R_SPEED_REG            0x24
+#define FAN3_R_SPEED_REG            0x25
+#define FAN2_R_SPEED_REG            0x26
+#define FAN1_R_SPEED_REG            0x27
 
 // REG BIT FIELD POSITION or MASK
 #define BOARD_INFO_REG_TYPE_MSK     0x7
 #define FAN_PWM_MSK                 0xF
 #define FAN_CPLD_RESET_BIT          0x7
 
-#define FAN1_PRES                   0x0
-#define FAN2_PRES                   0x1
-#define FAN3_PRES                   0x2
-#define FAN4_PRES                   0x3
-#define FAN5_PRES                   0x4
-#define FAN6_PRES                   0x5
+#define FAN6_PRES                   0x0
+#define FAN5_PRES                   0x1
+#define FAN4_PRES                   0x2
+#define FAN3_PRES                   0x3
+#define FAN2_PRES                   0x4
+#define FAN1_PRES                   0x5
 
 #define FAN1_ID                     0x0
 #define FAN2_ID                     0x1
@@ -354,41 +353,6 @@ static ssize_t set_fan_led1_status(struct device *dev, struct device_attribute *
     return count;
 }
 
-/* ------------- */
-
-static ssize_t show_fan_power(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = cpld_i2c_read(data, FAN_POWER_REG);
-
-    return sprintf(buf,"%d\n",(val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t set_fan_power(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 reg_val=0, usr_val=0, mask;
-    int ret=kstrtou8(buf,10, &usr_val);
-    if (ret != 0) {
-        return ret;
-    }
-    if (usr_val > 1) {
-        return -EINVAL;
-    }
-
-    mask = (~(1 << sda->index)) & 0xFF;
-    reg_val = cpld_i2c_read(data, FAN_POWER_REG);
-    reg_val = reg_val & mask;
-
-    usr_val = usr_val << sda->index;
-
-    cpld_i2c_write(data, FAN_POWER_REG, (reg_val|usr_val));
-
-    return count;
-
-}
 
 // sysfs attributes
 static SENSOR_DEVICE_ATTR(board_type, S_IRUGO, show_board_type, NULL, 0);
@@ -425,12 +389,6 @@ static SENSOR_DEVICE_ATTR(fan3_led, S_IRUGO | S_IWUSR, show_fan_led1_status, set
 static SENSOR_DEVICE_ATTR(fan4_led, S_IRUGO | S_IWUSR, show_fan_led1_status, set_fan_led1_status, FAN4_LED_REG);
 static SENSOR_DEVICE_ATTR(fan5_led, S_IRUGO | S_IWUSR, show_fan_led1_status, set_fan_led1_status, FAN5_LED_REG);
 static SENSOR_DEVICE_ATTR(fan6_led, S_IRUGO | S_IWUSR, show_fan_led1_status, set_fan_led1_status, FAN6_LED_REG);
-static SENSOR_DEVICE_ATTR(fan1_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN1_PRES);
-static SENSOR_DEVICE_ATTR(fan2_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN2_PRES);
-static SENSOR_DEVICE_ATTR(fan3_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN3_PRES);
-static SENSOR_DEVICE_ATTR(fan4_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN4_PRES);
-static SENSOR_DEVICE_ATTR(fan5_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN5_PRES);
-static SENSOR_DEVICE_ATTR(fan6_power, S_IRUGO | S_IWUSR, show_fan_power, set_fan_power, FAN6_PRES);
 
 
 static struct attribute *fan_cpld_attributes[] = {
@@ -468,12 +426,6 @@ static struct attribute *fan_cpld_attributes[] = {
     &sensor_dev_attr_fan4_led.dev_attr.attr,
     &sensor_dev_attr_fan5_led.dev_attr.attr,
     &sensor_dev_attr_fan6_led.dev_attr.attr,
-    &sensor_dev_attr_fan1_power.dev_attr.attr,
-    &sensor_dev_attr_fan2_power.dev_attr.attr,
-    &sensor_dev_attr_fan3_power.dev_attr.attr,
-    &sensor_dev_attr_fan4_power.dev_attr.attr,
-    &sensor_dev_attr_fan5_power.dev_attr.attr,
-    &sensor_dev_attr_fan6_power.dev_attr.attr,
     NULL
 };
 
