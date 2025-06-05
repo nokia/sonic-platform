@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "202503" ]
+  pull_request:
+    branches: [ "202503" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: build
+      run: |
+        sudo apt-get update
+        sudo apt-get install build-essential debhelper
+        sudo apt-get install linux-headers-6.1.0-1036
+        git submodule update --init --recursive
+        export KVERSION=$(find /lib/modules/ -name 6.1.0* | awk -F '/' '{print$4}')
+        export CONFIGURED_ARCH=amd64
+        dpkg-buildpackage -rfakeroot -b -us -uc -tc -j$(nproc)
+        
