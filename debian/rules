@@ -21,7 +21,7 @@ KERNEL_SRC :=  /lib/modules/$(KVERSION)
 
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS:= chassis ixr7220h3 ixr7220h4-32d ixr7220h5-32d ixr7220h5-64d ixr7220h4-64d \
-  ixr7220h5-64o ixr7250x3b ixr7220d4
+  ixr7220h5-64o ixr7250x1b ixr7250x3b ixr7220d4
 BRIDGE_DRIVER_TARGETS :=ixr7250x3b
 MODULE_DIR := modules
 UTILS_DIR := utils
