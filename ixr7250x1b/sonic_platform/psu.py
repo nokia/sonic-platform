@@ -17,8 +17,8 @@ PSU_NUM = 2
 I2C_BUS = [14, 15]
 PSU_ADDR = '5b'
 PSU_EEPROM_ADDR = '53'
-MAX_VOLTAGE = 13
-MIN_VOLTAGE = 11
+MAX_VOLTAGE = 264
+MIN_VOLTAGE = 180
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 sonic_logger = logger.Logger('psu')
@@ -141,7 +141,7 @@ class Psu(PsuBase):
             bool: True if PSU is operating properly, False if not
         """
         result = read_sysfs_file(self.psu_dir + "psu_status")        
-        if (int(result, 16) & 0x400) >> 10 == 0:
+        if (int(result, 10) & 0x800) >> 11 == 0:
             return True
         
         return False
