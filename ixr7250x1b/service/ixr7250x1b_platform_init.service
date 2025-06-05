@@ -1,0 +1,14 @@
+[Unit]
+Description=Nokia-7250-IXR-X1b Platform Service
+After=sysinit.target
+Before=determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ixr7250x1b_platform_init.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ixr7250x1b_platform_init
+
+[Install]
+WantedBy=multi-user.target
