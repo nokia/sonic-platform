@@ -27,6 +27,7 @@ load_kernel_drivers() {
     modprobe fan_eeprom
     modprobe psu_eeprom
     modprobe fan_led
+    modprobe pcon
 }
 
 file_exists() {
@@ -56,6 +57,11 @@ dev_conf_init() {
     echo pconm 0x74 > /sys/bus/i2c/devices/i2c-24/new_device
     echo pconm 0x74 > /sys/bus/i2c/devices/i2c-25/new_device
     echo pconm 0x74 > /sys/bus/i2c/devices/i2c-17/new_device
+
+    file_exists /sys/bus/i2c/drivers/pcon/23-0074/name
+    file_exists /sys/bus/i2c/drivers/pcon/24-0074/name
+    file_exists /sys/bus/i2c/drivers/pcon/25-0074/name
+    file_exists /sys/bus/i2c/drivers/pcon/17-0074/name
 
     PCON0_HWMON=$(ls /sys/bus/i2c/drivers/pcon/23-0074/hwmon/)
     echo "pcon0=/sys/class/hwmon/${PCON0_HWMON}" >> $CONF_FILE
