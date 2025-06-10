@@ -5,6 +5,7 @@
 # Load required kernel-mode drivers
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"
+    echo "options cpuctl board=1" > /etc/modprobe.d/cpuctl.conf
     depmod -a
     rmmod amd-xgbe
     rmmod igb
@@ -17,7 +18,7 @@ load_kernel_drivers() {
     modprobe i2c-smbus
     modprobe i2c-dev
     modprobe i2c-mux
-    modprobe cpuctl board=1
+    modprobe cpuctl
     modprobe rtc_ds1307
     modprobe optoe
     modprobe at24
