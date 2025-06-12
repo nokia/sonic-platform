@@ -5,7 +5,6 @@
 # Load required kernel-mode drivers
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"
-    echo "options cpuctl board=1" > /etc/modprobe.d/cpuctl.conf
     depmod -a
     rmmod amd-xgbe
     rmmod igb

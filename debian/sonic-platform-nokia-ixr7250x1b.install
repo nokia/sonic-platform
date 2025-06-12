@@ -1,3 +1,4 @@
+ixr7250x1b/conf/cpuctl.conf etc/modprobe.d
 ixr7250x1b/scripts/ixr7250x1b_platform_init.sh usr/local/bin
 ixr7250x1b/service/ixr7250x1b_platform_init.service etc/systemd/system
 ixr7250x1b/scripts/nokia-watchdog.sh usr/local/bin
