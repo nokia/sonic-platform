@@ -142,4 +142,12 @@ if type pcon_cmds &> /dev/null ; then
     pcon_cmds -v -r /var/run/sonic-platform-nokia/pcon_reboot_reason
 fi
 
+file_exists /sys/bus/i2c/devices/1-0054/eeprom
+status=$?
+if [ "$status" == "1" ]; then
+    chmod 644 /sys/bus/i2c/devices/1-0054/eeprom
+else
+    echo "SYSEEPROM file not foud"
+fi
+
 exit 0
