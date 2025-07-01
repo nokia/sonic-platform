@@ -65,6 +65,15 @@ uint32_t GetPconIndexForAsicIf(int asic_num)
     }
     return 0;
 }
+uint32_t GetPconIndexForCPU()
+{
+    CardType self = GetMyCardType();
+    std::map<CardType, int> board_reset_pcon_index = {
+        {0x1b, 3},
+        {0x20, 1},
+        {0x3c, 2}};
+    return board_reset_pcon_index.at(self);
+}
 uint32_t GetTargetMvolt(uint32_t jer_rov_value)
 {
     CardType self = GetMyCardType();
