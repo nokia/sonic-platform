@@ -8,6 +8,7 @@
 try:
     import os
     import sys
+    from datetime import datetime, timezone
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.sfp import Sfp
     from sonic_platform.eeprom import Eeprom
@@ -283,6 +284,17 @@ class Chassis(ChassisBase):
         """
         return True
 
+    def _find_software_reboot_cause_from_reboot_cause_file(self):
+        REBOOT_CAUSE_UNKNOWN = "Unknown"
+        REBOOT_CAUSE_DIR = "/host/reboot-cause/"
+        REBOOT_CAUSE_FILE = os.path.join(REBOOT_CAUSE_DIR, "reboot-cause.txt")
+
+        software_reboot_cause = REBOOT_CAUSE_UNKNOWN
+        if os.path.isfile(REBOOT_CAUSE_FILE):
+            with open(REBOOT_CAUSE_FILE) as cause_file:
+                software_reboot_cause = cause_file.readline().rstrip('\n')
+        return software_reboot_cause
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
@@ -293,6 +305,39 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
+        CAUSE_FORMAT = "User issued '{}' command [User: {}, Time: {}]"
+        CAUSE_FORMAT_NOTIME = "User issued '{}' command [User: {}]"
+        POWER_CAUSE_FILE = "/var/run/sonic-platform-nokia/pcon_reboot_reason"
+        PLATFORM_FIRSTBOOT_FLAG = "/tmp/notify_firstboot_to_platform"
+
+        try:
+            with open(POWER_CAUSE_FILE) as pcon_cause_file:
+                pcon_cause_lines = pcon_cause_file.readlines()
+
+            reboot_type = pcon_cause_lines[0].strip()
+            outtime = "N/A"
+            if (len(pcon_cause_lines) > 1):
+                timestamp = pcon_cause_lines[1].strip()
+                dateobj = datetime.strptime(timestamp, "%a %b %d %H:%M:%S %Y").replace(
+                    tzinfo=timezone.utc)
+                outtime = dateobj.strftime("%a %b %d %I:%M:%S %p %Z %Y")
+                
+            reboot_cause = self._find_software_reboot_cause_from_reboot_cause_file()
+            if reboot_type == "Power Loss":
+                # In case of firsttime upgraded from MFG image, the PCON record 
+                # has not been cleared, the reboto-cause should use fromreboot-cause.txt
+                if "reboot" in reboot_cause and os.path.exists(PLATFORM_FIRSTBOOT_FLAG):
+                    return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+                return (self.REBOOT_CAUSE_HARDWARE_OTHER,
+                        CAUSE_FORMAT.format(reboot_type, "Unknown", outtime))
+            else:
+                if "Unknown" in reboot_cause:
+                    return (self.REBOOT_CAUSE_HARDWARE_OTHER,
+                            CAUSE_FORMAT.format("Unknown (watchdog or others)", "Unknown", outtime))
+        except Exception:
+            sonic_logger.log_warning("Failed to parse platform reboot-cause file")
+            return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
     
     def get_watchdog(self):
