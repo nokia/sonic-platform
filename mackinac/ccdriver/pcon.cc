@@ -117,7 +117,8 @@ int main(int argc, char *argv[])
             bool is_hw_power_failure = 0;
             std::string last_boot_time_str;
             std::string last_power_time_str;
-            std::string reset_log = hwPconGetResetReason(hw_instance_, 3);
+            int pcon_index = GetPconIndexForCPU();
+            std::string reset_log = hwPconGetResetReason(hw_instance_, pcon_index);
             if (pcon_options::is_verbose) {
                 printf("Reset Log\n%s", reset_log.c_str());
             }
@@ -156,7 +157,7 @@ int main(int argc, char *argv[])
                 std::ofstream(pcon_options::reboot_output_file, std::ios::out) << "Unknown\n"
                     << last_boot_time_str << "\n";;
             }
-            hwPconGetClearEventLogResetReason(hw_instance_, 3);
+            hwPconGetClearEventLogResetReason(hw_instance_, pcon_index);
         }
     }
     return EXIT_SUCCESS;
