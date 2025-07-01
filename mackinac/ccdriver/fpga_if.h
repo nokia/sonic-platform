@@ -26,4 +26,6 @@ typedef enum
     CTL_FPGA_ALL,
     CTL_FPGA_NONE = 0xff,
 } CtlFpgaId;
+CtlFpgaId ctl_fpga_id_default(void);
+const char *ctl_fpga_name(CtlFpgaId fpga_id);
 }
