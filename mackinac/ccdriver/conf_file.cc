@@ -5,6 +5,7 @@
 #include "platform_hw_info.h"
 #include "tmSpiDefs.h"
 #include <string>
+#include <fmt/format.h>
 #include <unordered_map>
 #include <map>
 #include <utility>
@@ -49,10 +50,10 @@ public:
         return ioctl_dev_path;
     }
     std::string getSpiDevice(CtlFpgaId fpga_id, uint16_t channel) {
-        return spi_map[std::pair<int, int>(fpga_id, channel)];
+        return fmt::format("/dev/spidev{}.{}", (int)fpga_id, channel);
     }
     int getSpiFd(CtlFpgaId fpga_id, uint16_t channel) {
-        std::string dev_path = spi_map[std::pair<int, int>(fpga_id, channel)];
+        std::string dev_path = getSpiDevice(fpga_id, channel);
         auto it = open_spi_fds.find(dev_path);
         if (it != open_spi_fds.end()) {
             return it->second;
@@ -69,7 +70,6 @@ private:
     CardType myCardType = 0x1b;
     std::unordered_map<std::string, std::string> config_map;
     std::unordered_map <int, std::string> pcon_map;
-    std::map <std::pair<int, int>, std::string> spi_map;
     std::unordered_map <std::string, int> open_spi_fds;
     std::string cpuctl_dev_path;
     std::string ioctl_dev_path;
@@ -120,14 +120,6 @@ private:
             pcon_map[pcon_index] = path;
             pcon_index++;
         }
-        spi_map[ std::pair<int,int>(CTL_FPGA_CPUCTL, 0) ] = "/dev/spidev0.0";
-        spi_map[ std::pair<int,int>(CTL_FPGA_CPUCTL, 1) ] = "/dev/spidev0.1";
-        spi_map[ std::pair<int,int>(CTL_FPGA_CPUCTL, 2) ] = "/dev/spidev0.2";
-        spi_map[ std::pair<int,int>(CTL_FPGA_CPUCTL, 6) ] = "/dev/spidev0.6";
-        spi_map[ std::pair<int,int>(CTL_FPGA_IOCTL, 0) ] = "/dev/spidev1.0";
-        spi_map[ std::pair<int,int>(CTL_FPGA_IOCTL, 1) ] = "/dev/spidev1.1";
-        spi_map[ std::pair<int,int>(CTL_FPGA_IOCTL, 2) ] = "/dev/spidev1.2";
-        spi_map[ std::pair<int,int>(CTL_FPGA_IOCTL, 3) ] = "/dev/spidev1.3";
     }
 };
 }
