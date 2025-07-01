@@ -17,6 +17,7 @@ typedef uint64_t tUint64 __attribute__((aligned(8)));
 typedef int64_t tInt64_a4 __attribute__((aligned(4)));
 typedef uint64_t tUint64_a4 __attribute__((aligned(4)));
 typedef unsigned char tBoolean;
+typedef tUint32 tHwCardType;
 typedef int8_t INT8;
 typedef int16_t INT16;
 typedef int32_t INT32;

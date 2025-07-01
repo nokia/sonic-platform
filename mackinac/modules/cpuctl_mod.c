@@ -229,8 +229,7 @@ static int ctl_probe(struct pci_dev *pcidev, const struct pci_device_id *id)
 		return rc;
 	}
 
-	if (id->device == 0x0030)
-		spi_device_create(pdev);
+	spi_device_create(pdev);
 
 	/* tbd: set instance name e.g. /sys/bus/pci/drivers/cpuctl/ctl_io_vermilion
 	kobject_set_name(&pcidev->dev.kobj, ctlv->name); */

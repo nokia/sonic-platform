@@ -600,10 +600,6 @@ const tPconAccessApi default_access_api =
     .hwSpiWrite8 = spiWrite8,
     .hwSpiWrite8ReadBlock = spiWrite8BlockRead,
     .hwSpiWriteBlock = spiWriteBlock,
-    .hwSpiPromReadId = spiReadId,
-    .hwSpiPromReadByte = spiReadPromByte,
-    .hwSpiPromDump = spiPromDump,
-    .hwSpiProgramProm = spiProgramProm,
 };
 const tPconAccessApi* hwPconGetAccessApis(HwInstance instance)
 {

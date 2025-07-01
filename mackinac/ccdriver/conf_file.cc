@@ -141,9 +141,11 @@ std::string GetIOCtlDeviceBase(void)
 }
 std::string GetSpiDevice(const tSpiParameters *spi_paramters)
 {
-    return configuration_file::Configuration::Get().getSpiDevice(spi_paramters->fpga_id, spi_paramters->channel);
+    CtlFpgaId fpga_id = (spi_paramters->fpga_id == CTL_FPGA_DEFAULT) ? ctl_fpga_id_default() : spi_paramters->fpga_id;
+    return configuration_file::Configuration::Get().getSpiDevice(fpga_id, spi_paramters->channel);
 }
 int GetSpiFd(const tSpiParameters *spi_paramters)
 {
-    return configuration_file::Configuration::Get().getSpiFd(spi_paramters->fpga_id, spi_paramters->channel);
+    CtlFpgaId fpga_id = (spi_paramters->fpga_id == CTL_FPGA_DEFAULT) ? ctl_fpga_id_default() : spi_paramters->fpga_id;
+    return configuration_file::Configuration::Get().getSpiFd(fpga_id, spi_paramters->channel);
 }
