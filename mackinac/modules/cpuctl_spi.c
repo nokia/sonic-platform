@@ -16,12 +16,19 @@ On CPM side:
 - PCON4 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev0.2
 - ESPLL is mapped to SPI Ctrl 0 bus 6     /dev/spidev0.6
 - Dev Flash is mapped to SPI Ctrl 1 bus 0
+
 On IOM side:
+ (x3b)
 - ??                                      timer=?  /dev/spidev1.0
 - PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
 - PCON1 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev1.2
 - PCON2 is mapped to SPI Ctrl 0 bus 3     timer=6  /dev/spidev1.3
-
+ (x1b)
+- PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
+- PCON2 is mapped to SPI Ctrl 0 bus 4     timer=6  /dev/spidev1.4
+ (x4)
+- PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
+- PCON1 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev1.4
 */
 #include <linux/device.h>
 #include <linux/delay.h>
@@ -38,6 +45,7 @@ On IOM side:
 
 #define SPI_IDT_SETS_TIMER 16
 #define SPI_TIMER_DEFAULT 6
+#define SPI_FPI_TIMER     1
 #define SPI_SPEED_HALF 0
 #define SPI_SPEED_FULL 1
 #define SPI_DEFAULT_SPEED (SPI_SPEED_FULL)
@@ -56,6 +64,20 @@ On IOM side:
 #define S_SPI_BUSY 24
 #define S_SPI_NOACK 25
 #define S_SPI_ERROR 26
+
+
+#define S_SPI_CHANNEL_INVALID -1
+int bus0_channums[3][N_SPI_MINORS] = {
+    {0, 1, 2, S_SPI_CHANNEL_INVALID},
+    {0, 1, 2, S_SPI_CHANNEL_INVALID},
+    {0, 1, 2, S_SPI_CHANNEL_INVALID}
+};
+
+int bus1_channums[3][N_SPI_MINORS] = {
+    {0, 1, 2, 3},
+    {0, 1, 4, S_SPI_CHANNEL_INVALID},
+    {0, 1, 2, S_SPI_CHANNEL_INVALID}
+};
 
 static int ctl_spi_check_status(CTLDEV *pdev)
 {
@@ -213,6 +235,8 @@ static int ctlspi_spi_controller_transfer(struct spi_controller *spicon, struct 
 
     if (spicon->bus_num == 0 && message->spi->chip_select == 1)
         timer = SPI_IDT_SETS_TIMER;
+    else if (channel == 0)
+        timer = SPI_FPI_TIMER;
 
     start = ktime_get_ns();
     list_for_each_entry(xfer, &message->transfers, transfer_list)
@@ -316,9 +340,11 @@ int spi_device_create(CTLDEV *pdev)
     if (!spicon)
         return -ENOMEM;
 
+    int bus_num = pdev->ctlv->spi_bus;
+
     /* Initialize the spi_controller fields */
     spicon->dev.parent = dev;
-    spicon->bus_num = pdev->ctlv->spi_bus;
+    spicon->bus_num = bus_num;
     spicon->num_chipselect = N_SPI_MINORS;
     spicon->flags = SPI_CONTROLLER_HALF_DUPLEX;
     mutex_init(&spicon->bus_lock_mutex);
@@ -341,13 +367,31 @@ int spi_device_create(CTLDEV *pdev)
 
     spi_controller_set_devdata(spicon, pdev);
 
-    for (i = 0; i < N_SPI_MINORS; i++)
-    {
-        struct spi_board_info sbi = {{0}};
-        sbi.bus_num = 0;
-        strcpy(sbi.modalias, "ltc2488");
-        sbi.chip_select = i;
-        spi_new_device(spicon, &sbi);
+    if (bus_num == 0) {
+        for (i = 0; i < N_SPI_MINORS; i++)
+        {
+            if (bus0_channums[board][i] == S_SPI_CHANNEL_INVALID)
+                continue;
+
+            struct spi_board_info sbi = {{0}};
+            sbi.bus_num = bus_num;
+            strcpy(sbi.modalias, "ltc2488");
+            sbi.chip_select = bus0_channums[board][i];
+            spi_new_device(spicon, &sbi);
+        }
+    }
+    else {
+        for (i = 0; i < N_SPI_MINORS; i++)
+        {
+            if (bus1_channums[board][i] == S_SPI_CHANNEL_INVALID)
+                continue;
+
+            struct spi_board_info sbi = {{0}};
+            sbi.bus_num = bus_num;
+            strcpy(sbi.modalias, "ltc2488");
+            sbi.chip_select = bus1_channums[board][i];
+            spi_new_device(spicon, &sbi);
+        }
     }
 
     return rc;
