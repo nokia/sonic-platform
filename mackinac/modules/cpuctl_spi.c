@@ -15,18 +15,20 @@ On CPM side:
 - SETS is mapped to SPI Ctrl 0 bus 1      timer=16 /dev/spidev0.1
 - PCON4 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev0.2
 - ESPLL is mapped to SPI Ctrl 0 bus 6     /dev/spidev0.6
-- Dev Flash is mapped to SPI Ctrl 1 bus 0
+- Other Device Flash is mapped to SPI Ctrl 1 bus 0
 
 On IOM side:
  (x3b)
-- ??                                      timer=?  /dev/spidev1.0
+- PCON Flash                              timer=1  /dev/spidev1.0
 - PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
 - PCON1 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev1.2
 - PCON2 is mapped to SPI Ctrl 0 bus 3     timer=6  /dev/spidev1.3
  (x1b)
+- PCON Flash                              timer=1  /dev/spidev1.0
 - PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
 - PCON2 is mapped to SPI Ctrl 0 bus 4     timer=6  /dev/spidev1.4
  (x4)
+- PCON Flash                              timer=1  /dev/spidev1.0
 - PCON0 is mapped to SPI Ctrl 0 bus 1     timer=6  /dev/spidev1.1
 - PCON1 is mapped to SPI Ctrl 0 bus 2     timer=6  /dev/spidev1.4
 */
@@ -335,12 +337,12 @@ int spi_device_create(CTLDEV *pdev)
     struct device *dev = &pdev->pcidev->dev;
     struct spi_controller *spicon;
     int rc = 0, i;
+    int bus_num = pdev->ctlv->spi_bus;
 
     spicon = devm_spi_alloc_master(dev, sizeof(CTLDEV));
     if (!spicon)
         return -ENOMEM;
 
-    int bus_num = pdev->ctlv->spi_bus;
 
     /* Initialize the spi_controller fields */
     spicon->dev.parent = dev;
@@ -370,10 +372,11 @@ int spi_device_create(CTLDEV *pdev)
     if (bus_num == 0) {
         for (i = 0; i < N_SPI_MINORS; i++)
         {
+            struct spi_board_info sbi = {{0}};
+
             if (bus0_channums[board][i] == S_SPI_CHANNEL_INVALID)
                 continue;
 
-            struct spi_board_info sbi = {{0}};
             sbi.bus_num = bus_num;
             strcpy(sbi.modalias, "ltc2488");
             sbi.chip_select = bus0_channums[board][i];
@@ -383,10 +386,11 @@ int spi_device_create(CTLDEV *pdev)
     else {
         for (i = 0; i < N_SPI_MINORS; i++)
         {
+            struct spi_board_info sbi = {{0}};
+
             if (bus1_channums[board][i] == S_SPI_CHANNEL_INVALID)
                 continue;
 
-            struct spi_board_info sbi = {{0}};
             sbi.bus_num = bus_num;
             strcpy(sbi.modalias, "ltc2488");
             sbi.chip_select = bus1_channums[board][i];
