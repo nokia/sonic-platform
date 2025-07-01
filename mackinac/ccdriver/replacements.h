@@ -29,6 +29,7 @@ std::string Format(const char *format, ...);
 HwInstance GetMyHwInstance();
 uint32_t GetNumAsicsIf(void);
 uint32_t GetPconIndexForAsicIf(int asicif_num);
+uint32_t GetPconIndexForCPU();
 uint32_t GetTargetMvolt(uint32_t jer_rov_value);
 uint32_t GetCtrlFpgaMiscIO2(void);
 std::string GetPconDeviceBase(uint32_t pcon_index);
