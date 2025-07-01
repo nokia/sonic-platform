@@ -71,7 +71,7 @@ uint32_t GetPconIndexForCPU()
     std::map<CardType, int> board_reset_pcon_index = {
         {0x1b, 3},
         {0x20, 1},
-        {0x3c, 2}};
+        {0x3c, 1}};
     return board_reset_pcon_index.at(self);
 }
 uint32_t GetTargetMvolt(uint32_t jer_rov_value)
@@ -98,6 +98,23 @@ uint32_t GetTargetMvolt(uint32_t jer_rov_value)
         break;
     }
     return 0;
+}
+CtlFpgaId ctl_fpga_id_default(void)
+{
+    return CTL_FPGA_CPUCTL;
+}
+const char *ctl_fpga_name(CtlFpgaId fpga_id)
+{
+    switch (fpga_id)
+    {
+        case CTL_FPGA_CPUCTL:
+            return "CpuCtlFpga";
+        case CTL_FPGA_IOCTL:
+            return "IoCtlFpga";
+        default:
+            break;
+    }
+    return "NULL";
 }
 bool idt8a35003LocalZDpllLocked(void)
 {
@@ -384,44 +401,6 @@ SrlStatus spiWriteBlock(const tSpiParameters *parms, const uint8_t *wrdata, uint
         return status;
     }
 }
-SrlStatus spiWriteControlByte(const tSpiParameters *parms, uint16_t control, uint8_t data)
-{
-    SrlStatus status = 0;
-    ;
-    return status;
-}
-SrlStatus spiReadId(const tSpiParameters *parms, tFlashDeviceId *pDeviceId)
-{
-    SrlStatus status = 0;
-    ;
-    return status;
-}
-SrlStatus spiReadPromByte(const tSpiParameters *parms,
-    uint32_t address,
-    uint8_t *data)
-{
-    SrlStatus status = 0;
-    ;
-    return status;
-}
-SrlStatus spiPromDump(const tSpiParameters *parms,
-        uint32_t offset,
-        tFlashDeviceId flashDevice)
-{
-    SrlStatus status = 0;
-    ;
-    return status;
-}
-SrlStatus spiProgramProm(const tSpiParameters *parms,
-        uint8_t *bitfile,
-       uint32_t fileSize,
-       uint32_t location,
-       tSpiProgramMask options)
-{
-    SrlStatus status = 0;
-    ;
-    return status;
-}
 }
 std::string HwInstanceToString(HwInstance instance)
 {
@@ -474,7 +453,7 @@ int spi_close(int fd)
 {
     return close(fd);
 }
-int spi_xfer(int fd, const uint8_t *tx_buffer, uint8_t tx_len, uint8_t *rx_buffer, uint8_t rx_len)
+int spi_xfer(int fd, const uint8_t *tx_buffer, uint32_t tx_len, uint8_t *rx_buffer, uint32_t rx_len)
 {
     int rc;
     struct spi_ioc_transfer ioc_message[2];
@@ -487,7 +466,7 @@ int spi_xfer(int fd, const uint8_t *tx_buffer, uint8_t tx_len, uint8_t *rx_buffe
     rc = ioctl(fd, SPI_IOC_MESSAGE(2), ioc_message);
     return rc;
 }
-int spi_read(int fd, uint8_t *rx_buffer, uint8_t rx_len)
+int spi_read(int fd, uint8_t *rx_buffer, uint32_t rx_len)
 {
     int rc;
     struct spi_ioc_transfer ioc_message[1];
@@ -498,7 +477,7 @@ int spi_read(int fd, uint8_t *rx_buffer, uint8_t rx_len)
     rc = ioctl(fd, SPI_IOC_MESSAGE(1), ioc_message);
     return rc;
 }
-int spi_write(int fd, const uint8_t *tx_buffer, uint8_t tx_len)
+int spi_write(int fd, const uint8_t *tx_buffer, uint32_t tx_len)
 {
     int rc;
     struct spi_ioc_transfer ioc_message[1];
@@ -507,5 +486,19 @@ int spi_write(int fd, const uint8_t *tx_buffer, uint8_t tx_len)
     ioc_message[0].len = tx_len;
     ioc_message[0].cs_change = 1;
     rc = ioctl(fd, SPI_IOC_MESSAGE(1), ioc_message);
+    return rc;
+}
+int spi_write_two(int fd, const uint8_t *tx_buffer1, uint32_t tx_len1,
+                const uint8_t *tx_buffer2, uint32_t tx_len2)
+{
+    int rc;
+    struct spi_ioc_transfer ioc_message[2];
+    memset(ioc_message, 0, sizeof(ioc_message));
+    ioc_message[0].tx_buf = (unsigned long)tx_buffer1;
+    ioc_message[0].len = tx_len1;
+    ioc_message[1].tx_buf = (unsigned long)tx_buffer2;
+    ioc_message[1].len = tx_len2;
+    ioc_message[1].cs_change = 1;
+    rc = ioctl(fd, SPI_IOC_MESSAGE(2), ioc_message);
     return rc;
 }

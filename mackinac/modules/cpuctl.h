@@ -26,7 +26,7 @@
 
 #define CPUCTL_NUM_MEM_REGIONS 1
 #define CPUCTL_MINORS_MAX 1
-#define N_SPI_MINORS 3
+#define N_SPI_MINORS 4
 
 typedef struct
 {
