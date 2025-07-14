@@ -1,11 +1,15 @@
 try:
     from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
     from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
-    from sonic_py_common.logger import Logger
+    from sonic_py_common import logger
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-logger = Logger()
+sonic_logger = logger.Logger('thermal_info')
+sonic_logger.set_min_log_priority_warning()
+
+FM = 3
+TI = 5
 
 @thermal_json_object('fan_info')
 class FanInfo(ThermalPolicyInfoBase):
@@ -27,17 +31,18 @@ class FanInfo(ThermalPolicyInfoBase):
         :return:
         """
         self._status_changed = False
-        for fan in chassis.get_all_fans():
-            if fan.get_presence() and fan not in self._presence_fans:
-                self._presence_fans.add(fan)
+        for fandrawer in chassis.get_all_fan_drawers():
+            fandrawer_pres = fandrawer.get_presence()
+            if fandrawer_pres and fandrawer not in self._presence_fans:
+                self._presence_fans.add(fandrawer)
                 self._status_changed = True
-                if fan in self._absence_fans:
-                    self._absence_fans.remove(fan)
-            elif not fan.get_presence() and fan not in self._absence_fans:
-                self._absence_fans.add(fan)
+                if fandrawer in self._absence_fans:
+                    self._absence_fans.remove(fandrawer)
+            elif not fandrawer_pres and fandrawer not in self._absence_fans:
+                self._absence_fans.add(fandrawer)
                 self._status_changed = True
-                if fan in self._presence_fans:
-                    self._presence_fans.remove(fan)
+                if fandrawer in self._presence_fans:
+                    self._presence_fans.remove(fandrawer)
 
     def get_absence_fans(self):
         """
@@ -71,14 +76,14 @@ class ThermalInfo(ThermalPolicyInfoBase):
     def __init__(self):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
-        self._num_fan_levels = 3
-        self._level_up_threshold = [[42, 37, 42, 43, 64, 64, 52],
-                                    [51, 44, 51, 50, 74, 74, 62],
-                                    [59, 51, 59, 58, 84, 84, 71]]
-        
-        self._level_down_threshold = [[46, 40, 46, 47, 68, 68, 56],
-                                      [55, 48, 55, 54, 78, 78, 66],
-                                      [63, 55, 63, 62, 88, 88, 75]]
+        self._num_fan_levels = 2
+        self.p = 0
+        self.se = 0
+        self.ps = 1
+        self.mc = 100
+        self.nc = 38
+        self.last_drawer_event = False
+        self._fan_drawer = 0
 
     def collect(self, chassis):
         """
@@ -87,54 +92,50 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return:
         """
         self._temps = []
+        self._t = []
+        self._fan_speeds = []
         self._over_high_critical_threshold = False
         self._set_fan_default_speed = False
-        self._set_fan_threshold_one_speed = False
-        self._set_fan_threshold_two_speed = False
+        self._set_fan_ctl_speed = False
         self._set_fan_high_temp_speed = False
-
-        # Calculate average temp within the device
+        
         num_of_thermals = chassis.get_num_thermals()
         for index in range(num_of_thermals):
-            self._temps.insert(index, chassis.get_thermal(index).get_temperature())
+            temp_current = chassis.get_thermal(index).get_temperature()    
+            self._temps.insert(index, temp_current)
+            self._t.insert(index, chassis.get_thermal(index).get_high_threshold() - temp_current)
+            
+        t_min = min(self._t)
 
-       # Find current required threshold level
-        max_level =0
-        min_level = [self._num_fan_levels for i in range(num_of_thermals)]
-        for index in range(num_of_thermals):
-            for level in range(self._num_fan_levels):
-                if self._temps[index]>self._level_up_threshold[level][index]:
-                    if max_level<level+1:
-                        max_level=level+1
-                if self._temps[index]<self._level_down_threshold[level][index]:
-                    if min_level[index]>level:
-                        min_level[index]=level
+        self.good_fan = 0
+        fan_speed_sum = 0
+        self.fan_drawer = 0
+        for fandrawer in chassis.get_all_fan_drawers():
+            if fandrawer.get_presence():
+                self.fan_drawer += 1
+                for fan in fandrawer.get_all_fans():
+                    fan_speed = fan.get_speed()
+                    if (fan_speed >= (self.nc - 5)) or (fan_speed <= self.mc):
+                        fan_speed_sum += fan_speed
+                        self.good_fan += 1
+        
+        avg_fan_speed = round(fan_speed_sum / self.good_fan)
 
-        max_of_min_level=max(min_level)
+        diff = self.fc(t_min-FM, avg_fan_speed)
+        if (avg_fan_speed - diff <= self.nc):
+            self.fanctl_speed = self.nc
+        elif (avg_fan_speed - diff >= self.mc):
+            self.fanctl_speed = self.mc
+        else:
+            self.fanctl_speed = avg_fan_speed - diff
 
-        #compare with running threshold level
-        if max_of_min_level > self._old_threshold_level:
-            max_of_min_level=self._old_threshold_level
+        self._set_fan_ctl_speed = True
 
-        self._current_threshold_level = max(max_of_min_level,max_level)
-
-        #set fan to max speed if one fan is down
-        for fan in chassis.get_all_fans():
-            if not fan.get_status() :
-                self._current_threshold_level = 3
-
-       # Decide fan speed based on threshold level
-        if self._current_threshold_level != self._old_threshold_level:
-            if self._current_threshold_level == 0:
-                self._set_fan_default_speed = True
-            elif self._current_threshold_level == 1:
-                self._set_fan_threshold_one_speed = True
-            elif self._current_threshold_level == 2:
-                self._set_fan_threshold_two_speed = True
-            elif self._current_threshold_level == 3:
-                self._set_fan_high_temp_speed = True
-
-        self._old_threshold_level=self._current_threshold_level
+        if self._fan_drawer == 2 and self.fan_drawer == 3:
+            self.last_drawer_insert = True
+        else:
+            self.last_drawer_insert = False
+        self._fan_drawer = self.fan_drawer
 
     def is_set_fan_default_speed(self):
         """
@@ -142,20 +143,6 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return: True if the temperature is warm up and over high threshold else False
         """
         return self._set_fan_default_speed
-
-    def is_set_fan_threshold_one_speed(self):
-        """
-        Retrieves if the temperature is warm up and over high threshold
-        :return: True if the temperature is warm up and over high threshold else False
-        """
-        return self._set_fan_threshold_one_speed
-
-    def is_set_fan_threshold_two_speed(self):
-        """
-        Retrieves if the temperature is warm up and over high threshold
-        :return: True if the temperature is warm up and over high threshold else False
-        """
-        return self._set_fan_threshold_two_speed
 
     def is_set_fan_high_temp_speed(self):
         """
@@ -170,6 +157,43 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return: True if the temperature is over high critical threshold else False
         """
         return self._over_high_critical_threshold
+
+    def is_set_fan_ctl_speed(self):
+        """
+        Retrieves if the temperature is warm up and over high threshold
+        :return: True if the temperature is warm up and over high threshold else False
+        """
+        return self._set_fan_ctl_speed
+    
+    def fc(self, t, f):
+        m = (t - self.p)/TI
+
+        if (t == 0 or (self.p > 0 and t < 0) or (self.p < 0 and t > 0)):
+            self.se = 0
+            self.ps = 1
+        
+        if (t < -1):
+            a = 0.4 * -1 * t
+        else:
+            a = 0.4
+
+        if ((f > self.nc) and (f < self.mc)):
+            self.se += t
+            self.ps += 1
+        
+        result = (a * t) + (0.002 * self.se)/self.ps + (10 * m)
+ 
+        self.p = t
+        return round(result)
+    
+    def get_fanctl_speed(self):
+        if (self.fanctl_speed >= self.nc or self.fanctl_speed <= self.mc):
+            return self.fanctl_speed
+        else:
+            return 0
+        
+    def get_last_drawer_event(self):
+        return self.last_drawer_insert
 
 @thermal_json_object('psu_info')
 class PsuInfo(ThermalPolicyInfoBase):

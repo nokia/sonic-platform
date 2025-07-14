@@ -55,7 +55,7 @@ class Component(ComponentBase):
         ["SWPLD2", "Used for managing PORT 1-16, 33-48"],
         ["SWPLD3", "Used for managing PORT 17-32, 49-64, SFP+"] ]
 
-    CPLD_UPDATE_COMMAND = ['./vme_h5_64o', '', '']
+    CPLD_UPDATE_COMMAND = ['./vme_h5', '', '']
     FPGA_UPDATE_COMMAND = ['./fpga_upg_tool', '-c', '1', '-p', '', '']
     BIOS_UPDATE_COMMAND = ['./afulnx_64', '', '/P', '/B', '/N']
 
@@ -179,8 +179,8 @@ class Component(ComponentBase):
 
         if self.name == "CPUPLD":
             # check whether the cpld upgrade tool exists
-            if not os.path.isfile('/tmp/vme_h5_64o'):
-                print("ERROR: the cpld upgrade tool /tmp/vme_h5_64o doesn't exist ")
+            if not os.path.isfile('/tmp/vme_h5'):
+                print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
             write_sysfs_file("/sys/class/gpio/export", str(10099))
             write_sysfs_file("/sys/class/gpio/export", str(10076))
@@ -195,7 +195,7 @@ class Component(ComponentBase):
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
             self.gpio_set("/dev/gpiochip0", 105, 1)
-            self.CPLD_UPDATE_COMMAND[2] = 'h5_64o_cpupld_refresh.vme'
+            self.CPLD_UPDATE_COMMAND[2] = 'h5_cpupld_refresh.vme'
             try:
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
@@ -210,8 +210,8 @@ class Component(ComponentBase):
 
         elif self.name == "SWPLD2":
             # check whether the cpld upgrade tool exists
-            if not os.path.isfile('/tmp/vme_h5_64o'):
-                print("ERROR: the cpld upgrade tool /tmp/vme_h5_64o doesn't exist ")
+            if not os.path.isfile('/tmp/vme_h5'):
+                print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
             write_sysfs_file("/sys/class/gpio/export", str(9953))
             write_sysfs_file("/sys/class/gpio/gpio9953/value", str(1))
@@ -233,8 +233,8 @@ class Component(ComponentBase):
 
         elif self.name == "SWPLD3":
             # check whether the cpld upgrade tool exists
-            if not os.path.isfile('/tmp/vme_h5_64o'):
-                print("ERROR: the cpld upgrade tool /tmp/vme_h5_64o doesn't exist ")
+            if not os.path.isfile('/tmp/vme_h5'):
+                print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
             write_sysfs_file("/sys/class/gpio/export", str(9953))
             write_sysfs_file("/sys/class/gpio/gpio9953/value", str(1))
@@ -266,7 +266,7 @@ class Component(ComponentBase):
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade SysFPGA: rc={e.returncode}")
             self.FPGA_UPDATE_COMMAND[4] = '1'
-            self.FPGA_UPDATE_COMMAND[5] = 'h5_64o_sysfpga_g.bit'
+            self.FPGA_UPDATE_COMMAND[5] = 'h5_sysfpga_g.bit'
             try:
                 subprocess.run(self.FPGA_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:

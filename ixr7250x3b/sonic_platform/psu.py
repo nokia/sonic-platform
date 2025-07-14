@@ -17,8 +17,8 @@ PSU_NUM = 2
 I2C_BUS = [14, 15]
 PSU_ADDR = '5b'
 PSU_EEPROM_ADDR = '53'
-MAX_VOLTAGE = 13
-MIN_VOLTAGE = 11
+MAX_VOLTAGE = 264
+MIN_VOLTAGE = 180
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 sonic_logger = logger.Logger('psu')
@@ -127,6 +127,10 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
+        if self.get_presence():
+            result = read_sysfs_file(self.eeprom_dir + "part_number")
+            return result.strip()
+
         return 'N/A'
 
     def get_status(self):
@@ -136,11 +140,10 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is operating properly, False if not
         """
-        result = read_sysfs_file(self.psu_dir + "psu_status")
-        if int(result, 10) < 0:
-            return False        
-        elif (int(result, 10) & (1 << 11)):
+        result = read_sysfs_file(self.psu_dir + "psu_status")        
+        if (int(result, 10) & 0x800) >> 11 == 0:
             return True
+        
         return False
 
     def get_voltage(self):
@@ -152,7 +155,7 @@ class Psu(PsuBase):
             e.g. 12.1
         """
         if self.get_presence():
-            result = read_sysfs_file(self.psu_dir + "in2_input")
+            result = read_sysfs_file(self.psu_dir + "in1_input")
             psu_voltage = (float(result))/1000
         else:
             psu_voltage = 0.0
@@ -167,7 +170,7 @@ class Psu(PsuBase):
             A float number, the electric current in amperes, e.g 15.4
         """
         if self.get_presence():
-            result = read_sysfs_file(self.psu_dir + "curr2_input")
+            result = read_sysfs_file(self.psu_dir + "curr1_input")
             psu_current = (float(result))/1000
         else:
             psu_current = 0.0
