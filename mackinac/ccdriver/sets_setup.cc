@@ -117,11 +117,63 @@ tIdt8a3xxxxDevIndex idt8a35003InitApisHw(void)
     idt8a35003DevIdx = idt8a3xxxxInitDevInfo(((tIdt8a3xxxxDevIndex) -1), idt8a35003CurrentDeviceConfigInfo);
     return idt8a35003DevIdx;
 }
+ tBoolean idt8a35003LocalZDpllLocked(void)
+{
+    if (!((idt8a35003CurrentDeviceConfigInfo->dpllConfig.localZDpll) != idt8a3xxxxInvalidDpll))
+    {
+        return 1;
+    }
+    tUint8 dpllState = idt8a3xxxxDpllGetState(idt8a35003DevIdx,
+        idt8a35003CurrentDeviceConfigInfo->dpllConfig.localZDpll);
+    if (dpllState == 0x03)
+        return 1;
+    else
+        return 0;
+}
+ tBoolean idt8a35003Ts1ZDpllLocked(void)
+{
+    if (!((idt8a35003CurrentDeviceConfigInfo->dpllConfig.ts1ZDpll) != idt8a3xxxxInvalidDpll))
+    {
+        return 1;
+    }
+    tUint8 dpllState = idt8a3xxxxDpllGetState(idt8a35003DevIdx,
+        idt8a35003CurrentDeviceConfigInfo->dpllConfig.ts1ZDpll);
+    if (dpllState == 0x03)
+        return 1;
+    else
+        return 0;
+}
+ tBoolean __wait_lock(uint32_t timeout)
+{
+    while (timeout > 0 &&
+        !(idt8a35003LocalZDpllLocked() && idt8a35003Ts1ZDpllLocked()))
+    {
+        sleep(1);
+        timeout -= 1;
+    }
+    return (idt8a35003LocalZDpllLocked() && idt8a35003Ts1ZDpllLocked());
+}
 }
 namespace sets_setup_options {
 bool download;
+bool wait_lock;
 bool info;
 std::string filename;
+bool dpll_info;
+srlinux::platform::bsp::eIdt8a3xxxxDplls dpll_id;
+int dpll_verbose;
+bool inputs_info;
+std::string_view get_option_value(
+    const std::vector<std::string_view>& args,
+    const std::string_view& option_name,
+    const int nth=1) {
+    for (auto it = args.begin(), end = args.end(); it != end; ++it) {
+        if (*it == option_name)
+            if (size_t(std::distance(it, end) > nth))
+                return *(it + nth);
+    }
+    return "";
+}
 std::string_view get_option(
     const std::vector<std::string_view>& args,
     const std::string_view& option_name) {
@@ -147,18 +199,31 @@ void parse(int argc, char* argv[]) {
     }
     const std::vector<std::string_view> args(argv + 1, argv + argc);
     download = has_switch(args, "-d") || has_switch(args, "--download");
+    wait_lock = has_switch(args, "--wait-lock");
     info = has_switch(args, "-i");
     filename = get_option(args, "-f");
-    if (download + (filename != "") + info > 1 ) {
+    dpll_info = has_switch(args, "--dpll");
+    if (dpll_info) {
+        try {
+            dpll_id = srlinux::platform::bsp::eIdt8a3xxxxDplls(
+                std::stoi(std::string(get_option_value(args, "--dpll", 1))));
+            dpll_verbose = std::stoi(std::string(get_option_value(args, "--dpll", 2)));
+        } catch (const std::exception &x) {
+            throw std::runtime_error("missing integer arguments");
+        }
+    }
+    inputs_info = has_switch(args, "--inputs");
+    if (download + (filename != "") + info + dpll_info + inputs_info + wait_lock > 1 ) {
         throw std::runtime_error("both more than one action requested");
     }
-    if (!info && !download && filename == "") {
-        throw std::runtime_error("not doing anything; neither filename nor download specified");
+    if (download + (filename != "") + info + dpll_info + inputs_info + wait_lock == 0) {
+        throw std::runtime_error("not doing anything; no action specified");
     }
     return;
 }
 void usage(char *command) {
-    printf("%s: ( -i ) ([ -d | --download ] | [-f <firmware_file>])\n", command);
+    printf("%s: ( -i  | [ -d | --download ] | [-f <firmware_file>] \n"
+        "\t\t| --wait-lock |--dpll <dpllid> <verbose> | --inputs)\n", command);
     return;
 }
 }
@@ -183,8 +248,28 @@ int main(int argc, char *argv[])
         if (sets_setup_options::info) {
             srlinux::platform::bsp::idt8a3xxxxDumpDevs();
         }
+        else if (sets_setup_options::inputs_info) {
+            printf("%s\n",
+                srlinux::platform::bsp::idt8a3xxxxInputsToString(dev0, 1).c_str());
+        }
+        else if (sets_setup_options::dpll_info) {
+            printf("%s\n",
+                srlinux::platform::bsp::idt8a3xxxxDpllToString(dev0,
+                    sets_setup_options::dpll_id,
+                    sets_setup_options::dpll_verbose).c_str());
+        }
         else if (sets_setup_options::download) {
             srlinux::platform::bsp::idt8a3xxxxBringupByDownload(dev0);
+        }
+        else if (sets_setup_options::wait_lock) {
+            printf("Waiting for frequency lock.\n");
+            if (srlinux::platform::bsp::__wait_lock(16)) {
+                printf("Frequency locked\n");
+            }
+            else {
+                fprintf(stderr, "Failed to acquire frequency lock in idt device within %i seconds.\n",
+                    16);
+            }
         }
         else {
             srlinux::platform::bsp::idt8a3xxxxProgramEepromFromFile(dev0,

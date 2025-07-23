@@ -391,9 +391,23 @@ SrlStatus spiWriteBlock(const tSpiParameters *parms, const uint8_t *wrdata, uint
     SrlStatus status = 0;
     ;
     int fd = GetSpiFd(parms);
-    int rc = spi_write(fd, wrdata, wrcount);
+    const uint8_t *bldata = wrdata;
+    uint32_t recount = wrcount;
+    while (recount > 4096) {
+        int rc = spi_write(fd, bldata, 4096, 0);
+        if (rc < 0 ) {
+            printf("%s(): failed with %i (%s), wrcount = %i\n",__FUNCTION__, rc, strerror(errno), 4096);
+            return (-1);
+        }
+        else {
+            ;
+        }
+        bldata += 4096;
+        recount -= 4096;
+    }
+    int rc = spi_write(fd, bldata, recount);
     if (rc < 0 ) {
-        printf("%s(): failed with %i (%s)\n",__FUNCTION__, rc, strerror(errno));
+        printf("%s(): failed with %i (%s), wrcount = %i\n",__FUNCTION__, rc, strerror(errno), 4096);
         return (-1);
     }
     else {
@@ -477,14 +491,14 @@ int spi_read(int fd, uint8_t *rx_buffer, uint32_t rx_len)
     rc = ioctl(fd, SPI_IOC_MESSAGE(1), ioc_message);
     return rc;
 }
-int spi_write(int fd, const uint8_t *tx_buffer, uint32_t tx_len)
+int spi_write(int fd, const uint8_t *tx_buffer, uint32_t tx_len, bool end)
 {
     int rc;
     struct spi_ioc_transfer ioc_message[1];
     memset(ioc_message, 0, sizeof(ioc_message));
     ioc_message[0].tx_buf = (unsigned long)tx_buffer;
     ioc_message[0].len = tx_len;
-    ioc_message[0].cs_change = 1;
+    ioc_message[0].cs_change = (end) ? 1 : 0;
     rc = ioctl(fd, SPI_IOC_MESSAGE(1), ioc_message);
     return rc;
 }

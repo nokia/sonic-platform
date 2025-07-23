@@ -154,6 +154,8 @@ typedef struct tIdt8a3xxxxDeviceConfigInfo
 } tIdt8a3xxxxDeviceConfigInfo;
 typedef tUint8 tIdt8a3xxxxInputPriorityTable[idt8a3xxxxNumInput];
 extern const tIdt8a3xxxxDeviceConfigInfo *idt8a3xxxxCurrentDeviceConfigInfo[10];
+extern tUint8 idt8a3xxxxDpllGetState(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll);
+extern std::string idt8a3xxxxDpllToString(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll, tBoolean detail);
 extern std::string idt8a3xxxxImageVersionToString(tIdt8a3xxxxDevIndex devIdx);
 void idt8a3xxxxDumpDevs(void);
 extern void idt8a3xxxxDumpVersion(tIdt8a3xxxxDevIndex devIdx);
@@ -174,4 +176,5 @@ extern void idt8a3xxxxEepromSetCurrentBlock(tIdt8a3xxxxDevIndex devIdx, tUint32 
 extern tStatus idt8a3xxxxProgramEepromFromFile(tIdt8a3xxxxDevIndex devIdx, char *filename, tBoolean verbose);
 extern tBoolean idt8a3xxxxGetRegIsTrigger(tUint16 regOffset);
 extern void idt8a3xxxxInitRegIsTriggerBitmap(void);
+extern std::string idt8a3xxxxInputsToString(tIdt8a3xxxxDevIndex devIdx, tBoolean detail);
 }

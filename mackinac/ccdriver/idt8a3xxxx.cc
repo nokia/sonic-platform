@@ -15,11 +15,21 @@
 using namespace srlinux::platform::spi;
 namespace srlinux::platform::bsp
 {
+typedef struct tIdt8a3xxxxInputPrioritySetting
+{
+    tUint8 current;
+    tUint8 enabled;
+} tIdt8a3xxxxInputPrioritySetting;
+typedef struct tIdt8a3xxxxDpllInfo
+{
+    tIdt8a3xxxxInputPrioritySetting inputPriority[idt8a3xxxxNumInput];
+} tIdt8a3xxxxDpllInfo;
 typedef struct tIdt8a3xxxxBurstBuf
 {
     tUint32 length;
     tUint8 * buf;
 } tIdt8a3xxxxBurstBuf;
+typedef tInt64 tFcwValue;
  tIdt8a3xxxxDevIndex idt8a3xxxxNumUsedDevices = 0;
  eIdt8a3xxxxInputs idt8a3xxxxNumInputsForDev[10] = { idt8a3xxxxNumInput};
  eIdt8a3xxxxDplls idt8a3xxxxNumDpllsForDev[10] = { idt8a3xxxxNumDpll};
@@ -30,8 +40,33 @@ typedef struct tIdt8a3xxxxBurstBuf
  tUint32 idt8a3xxxxCurrentEepromBlock[10] = { 0};
  tUint8 idt8a3xxxxEepromLoadStatus[10] = { 0};
  tUint16 idt8a3xxxxExpectedProductId[10] = { 0};
+ tIdt8a3xxxxDpllInfo idt8a3xxxxDpllInfo[10][idt8a3xxxxNumDpll]
+                             = {
+                                  {
+                                      {
+                                        .inputPriority =
+                                        {
+                                                { 19,
+                                                   19,
+                                                }
+                                        }
+                                      }
+                                   }
+                               };
  tIdt8a3xxxxBurstBuf idt8a3xxxxBurstBuf[10] = { { 0 } };
  const tIdt8a3xxxxDeviceConfigInfo *idt8a3xxxxCurrentDeviceConfigInfo[10] = { NULL};
+ tUint16 idt8a3xxxx_module_input_offsets[idt8a3xxxxNumInput] = { 0xC1B0, 0xC1C0, 0xC1D0, 0xC200,
+                                                                             0xC210, 0xC220, 0xC230, 0xC240,
+                                                                             0xC250, 0xC260, 0xC280, 0xC290,
+                                                                             0xC2A0, 0xC2B0, 0xC2C0, 0xC2D0 };
+ tUint16 idt8a3xxxx_module_ref_mon_offsets[idt8a3xxxxNumInput] = { 0xC2E0, 0xC2EC, 0xC300, 0xC30C,
+                                                                               0xC318, 0xC324, 0xC330, 0xC33C,
+                                                                               0xC348, 0xC354, 0xC360, 0xC36C,
+                                                                               0xC380, 0xC38C, 0xC398, 0xC3A4 };
+ tUint16 idt8a3xxxx_module_dpll_offsets[idt8a3xxxxNumDpll] = { 0xC3B0, 0xC400, 0xC438, 0xC480,
+                                                                           0xC4B8, 0xC500, 0xC538, 0xC580 };
+ tUint16 idt8a3xxxx_module_dpll_ctrl_offsets[idt8a3xxxxNumDpll] = { 0xC600, 0xC63C, 0xC680, 0xC6BC,
+                                                                                0xC700, 0xC73C, 0xC780, 0xC7BC };
  tUint32 idt8a3xxxx_trigger_register_bitmap[128] = { 0};
  tBoolean idt8a3xxxx_trigger_register_bitmap_initialized = 0;
  tUint16 idt8a3xxxx_trigger_registers[] =
@@ -69,6 +104,11 @@ typedef struct tIdt8a3xxxxBurstBuf
       0xCE04, 0xCE0A, 0xCE10, 0xCE16, 0xCE1C, 0xCE22, 0xCE28, 0xCE2E, 0xCE34, 0xCE3A, 0xCE40, 0xCE46, 0xCE4C, 0xCE52, 0xCE58, 0xCE5E,
       0xCF4E, 0xCF5F, 0xCF67, 0xCF6D,
     };
+const tFcwValue FCW_42_SIGN_BIT = 0x0000020000000000;
+const tFcwValue FCW_42_SIGN_EXTENSION = 0xFFFFFC0000000000;
+const tFcwValue FCW_48_SIGN_BIT = 0x0000800000000000;
+const tFcwValue FCW_48_SIGN_EXTENSION = 0xFFFF000000000000;
+const double TWO_EE_53 = (double)0x0020000000000000;
  tBoolean idt8a3xxxxEepromIsEmpty(tIdt8a3xxxxDevIndex devIdx);
  void idt8a3xxxxSetRegIsTrigger(tUint16 regOffset)
 {
@@ -354,6 +394,313 @@ static inline void idt8a3xxxxRegUnlock(tIdt8a3xxxxDevIndex devIdx)
     tUint64 regWriteVal = htole64(regVal);
     idt8a3xxxxSetReg(devIdx, regOffset, 6, (tUint8 *)&regWriteVal);
 }
+ void idt8a3xxxxWriteTrigger(tIdt8a3xxxxDevIndex devIdx, tUint16 triggerRegOffset)
+{
+    if ((devIdx < idt8a3xxxxNumUsedDevices))
+    {
+        idt8a3xxxxRegLock(devIdx);
+        tUint8 regVal = idt8a3xxxxGetReg8(devIdx, triggerRegOffset);
+        idt8a3xxxxSetReg8(devIdx, triggerRegOffset, regVal);
+        idt8a3xxxxRegUnlock(devIdx);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u" "\n", devIdx);
+    }
+}
+ tUint8 idt8a3xxxxDpllGetInputPriority(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll, eIdt8a3xxxxInputs idtInput)
+{
+    tUint8 priority = 19;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]) && (idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+    {
+        priority = idt8a3xxxxDpllInfo[devIdx][dpll].inputPriority[idtInput].current;
+        if (priority != 19)
+        {
+            tUint8 inputCheck;
+            tUint8 prioVal = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x0F + priority));
+            inputCheck = (prioVal & 0x3E) >> 1;
+            if (inputCheck != idtInput)
+            {
+                printf("devIdx %u priority 0x%x expected input 0x%x, but read 0x%x" "\n", devIdx, priority, idtInput, inputCheck);
+            }
+        }
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x input 0x%x" "\n", devIdx, dpll, idtInput);
+    }
+    return priority;
+}
+ tBoolean idt8a3xxxxDpllGetRevertiveMode(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tBoolean isRevertive = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 ctrl0 = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x02));
+        isRevertive = ((ctrl0 & 0x02) != 0);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return isRevertive;
+}
+ tBoolean idt8a3xxxxDpllGetHitless(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tBoolean isHitless = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 ctrl0 = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x02));
+        isHitless = ((ctrl0 & 0x01) != 0);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return isHitless;
+}
+ eIdt8a3xxxxInputs idt8a3xxxxDpllGetManualInput(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    eIdt8a3xxxxInputs idtInput = idt8a3xxxxInvalidInput;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 manRefCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x01));
+        manRefCfg &= (0x1F);
+        idtInput = static_cast<eIdt8a3xxxxInputs> (manRefCfg >> 0);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return idtInput;
+}
+ tUint16 idt8a3xxxxDpllGetPhaseFineAdvance(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint16 fineAdvance = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        fineAdvance = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x1A));
+        fineAdvance &= (0x1FFF);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return fineAdvance;
+}
+ eIdt8a3xxxxInputs idt8a3xxxxDpllGetPhaseMeasurementFbInput(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    eIdt8a3xxxxInputs fbInput = idt8a3xxxxInvalidInput;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 cfgVal = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x36));
+        fbInput = static_cast<eIdt8a3xxxxInputs> ((cfgVal & 0xF0) >> 4);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return fbInput;
+}
+ eIdt8a3xxxxInputs idt8a3xxxxDpllGetPhaseMeasurementRefInput(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    eIdt8a3xxxxInputs refInput = idt8a3xxxxInvalidInput;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 cfgVal = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x36));
+        refInput = static_cast<eIdt8a3xxxxInputs> ((cfgVal & 0x0F) >> 0);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return refInput;
+}
+ tInt64 idt8a3xxxxDpllGetPhaseOffset(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tInt64 phaseOffset = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        phaseOffset = idt8a3xxxxGetReg40(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x14));
+        phaseOffset &= (0x0000000FFFFFFFFF);
+        if ((phaseOffset & 0x0000000800000000) != 0)
+            phaseOffset |= 0xFFFFFFF000000000;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return phaseOffset;
+}
+ tInt64 idt8a3xxxxDpllGetPhaseStatus(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tInt64 phaseStatus = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        phaseStatus = idt8a3xxxxGetReg40(devIdx, (0xC03C + 0xDC + (dpll*0x08)));
+        phaseStatus &= (0x0000000FFFFFFFFF);
+        if ((phaseStatus & 0x0000000800000000) != 0)
+            phaseStatus |= 0xFFFFFFF000000000;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return phaseStatus;
+}
+ tUint8 idt8a3xxxxDpllGetPllMode(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 pllMode = 0xff;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        pllMode = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x37));
+        pllMode = (pllMode & 0x38) >> 3;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return pllMode;
+}
+ tUint8 idt8a3xxxxDpllGetHoldoverMode(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 hoMode = 0xff;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        hoMode = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x0A));
+        hoMode = hoMode & 0x07;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return hoMode;
+}
+ tUint8 idt8a3xxxxDpllGetStateMode(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 stateMode = 0xff;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        stateMode = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x37));
+        stateMode = (stateMode & 0x07) >> 0;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return stateMode;
+}
+ tUint8 idt8a3xxxxDpllGetRefMode(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 refMode = 0xff;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        refMode = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x35));
+        refMode = (refMode & 0x0F) >> 0;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return refMode;
+}
+ tUint8 idt8a3xxxxInputGetStatus(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxInputs idtInput)
+{
+    tUint8 status = 0x07;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+    {
+        status = idt8a3xxxxGetReg8(devIdx, (0xC03C + 0x08 + idtInput));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u input 0x%x" "\n", devIdx, idtInput);
+    }
+    return status;
+}
+ tUint8 idt8a3xxxxDpllGetCurrentInput(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 currRef = 0x1F;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        currRef = idt8a3xxxxGetReg8(devIdx, (0xC03C + 0x22 + dpll));
+        currRef &= 0x1F;
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return currRef;
+}
+ tUint8 idt8a3xxxxDpllGetState(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint8 dpllState = 0x00;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 dpllStatus = idt8a3xxxxGetReg8(devIdx, (0xC03C + 0x18 + dpll));
+        dpllState = (dpllStatus & 0x0F);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return dpllState;
+}
+ void idt8a3xxxxInputGetFreq(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxInputs idtInput, tUint64 *inFreqM, tUint16 *inFreqN, tUint16 *inDiv)
+{
+    tUint64 inFreqMValue = 0;
+    tUint16 inFreqNValue = 0;
+    tUint16 inDivValue = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+    {
+        inFreqMValue = idt8a3xxxxGetReg48(devIdx, (idt8a3xxxx_module_input_offsets[idtInput] + 0x00));
+        inFreqNValue = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_input_offsets[idtInput] + 0x06));
+        inDivValue = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_input_offsets[idtInput] + 0x08));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u input 0x%x" "\n", devIdx, idtInput);
+    }
+    *inFreqM = inFreqMValue;
+    *inFreqN = inFreqNValue;
+    *inDiv = inDivValue;
+}
+ tInt16 idt8a3xxxxInputGetPhaseOffset(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxInputs idtInput)
+{
+    tInt16 phaseOffset = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+    {
+        phaseOffset = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_input_offsets[idtInput] + 0x0A));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u input 0x%x" "\n", devIdx, idtInput);
+    }
+    return phaseOffset;
+}
+ double idt8a3xxxxFcwToPpbOffset(tFcwValue fcw)
+{
+    double fcwDouble = (double)fcw;
+    double ppbOffset = ((double)(1E9) * fcwDouble) / (TWO_EE_53 - fcwDouble);
+    return ppbOffset;
+}
+ tFcwValue idt8a3xxxxGetFcw42Reg(tIdt8a3xxxxDevIndex devIdx, tUint16 regOffset)
+{
+    tFcwValue fcw = idt8a3xxxxGetReg48(devIdx, regOffset);
+    if ((fcw & FCW_42_SIGN_BIT) != 0)
+        fcw |= FCW_42_SIGN_EXTENSION;
+    return fcw;
+}
+ tFcwValue idt8a3xxxxGetFcw48Reg(tIdt8a3xxxxDevIndex devIdx, tUint16 regOffset)
+{
+    tFcwValue fcw = idt8a3xxxxGetReg48(devIdx, regOffset);
+    if ((fcw & FCW_48_SIGN_BIT) != 0)
+        fcw |= FCW_48_SIGN_EXTENSION;
+    return fcw;
+}
+ tFcwValue idt8a3xxxxDcoDpllGetFcw(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    return idt8a3xxxxGetFcw42Reg(devIdx, (0xC838 + (0x8*dpll) + 0x00));
+}
  tIdt8a3xxxxDevIndex idt8a3xxxxInitDevInfo(tIdt8a3xxxxDevIndex devIdx,
                                                  const tIdt8a3xxxxDeviceConfigInfo * pDeviceInfo)
 {
@@ -422,6 +769,110 @@ static inline void idt8a3xxxxRegUnlock(tIdt8a3xxxxDevIndex devIdx)
     }
     assert(((idt8a3xxxxBurstBuf[devIdx].length != 0) && (idt8a3xxxxBurstBuf[devIdx].buf != NULL)));
     return devIdx;
+}
+ tBoolean idt8a3xxxxDpllIsFastlockEnabled(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tBoolean fastlockEnabled = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        tUint8 fastlockCfg0 = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x23));
+        fastlockEnabled = ((fastlockCfg0 & 0x40) != 0);
+        fastlockEnabled |= ((fastlockCfg0 & 0x04) != 0);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return fastlockEnabled;
+}
+ tUint16 idt8a3xxxxDpllGetLockedBw(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint16 bwReg = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        bwReg = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x04));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return bwReg;
+}
+ tUint16 idt8a3xxxxDpllGetFastlockBw(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tUint16 bwReg = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        bwReg = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x2A));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return bwReg;
+}
+ void idt8a3xxxxDpllSetFilterStatusCfgWithTrigger(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll, tUint8 cfg)
+{
+    tUint8 origCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x06));
+    if ((origCfg & 0x07) ==
+        (cfg & 0x07))
+        return;
+    idt8a3xxxxSetReg8_Field(devIdx,
+                            (idt8a3xxxx_module_dpll_offsets[dpll] + 0x06),
+                            0x07,
+                            0,
+                            cfg);
+    idt8a3xxxxWriteTrigger(devIdx, (tUint16)(idt8a3xxxx_module_dpll_offsets[dpll] + 0x37));
+}
+ tFcwValue idt8a3xxxxDpllGetFilterStatusHoldoverFcw(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tFcwValue fcw = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        idt8a3xxxxRegLock(devIdx);
+        idt8a3xxxxDpllSetFilterStatusCfgWithTrigger(devIdx, dpll, (0x04 | (0x02 << 0)));
+        fcw = idt8a3xxxxGetFcw48Reg(devIdx, (0xC03C + 0x44 + (dpll*0x08)));
+        idt8a3xxxxRegUnlock(devIdx);
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return fcw;
+}
+ tInt64 idt8a3xxxxDpllGetFilterStatusTdcPhase(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tInt64 filterStatus = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        idt8a3xxxxRegLock(devIdx);
+        idt8a3xxxxDpllSetFilterStatusCfgWithTrigger(devIdx, dpll, (0x00 << 0));
+        filterStatus = idt8a3xxxxGetReg48(devIdx, (0xC03C + 0x44 + (dpll*0x08)));
+        idt8a3xxxxRegUnlock(devIdx);
+        filterStatus &= (0x0000FFFFFFFFFFFF);
+        if ((filterStatus & 0x0000800000000000) != 0)
+        {
+            filterStatus |= 0xFFFF000000000000;
+        }
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return filterStatus;
+}
+ tFcwValue idt8a3xxxxDpllGetManualHoldoverFcw(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    tFcwValue fcw = 0;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        fcw = idt8a3xxxxGetFcw42Reg(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x30));
+    }
+    else
+    {
+        printf("Bad parm: devIdx %u dpll 0x%x" "\n", devIdx, dpll);
+    }
+    return fcw;
 }
  void idt8a3xxxxSwitchTo2bMode(tIdt8a3xxxxDevIndex devIdx)
 {
@@ -816,6 +1267,216 @@ static inline void idt8a3xxxxRegUnlock(tIdt8a3xxxxDevIndex devIdx)
         printf("Programming failed\n");
     return status;
 }
+ const char *fmtIdt8a3xxxxInput(tUint8 idtInput)
+{
+    switch (idtInput)
+    {
+        case idt8a3xxxxInput0:
+            return "idtInput0";
+        case idt8a3xxxxInput1:
+            return "idtInput1";
+        case idt8a3xxxxInput2:
+            return "idtInput2";
+        case idt8a3xxxxInput3:
+            return "idtInput3";
+        case idt8a3xxxxInput4:
+            return "idtInput4";
+        case idt8a3xxxxInput5:
+            return "idtInput5";
+        case idt8a3xxxxInput6:
+            return "idtInput6";
+        case idt8a3xxxxInput7:
+            return "idtInput7";
+        case idt8a3xxxxInput8:
+            return "idtInput8";
+        case idt8a3xxxxInput9:
+            return "idtInput9";
+        case idt8a3xxxxInput10:
+            return "idtInput10";
+        case idt8a3xxxxInput11:
+            return "idtInput11";
+        case idt8a3xxxxInput12:
+            return "idtInput12";
+        case idt8a3xxxxInput13:
+            return "idtInput13";
+        case idt8a3xxxxInput14:
+            return "idtInput14";
+        case idt8a3xxxxInput15:
+            return "idtInput15";
+        default:
+            return "Unknown";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllRefInput(tUint8 refInput)
+{
+    if ((refInput < idt8a3xxxxNumInput))
+        return fmtIdt8a3xxxxInput(refInput);
+    switch (refInput)
+    {
+        case 0x10:
+            return "Write_Phase";
+        case 0x11:
+            return "Write_Freq";
+        case 0x12:
+            return "XO_dpll";
+        case 0x1F:
+            return "No_Clk";
+        default:
+            return "Unknown";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllPllMode(tUint8 pllMode)
+{
+    switch (pllMode)
+    {
+        case 0x00:
+            return "PLL";
+        case 0x01:
+            return "Write phase";
+        case 0x02:
+            return "Write freq";
+        case 0x03:
+            return "GPIO inc/dec";
+        case 0x04:
+            return "Synthesizer";
+        case 0x05:
+            return "Phase measurement";
+        case 0x06:
+            return "Disabled";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllStateMode(tUint8 stateMode)
+{
+    switch (stateMode)
+    {
+        case 0x00:
+            return "Automatic";
+        case 0x01:
+            return "Force Lock";
+        case 0x02:
+            return "Force Freerun";
+        case 0x03:
+            return "Force Holdover";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllRefMode(tUint8 refMode)
+{
+    switch (refMode)
+    {
+        case 0x00:
+            return "Automatic";
+        case 0x01:
+            return "Manual";
+        case 0x02:
+            return "GPIO";
+        case 0x03:
+            return "Slave";
+        case 0x04:
+            return "GPIO Slave";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllState(tUint8 dpllState)
+{
+    switch (dpllState)
+    {
+        case 0x00:
+            return "FreeRun";
+        case 0x01:
+            return "LockAcq";
+        case 0x02:
+            return "LockRec";
+        case 0x03:
+            return "Locked";
+        case 0x04:
+            return "Holdover";
+        case 0x05:
+            return "OpenLoop";
+        case 0x06:
+            return "Disabled";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxDpllBwUnit(tUint16 bwUnit)
+{
+    switch (bwUnit)
+    {
+        case 0x00:
+            return "uHz";
+        case 0x01:
+            return "mHz";
+        case 0x02:
+            return "Hz";
+        case 0x03:
+            return "kHz";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxRefMonFreq(tUint8 freqOffsetLimit)
+{
+    switch (freqOffsetLimit)
+    {
+        case 0:
+            return "9.2";
+        case 1:
+            return "13.8";
+        case 2:
+            return "24.6";
+        case 3:
+            return "36.6";
+        case 4:
+            return "40";
+        case 5:
+            return "52";
+        case 6:
+            return "64";
+        case 7:
+            return "100";
+        default:
+            return "????";
+    }
+}
+ const char *fmtIdt8a3xxxxInMonStatus(tUint8 inMonStatus, char *buf, size_t size)
+{
+    char *pos = buf;
+    int chars;
+    buf[0] = 0;
+    if ((inMonStatus & 0x07) == 0)
+    {
+        chars = snprintf (pos, size, "OK");
+        pos += chars;
+        size -= chars;
+    }
+    else
+    {
+        if ((inMonStatus & 0x04) != 0)
+        {
+            chars = snprintf (pos, size, "%sfreqOffset", pos == buf ? "" : " ");
+            pos += chars;
+            size -= chars;
+        }
+        if ((inMonStatus & 0x02) != 0)
+        {
+            chars = snprintf (pos, size, "%snoActivity", pos == buf ? "" : " ");
+            pos += chars;
+            size -= chars;
+        }
+        if ((inMonStatus & 0x01) != 0)
+        {
+            chars = snprintf (pos, size, "%sLOS", pos == buf ? "" : " ");
+            pos += chars;
+            size -= chars;
+        }
+    }
+    return buf;
+}
  const char * fmtIdt8a3xxxxDeviceVariant(eIdt8a3xxxxDeviceVariants devVariant)
 {
     switch (devVariant)
@@ -831,6 +1492,347 @@ static inline void idt8a3xxxxRegUnlock(tIdt8a3xxxxDevIndex devIdx)
         default:
             return "unknown";
     }
+}
+ std::string idt8a3xxxxDumpDpllPriorities(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    std::string str;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        do { if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL) { str += Format("There is no idt8a3xxxx device at devIdx %d\n", devIdx); return str; } } while (0);
+        eIdt8a3xxxxInputs idtInput;
+        auto inc = [](eIdt8a3xxxxInputs& i) { return (i = static_cast<eIdt8a3xxxxInputs>(static_cast<int>(i) + 1)); };
+        tUint8 priority;
+        str += Format("  Dpll%u input priorities:\n", dpll);
+        for (priority = 0; priority < 19; priority++)
+        {
+            tUint8 prioVal;
+            tBoolean enabled;
+            prioVal = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x0F + priority));
+            enabled = (prioVal & 0x01) != 0;
+            idtInput = static_cast<eIdt8a3xxxxInputs>((prioVal & 0x3E) >> 1);
+            str += Format("  priority %2u: %sabled, input %u\n",
+                            priority,
+                            enabled ? " en" : "dis",
+                            idtInput);
+        }
+        for (idtInput = idt8a3xxxxInput0; (idtInput < (idt8a3xxxxNumInputsForDev[devIdx]/2)); inc(idtInput))
+        {
+            str += Format("idt8a3xxxxInputPriority[dpll%d][idtInput%2d] = current(0x%02x) enabled(0x%02x) hw(0x%02x)\n",
+                            dpll,
+                            idtInput,
+                            idt8a3xxxxDpllInfo[devIdx][dpll].inputPriority[idtInput].current,
+                            idt8a3xxxxDpllInfo[devIdx][dpll].inputPriority[idtInput].enabled,
+                            idt8a3xxxxDpllGetInputPriority(devIdx, dpll, idtInput));
+        }
+        for (idtInput = idt8a3xxxxInput8; ((idtInput >= 8) && (idtInput < (8 + (idt8a3xxxxNumInputsForDev[devIdx]/2)))); inc(idtInput))
+        {
+            str += Format("idt8a3xxxxInputPriority[dpll%d][idtInput%2d] = current(0x%02x) enabled(0x%02x) hw(0x%02x)\n",
+                            dpll,
+                            idtInput,
+                            idt8a3xxxxDpllInfo[devIdx][dpll].inputPriority[idtInput].current,
+                            idt8a3xxxxDpllInfo[devIdx][dpll].inputPriority[idtInput].enabled,
+                            idt8a3xxxxDpllGetInputPriority(devIdx, dpll, idtInput));
+        }
+    }
+    else
+    {
+        str += Format("Bad parm: devIdx %u dpll 0x%x\n", devIdx, dpll);
+    }
+    return str;
+}
+ std::string idt8a3xxxxDumpDpllHo(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll)
+{
+    std::string str;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        do { if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL) { str += Format("There is no idt8a3xxxx device at devIdx %d\n", devIdx); return str; } } while (0);
+        tFcwValue hoFcw = idt8a3xxxxDpllGetFilterStatusHoldoverFcw(devIdx, dpll);
+        double hoPpbOffset = idt8a3xxxxFcwToPpbOffset(hoFcw);
+        str += Format("  HO fcw      0x%016" "lx" ", offset %.9fppb\n", hoFcw, hoPpbOffset);
+    }
+    else
+    {
+        str += Format("Bad parm: devIdx %u dpll 0x%x\n", devIdx, dpll);
+    }
+    return str;
+}
+ std::string idt8a3xxxxDpllToString(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxDplls dpll, tBoolean detail)
+{
+    std::string str;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (dpll < idt8a3xxxxNumDpllsForDev[devIdx]))
+    {
+        do { if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL) { str += Format("There is no idt8a3xxxx device at devIdx %d\n", devIdx); return str; } } while (0);
+        if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] != NULL)
+            str += printf("%s ", idt8a3xxxxCurrentDeviceConfigInfo[devIdx]->dpllConfig.perDpllInfo[dpll].dpllName);
+        tUint8 dpllPllMode = idt8a3xxxxDpllGetPllMode(devIdx, dpll);
+        tUint8 dpllStateMode = idt8a3xxxxDpllGetStateMode(devIdx, dpll);
+        tUint8 dpllRefMode = idt8a3xxxxDpllGetRefMode(devIdx, dpll);
+        str += Format("DPLL: %u pll mode 0x%x(%s) state mode 0x%x(%s) ref mode 0x%x(%s)",
+                        dpll,
+                        dpllPllMode, fmtIdt8a3xxxxDpllPllMode(dpllPllMode),
+                        dpllStateMode, fmtIdt8a3xxxxDpllStateMode(dpllStateMode),
+                        dpllRefMode, fmtIdt8a3xxxxDpllRefMode(dpllRefMode));
+        if (dpllRefMode == 0x01)
+        {
+            eIdt8a3xxxxInputs manualInput = idt8a3xxxxDpllGetManualInput(devIdx, dpll);
+            str += Format("(%s)", fmtIdt8a3xxxxInput(manualInput));
+        }
+        tUint8 dpllCtrl2 = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x04));
+        tBoolean isExtFeedbackDpll = ((dpllCtrl2 & 0x01) != 0);
+        str += Format(" extFb %s", isExtFeedbackDpll ? "Y" : "N");
+        if (isExtFeedbackDpll)
+        {
+            eIdt8a3xxxxInputs fbInput = static_cast<eIdt8a3xxxxInputs>((dpllCtrl2 & 0x1E) >> 1);
+            str += Format("(%s)", fmtIdt8a3xxxxInput(fbInput));
+        }
+        str += "\n";
+        tUint8 dpllState = idt8a3xxxxDpllGetState(devIdx, dpll);
+        tUint8 dpllStatus = idt8a3xxxxGetReg8(devIdx, (0xC03C + 0x18 + dpll));
+        eIdt8a3xxxxInputs dpllCurrentInput = static_cast<eIdt8a3xxxxInputs>(idt8a3xxxxDpllGetCurrentInput(devIdx, dpll));
+        tBoolean dpllIsRevertive = idt8a3xxxxDpllGetRevertiveMode(devIdx, dpll);
+        tBoolean dpllIsHitless = idt8a3xxxxDpllGetHitless(devIdx, dpll);
+        str += Format("  state 0x%x(%s) raw status 0x%02x selected input %s revert %sabled hitless %sabled\n",
+                        dpllState, fmtIdt8a3xxxxDpllState(dpllState),
+                        dpllStatus,
+                        fmtIdt8a3xxxxDpllRefInput(dpllCurrentInput),
+                        dpllIsRevertive ? "En":"Dis",
+                        dpllIsHitless ? "En":"Dis");
+        tUint16 lockedBw = idt8a3xxxxDpllGetLockedBw(devIdx, dpll);
+        tUint16 acqBw = idt8a3xxxxDpllGetFastlockBw(devIdx, dpll);
+        tUint16 psl = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x06));
+        tUint8 predCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x30));
+        tUint8 wpPred = (predCfg & 0x02) >> 1;
+        tBoolean predEn = ((predCfg & 0x01) >> 0) == 1;
+        str += Format("  lockedBw %u%s fastlock %sabled acqBw %u%s psl %uns/s pred%u %sabled\n",
+                        lockedBw & 0x3FFF,
+                        fmtIdt8a3xxxxDpllBwUnit((lockedBw & 0xC000) >> 14),
+                        idt8a3xxxxDpllIsFastlockEnabled(devIdx, dpll) ? "En":"Dis",
+                        acqBw & 0x3FFF,
+                        fmtIdt8a3xxxxDpllBwUnit((acqBw & 0xC000) >> 14),
+                        psl,
+                        wpPred,
+                        predEn ? "en" : "dis");
+        tUint8 predDamp = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x08));
+        tUint8 predMult = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x09));
+        tUint16 predBw = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x0A));
+        tUint16 predPsl = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x0C));
+        str += Format("  pred0 damping %u bwMult %u bw %u%s psl %uns/s\n",
+                        predDamp & 0x0F,
+                        predMult & 0xFF,
+                        predBw & 0x3FFF,
+                        fmtIdt8a3xxxxDpllBwUnit((predBw & 0xC000) >> 14),
+                        predPsl);
+        predDamp = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x0E));
+        predMult = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x0F));
+        predBw = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x10));
+        predPsl = idt8a3xxxxGetReg16(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x12));
+        str += Format("  pred1 damping %u bwMult %u bw %u%s psl %uns/s\n",
+                        predDamp & 0x0F,
+                        predMult & 0xFF,
+                        predBw & 0x3FFF,
+                        fmtIdt8a3xxxxDpllBwUnit((predBw & 0xC000) >> 14),
+                        predPsl);
+        tUint8 comboPrimaryCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x32));
+        eIdt8a3xxxxDplls comboPrimaryDpll;
+        tBoolean comboPrimaryEnabled;
+        comboPrimaryDpll = static_cast<eIdt8a3xxxxDplls>(comboPrimaryCfg & 0x0F);
+        comboPrimaryEnabled = ((comboPrimaryCfg & 0x20) != 0);
+        tUint8 comboSecondaryCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_dpll_offsets[dpll] + 0x33));
+        eIdt8a3xxxxDplls comboSecondaryDpll;
+        tBoolean comboSecondaryEnabled;
+        comboSecondaryDpll = static_cast<eIdt8a3xxxxDplls>(comboSecondaryCfg & 0x0F);
+        comboSecondaryEnabled = ((comboSecondaryCfg & 0x20) != 0);
+        str += Format("  combo pri: %u %sabled sec: %u %sabled\n",
+                        comboPrimaryDpll,
+                        comboPrimaryEnabled ? "en":"dis",
+                        comboSecondaryDpll,
+                        comboSecondaryEnabled ? "en":"dis");
+        tFcwValue comboSwFcw = idt8a3xxxxGetFcw48Reg(devIdx, (idt8a3xxxx_module_dpll_ctrl_offsets[dpll] + 0x28));
+        double comboSwPpbOffset = idt8a3xxxxFcwToPpbOffset(comboSwFcw);
+        str += Format("  comboSw fcw 0x%016" "lx" ", offset %.9fppb\n", comboSwFcw, comboSwPpbOffset);
+        if (dpllPllMode == 0x02)
+        {
+            tFcwValue dcoFcw = idt8a3xxxxDcoDpllGetFcw(devIdx, dpll);
+            double dcoPpbOffset = idt8a3xxxxFcwToPpbOffset(dcoFcw);
+            str += Format("  DCO fcw     0x%016" "lx" ", offset %.9fppb\n", dcoFcw, dcoPpbOffset);
+        }
+        tUint8 dpllHoldoverMode = idt8a3xxxxDpllGetHoldoverMode(devIdx, dpll);
+        if (dpllHoldoverMode == 0x01)
+        {
+            tFcwValue manHoFcw = idt8a3xxxxDpllGetManualHoldoverFcw(devIdx, dpll);
+            double manHoPpbOffset = idt8a3xxxxFcwToPpbOffset(manHoFcw);
+            str += Format("  Man HO fcw  0x%016" "lx" ", offset %.9fppb\n", manHoFcw, manHoPpbOffset);
+        }
+        if (dpllPllMode == 0x00)
+            str += idt8a3xxxxDumpDpllHo(devIdx, dpll);
+        if (dpllPllMode == 0x05)
+        {
+            eIdt8a3xxxxInputs refInput = idt8a3xxxxDpllGetPhaseMeasurementRefInput(devIdx, dpll);
+            eIdt8a3xxxxInputs fbInput = idt8a3xxxxDpllGetPhaseMeasurementFbInput(devIdx, dpll);
+            tInt64 phaseStatus = idt8a3xxxxDpllGetPhaseStatus(devIdx, dpll);
+            tInt64 filterStatus = idt8a3xxxxDpllGetFilterStatusTdcPhase(devIdx, dpll);
+            str += Format("  ref %s fb %s phaseStatus 0x%016" "lx" " filterStatus 0x%016" "lx" "\n",
+                            fmtIdt8a3xxxxDpllRefInput(refInput),
+                            fmtIdt8a3xxxxDpllRefInput(fbInput),
+                            phaseStatus,
+                            filterStatus);
+        }
+        tInt64 phaseOffset = idt8a3xxxxDpllGetPhaseOffset(devIdx, dpll);
+        tUint16 phaseFineAdvance = idt8a3xxxxDpllGetPhaseFineAdvance(devIdx, dpll);
+        str += Format("  phaseOffset %" "ld" " ITDC_UI phaseFineAdvance %d FS_UI\n",
+                        phaseOffset,
+                        phaseFineAdvance);
+        if (detail)
+        {
+            tUint16 productId = idt8a3xxxxGeneralGetProductId(devIdx);
+            if (productId != 0x4012)
+            {
+               str += idt8a3xxxxDumpDpllPriorities(devIdx, dpll);
+            }
+        }
+    }
+    else
+    {
+        str += Format("Bad parm: devIdx %u dpll 0x%x\n", devIdx, dpll);
+    }
+    return str;
+}
+ std::string idt8a3xxxxInputToString(tIdt8a3xxxxDevIndex devIdx, eIdt8a3xxxxInputs idtInput)
+{
+    std::string str;
+    if ((devIdx < idt8a3xxxxNumUsedDevices) && (idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+    {
+        do { if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL) { str += Format("There is no idt8a3xxxx device at devIdx %d\n", devIdx); return str; } } while (0);
+        tUint8 inMonStatus;
+        char inMonStatusBuf[48];
+        tUint8 inputModeVal;
+        tUint8 refMonCfg;
+        tUint8 refMonFreq;
+        tUint8 freqOffsetLimit;
+        tUint16 inMonFreqStatus;
+        tInt16 inMonFreqFfo;
+        tUint16 inMonFreqFfoUnit;
+        tInt32 inMonFreqOffsetPpb;
+        tUint64 inFreqM;
+        tUint16 inFreqN;
+        tUint16 inDiv;
+        if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] != NULL)
+            str += Format("%s ", idt8a3xxxxCurrentDeviceConfigInfo[devIdx]->inputConfig.perInputInfo[idtInput].inputName);
+        str += Format("Input: %2u", idtInput);
+        inputModeVal = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_input_offsets[idtInput] + 0x0D));
+        refMonCfg = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_ref_mon_offsets[idtInput] + 0x0B));
+        refMonFreq = idt8a3xxxxGetReg8(devIdx, (idt8a3xxxx_module_ref_mon_offsets[idtInput] + 0x00));
+        inMonFreqStatus = idt8a3xxxxGetReg16(devIdx, (0xC03C + 0x8C + (idtInput*0x02)));
+        inMonStatus = idt8a3xxxxInputGetStatus(devIdx, idtInput);
+        str += Format(" inputMode 0x%02x", inputModeVal);
+        if ((idtInput < idt8a3xxxxInput8))
+        {
+            if ((inputModeVal & 0x20) != 0)
+                str += "(differential)";
+            else
+                str += "(single)";
+        }
+        else
+        {
+            if ((inputModeVal & 0x40) != 0)
+                str += "(GPIO single)";
+            else
+                if ((inputModeVal & 0x20) != 0)
+                    str += "(diff pair)";
+                else
+                    str += "(single)";
+        }
+        str += Format(" refMonCfg 0x%02x", refMonCfg);
+        if (refMonCfg != 0)
+        {
+            str += Format(" inMonStatus 0x%02x(%s)",
+                            inMonStatus,
+                            fmtIdt8a3xxxxInMonStatus(inMonStatus, inMonStatusBuf, sizeof(inMonStatusBuf)));
+        }
+        str += "\n";
+        freqOffsetLimit = refMonFreq & 0x07;
+        inMonFreqFfo = inMonFreqStatus & 0x1FFF;
+        if (inMonFreqStatus & 0x2000)
+            inMonFreqFfo |= 0xE000;
+        inMonFreqFfoUnit = (inMonFreqStatus & 0xC000) >> 14;
+        switch (inMonFreqFfoUnit)
+        {
+            case 0x00:
+                inMonFreqOffsetPpb = inMonFreqFfo;
+                break;
+            case 0x01:
+                inMonFreqOffsetPpb = inMonFreqFfo * 10;
+                break;
+            case 0x02:
+                inMonFreqOffsetPpb = inMonFreqFfo * 100;
+                break;
+            case 0x03:
+                inMonFreqOffsetPpb = inMonFreqFfo * 1000;
+                break;
+            default:
+                inMonFreqOffsetPpb = 0xfdfdfdfd;
+                break;
+        }
+        str += Format("  refMonFreq 0x%02x(freq offset limit %s ppm)  actual raw freq offset 0x%04x(%d ppb)\n",
+                        refMonFreq, fmtIdt8a3xxxxRefMonFreq(freqOffsetLimit),
+                        inMonFreqStatus, inMonFreqOffsetPpb);
+        idt8a3xxxxInputGetFreq(devIdx, idtInput, &inFreqM, &inFreqN, &inDiv);
+        tUint8 dpllPred = (inputModeVal & 0x80) >> 7;
+        tInt16 phaseOffset = idt8a3xxxxInputGetPhaseOffset(devIdx, idtInput);
+        str += Format("  inFreqM: %" "lu" " inFreqN: %u inDiv: %u dpllPred %u phase offset 0x%08x\n",
+                        inFreqM, inFreqN, inDiv, dpllPred, phaseOffset);
+    }
+    else
+    {
+        str += Format("Bad parm: devIdx %u input 0x%x\n", devIdx, idtInput);
+    }
+    return str;
+}
+ std::string idt8a3xxxxInputsToString(tIdt8a3xxxxDevIndex devIdx, tBoolean detail)
+{
+    std::string str;
+    if ((devIdx < idt8a3xxxxNumUsedDevices))
+    {
+        do { if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL) { str += Format("There is no idt8a3xxxx device at devIdx %d\n", devIdx); return str; } } while (0);
+        eIdt8a3xxxxInputs idtInput;
+        str += "Input info...\n";
+        if (idt8a3xxxxCurrentDeviceConfigInfo[devIdx] == NULL)
+        {
+            str += "  UNAVAILABLE - no device config info\n";
+            return str;
+        }
+        tUint64 inFreqM;
+        tUint16 inFreqN;
+        tUint16 inDiv;
+        auto inc = [](eIdt8a3xxxxInputs& i) { return (i = static_cast<eIdt8a3xxxxInputs>(static_cast<int>(i) + 1)); };
+        for (idtInput = idt8a3xxxxInput0; (idtInput < (idt8a3xxxxNumInputsForDev[devIdx]/2)); inc(idtInput))
+        {
+            if (!(idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+                continue;
+            idt8a3xxxxInputGetFreq(devIdx, idtInput, &inFreqM, &inFreqN, &inDiv);
+            if ((inFreqM == 0) &&
+                (!detail))
+                continue;
+            str += "\n";
+            str += idt8a3xxxxInputToString(devIdx, idtInput);
+        }
+        for (idtInput = idt8a3xxxxInput8; ((idtInput >= 8) && (idtInput < (8 + (idt8a3xxxxNumInputsForDev[devIdx]/2)))); inc(idtInput))
+        {
+            if (!(idtInput < idt8a3xxxxNumInputsForDev[devIdx]))
+                continue;
+            idt8a3xxxxInputGetFreq(devIdx, idtInput, &inFreqM, &inFreqN, &inDiv);
+            if ((inFreqM == 0) &&
+                (!detail))
+                continue;
+            str += "\n";
+            str += idt8a3xxxxInputToString(devIdx, idtInput);
+        }
+    }
+    else
+    {
+        str += Format("Bad parm: devIdx %u\n", devIdx);
+    }
+    return str;
 }
  std::string idt8a3xxxxNamesToString(tIdt8a3xxxxDevIndex devIdx)
 {
