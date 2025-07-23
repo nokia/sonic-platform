@@ -88,6 +88,7 @@ dev_conf_init
 
 if type sets_setup &> /dev/null ; then 
     sets_setup -d
+    sets_setup --wait-lock
 fi
 
 if type asic_rov_config &> /dev/null ; then 
