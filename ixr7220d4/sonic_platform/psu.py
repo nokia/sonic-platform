@@ -284,13 +284,13 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        if self.get_presence():
-            if self.get_status():
-                return self.STATUS_LED_COLOR_GREEN
-            if self.get_power() == 0.0:
-                return self.STATUS_LED_COLOR_OFF
-            return self.STATUS_LED_COLOR_RED
-        return 'N/A'
+        if not self.get_presence():
+            return self.STATUS_LED_COLOR_OFF
+
+        if self.get_status():
+            return self.STATUS_LED_COLOR_GREEN
+
+        return self.STATUS_LED_COLOR_AMBER
 
     def set_status_led(self, _color):
         """
@@ -311,13 +311,7 @@ class Psu(PsuBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
-        if self.get_presence():
-            if self.get_status():
-                return self.STATUS_LED_COLOR_GREEN
-            if self.get_power() == 0.0:
-                return self.STATUS_LED_COLOR_OFF
-            return self.STATUS_LED_COLOR_AMBER
-        return 'N/A'
+        return self.get_status_led()
 
     def set_status_master_led(self, _color):
         """
