@@ -1,0 +1,11 @@
+obj-m += i2c-ocores.o
+obj-m += h6_i2c_oc.o
+obj-m += sys_mux.o
+obj-m += sys_cpld.o
+obj-m += port_cpld0.o
+obj-m += port_cpld1.o
+obj-m += eeprom_fru.o
+obj-m += h6_fan_cpld.o
+obj-m += sys_fpga.o
+obj-m += embd_ctrl.o
+obj-m += pmbus_psu.o
