@@ -1,0 +1,12 @@
+[Unit]
+Description=Nokia-IXR7220-H6-64 Platform Service
+After=sysinit.target
+Before=pmon.service determine-reboot-cause.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/h6_64_platform_init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
