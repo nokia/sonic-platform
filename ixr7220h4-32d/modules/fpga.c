@@ -115,7 +115,7 @@ static void dni_fpga_remove(struct pci_dev *dev)
     /* release fpga-i2c */
     int i = 0;
     struct fpga_dev *fpga = pci_get_drvdata(dev);
-    printk(KERN_INFO "fpga = 0x%x\n", fpga);
+    printk(KERN_INFO "fpga = 0x%p\n", fpga);
 
     for (i = 0; i < num_i2c_adapter; i++)
     {

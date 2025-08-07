@@ -89,6 +89,7 @@ enum brd_type {
 	brd_x3b=0,
 	brd_x1b,
 	brd_x4,
+	brd_max
 };
 
 /* module_param */

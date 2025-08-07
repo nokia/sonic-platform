@@ -454,8 +454,7 @@ static const struct attribute_group dni_psu_group = {
 	.attrs = dni_psu_attributes,
 };
 
-static int dni_psu_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
+static int dni_psu_probe(struct i2c_client *client)
 {
 	struct dni_psu_data *data;
 	int status;

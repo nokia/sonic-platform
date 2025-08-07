@@ -203,8 +203,7 @@ static const struct attribute_group smb_cpld_group = {
     .attrs = smb_cpld_attributes,
 };
 
-static int smb_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int smb_cpld_probe(struct i2c_client *client)
 {
     int status;
      struct cpld_data *data = NULL;

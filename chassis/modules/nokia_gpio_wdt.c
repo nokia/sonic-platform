@@ -25,8 +25,9 @@ static struct kprobe kp =
     .symbol_name = "kallsyms_lookup_name"
 };
 typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
+typedef bool (*nokia_pci_aer_enabled_t)(void);
 
-bool (*nokia_pci_aer_enabled)(void) = NULL;
+static nokia_pci_aer_enabled_t nokia_pci_aer_enabled = NULL;
 
 struct nokia_gpio_wdt_priv {
 	struct watchdog_device wdd;
@@ -177,13 +178,12 @@ static int nokia_gpio_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int nokia_gpio_wdt_remove(struct platform_device *pdev)
+static void nokia_gpio_wdt_remove(struct platform_device *pdev)
 {
 	struct nokia_gpio_wdt_priv *priv = platform_get_drvdata(pdev);
 
 	watchdog_unregister_device(&priv->wdd);
 
-	return 0;
 }
 
 static const struct acpi_device_id nokia_gpio_wdt_acpi_match[] = {
@@ -225,7 +225,7 @@ static int __init nokia_gpio_wdt_init_driver(void)
     register_kprobe(&kp);
     kallsyms_lookup_name = (kallsyms_lookup_name_t) kp.addr;
     unregister_kprobe(&kp);
-    nokia_pci_aer_enabled = kallsyms_lookup_name("pci_aer_available");
+    nokia_pci_aer_enabled = (nokia_pci_aer_enabled_t) kallsyms_lookup_name("pci_aer_available");
 
     if (nokia_pci_aer_enabled)
        pr_info("nokia_gpio_wdt:  pci_aer_available() found at %p\n", (void *) nokia_pci_aer_enabled);

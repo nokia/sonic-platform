@@ -37,7 +37,7 @@ On IOM side:
 #include <linux/iopoll.h>
 #include <linux/spi/spi.h>
 #include <asm/uaccess.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 #include "cpuctl.h"
 
 #define SPI_1BYTE 0
@@ -69,13 +69,13 @@ On IOM side:
 
 
 #define S_SPI_CHANNEL_INVALID -1
-int bus0_channums[3][N_SPI_MINORS] = {
+int bus0_channums[brd_max][N_SPI_MINORS] = {
     {0, 1, 2, S_SPI_CHANNEL_INVALID},
     {0, 1, 2, S_SPI_CHANNEL_INVALID},
     {0, 1, 2, S_SPI_CHANNEL_INVALID}
 };
 
-int bus1_channums[3][N_SPI_MINORS] = {
+int bus1_channums[brd_max][N_SPI_MINORS] = {
     {0, 1, 2, 3},
     {0, 1, 4, S_SPI_CHANNEL_INVALID},
     {0, 1, 2, S_SPI_CHANNEL_INVALID}
@@ -233,9 +233,9 @@ static int ctlspi_spi_controller_transfer(struct spi_controller *spicon, struct 
     unsigned dur;
     int bus = spicon->bus_num;
     unsigned timer = SPI_TIMER_DEFAULT;
-    unsigned channel = message->spi->chip_select;
+    unsigned channel = message->spi->chip_select[0];
 
-    if (spicon->bus_num == 0 && message->spi->chip_select == 1)
+    if (spicon->bus_num == 0 && channel == 1)
         timer = SPI_IDT_SETS_TIMER;
     else if (channel == 0)
         timer = SPI_FPI_TIMER;
@@ -252,7 +252,7 @@ static int ctlspi_spi_controller_transfer(struct spi_controller *spicon, struct 
             txlen += xfer->len;
 
             dev_dbg(&pdev->pcidev->dev, "spidev%d.%d tx len %d\n", bus,
-                message->spi->chip_select, xfer->len);
+                channel, xfer->len);
         
             while (wrbytes)
             {
@@ -283,7 +283,7 @@ static int ctlspi_spi_controller_transfer(struct spi_controller *spicon, struct 
             rxlen += xfer->len;
 
             dev_dbg(&pdev->pcidev->dev, "spidev%d.%d rx len %d\n", bus,
-                message->spi->chip_select, xfer->len);
+                channel, xfer->len);
 
             while (rdbytes > 0)
             {
@@ -309,7 +309,7 @@ static int ctlspi_spi_controller_transfer(struct spi_controller *spicon, struct 
 
     dur = (ktime_get_ns() - start) / 1000;
     dev_dbg(&pdev->pcidev->dev, "spidev%d.%d time %dus\n", bus,
-        message->spi->chip_select, dur);
+        channel, dur);
 
     if (rc >= 0)
     {
@@ -342,7 +342,6 @@ int spi_device_create(CTLDEV *pdev)
     spicon = devm_spi_alloc_master(dev, sizeof(CTLDEV));
     if (!spicon)
         return -ENOMEM;
-
 
     /* Initialize the spi_controller fields */
     spicon->dev.parent = dev;

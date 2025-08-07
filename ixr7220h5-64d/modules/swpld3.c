@@ -1357,8 +1357,7 @@ static const struct attribute_group swpld3_group = {
     .attrs = swpld3_attributes,
 };
 
-static int swpld3_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int swpld3_probe(struct i2c_client *client)
 {
     int status;
     struct cpld_data *data = NULL;

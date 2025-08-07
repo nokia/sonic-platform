@@ -91,13 +91,12 @@ static int nokia_gpio_wdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int nokia_gpio_wdt_remove(struct platform_device *pdev)
+static void nokia_gpio_wdt_remove(struct platform_device *pdev)
 {
 	struct nokia_gpio_wdt_priv *priv = platform_get_drvdata(pdev);
 
 	watchdog_unregister_device(&priv->wdd);
 
-	return 0;
 }
 
 static const struct acpi_device_id nokia_gpio_wdt_acpi_match[] = {

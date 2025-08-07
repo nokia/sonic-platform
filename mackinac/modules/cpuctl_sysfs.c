@@ -758,7 +758,7 @@ static const struct attribute_group io_vermilion_ctl_group = {
 	.attrs = io_vermilion_ctl_attrs,
 };
 
-void port_init(CTLDEV *pdev)
+static void port_init(CTLDEV *pdev)
 {
 	u32 reg_val = 0;
 

@@ -392,8 +392,7 @@ static const struct attribute_group nokia_7220_h3_cpupld_group = {
     .attrs = nokia_7220_h3_cpupld_attributes,
 };
 
-static int nokia_7220_h3_cpupld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int nokia_7220_h3_cpupld_probe(struct i2c_client *client)
 {
     int status;
      struct cpld_data *data = NULL;

@@ -432,8 +432,7 @@ static const struct attribute_group d4_cpupld_group = {
     .attrs = d4_cpupld_attributes,
 };
 
-static int d4_cpupld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int d4_cpupld_probe(struct i2c_client *client)
 {
     int status;
     struct cpld_data *data = NULL;

@@ -322,8 +322,7 @@ static const struct attribute_group accton_i2c_psu_group = {
     .attrs = accton_i2c_psu_attributes,
 };
 
-static int accton_i2c_psu_probe(struct i2c_client *client,
-            const struct i2c_device_id *dev_id)
+static int accton_i2c_psu_probe(struct i2c_client *client)
 {
     struct accton_i2c_psu_data *data;
     int status;

@@ -481,7 +481,7 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
         (fpga->i2c + bus)->adapter.owner = THIS_MODULE;
         snprintf((fpga->i2c + bus)->adapter.name, sizeof((fpga->i2c + bus)->adapter.name),
                 fpga_i2c_info[i].name, i);
-        (fpga->i2c + bus)->adapter.class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+        (fpga->i2c + bus)->adapter.class = I2C_CLASS_HWMON;
         (fpga->i2c + bus)->adapter.algo = &smbus_algorithm;
         (fpga->i2c + bus)->adapter.algo_data = fpga->i2c + bus;
         /* set up the sysfs linkage to our parent device */
@@ -505,7 +505,7 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
             {
                 (fpga->i2c + bus)->bar = ioremap(pci_resource_start(dev, 0), pci_resource_len(dev, 0));
 
-                dev_info(&dev->dev, "BAR0 Register[0x%x] = 0x%x\n",
+                dev_info(&dev->dev, "BAR0 Register[0x%p] = 0x%x\n",
                        (fpga->i2c + bus)->bar, ioread32((fpga->i2c + bus)->bar));
 
                 /* Create I2C adapter */
@@ -513,7 +513,7 @@ int i2c_adapter_init(struct pci_dev *dev, struct fpga_dev *fpga)
                 (fpga->i2c + bus)->adapter.owner = THIS_MODULE;
                 snprintf((fpga->i2c + bus)->adapter.name, sizeof((fpga->i2c + bus)->adapter.name),
                         fpga_i2c_info[i].name, i, j);
-                (fpga->i2c + bus)->adapter.class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+                (fpga->i2c + bus)->adapter.class = I2C_CLASS_HWMON;
                 (fpga->i2c + bus)->adapter.algo = &smbus_algorithm;
                 (fpga->i2c + bus)->adapter.algo_data = fpga->i2c + bus;
                 /* set up the sysfs linkage to our parent device */

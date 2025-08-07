@@ -7,7 +7,7 @@
  */
 
 #include <linux/iopoll.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 #include "cpuctl.h"
 
 #define CTL_I2C_DATA    0x02700018
@@ -473,7 +473,7 @@ int ctl_i2c_probe(CTLDEV *pdev)
 	/* add ctl adapter (i2c host controller) */
 	i2c_set_adapdata(&pdev->adapter, pdev);
 	pdev->adapter.owner = THIS_MODULE;
-	pdev->adapter.class = I2C_CLASS_HWMON | I2C_CLASS_SPD;
+	pdev->adapter.class = I2C_CLASS_HWMON;
 	pdev->adapter.algo = &ctl_i2c_algo;
 	pdev->adapter.quirks = &ctl_i2c_quirks;
 	pdev->adapter.dev.parent = &pdev->pcidev->dev;
@@ -505,7 +505,7 @@ int ctl_i2c_probe(CTLDEV *pdev)
 		/* make nchan adapters on the mux */
 		for (i = 0; i < nchans; i++)
 		{
-			rc = i2c_mux_add_adapter(pdev->ctlmuxcore, 0, i, 0);
+			rc = i2c_mux_add_adapter(pdev->ctlmuxcore, 0, i);
 			if (rc)
 			{
 				i2c_mux_del_adapters(pdev->ctlmuxcore);

@@ -19,7 +19,7 @@
 #include <linux/io.h>
 #include <linux/semaphore.h>
 #include <linux/uaccess.h>
-#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/mutex.h>
 
 #define FPGA_I2C_BUSNUM 5

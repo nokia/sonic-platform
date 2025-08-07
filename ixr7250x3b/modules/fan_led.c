@@ -119,8 +119,7 @@ static const struct attribute_group fan_led_group = {
 	.attrs = fan_led_attributes,
 };
 
-static int fan_led_probe(struct i2c_client *client,
-	const struct i2c_device_id *dev_id)
+static int fan_led_probe(struct i2c_client *client)
 {
 	int status;
 	struct fan_led_data *data = NULL;

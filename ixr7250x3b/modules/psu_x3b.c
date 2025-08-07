@@ -326,8 +326,7 @@ static const struct attribute_group x3b_psu_group = {
 	.attrs = x3b_psu_attributes,
 };
 
-static int x3b_psu_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
+static int x3b_psu_probe(struct i2c_client *client)
 {
 	struct x3b_psu_data *data;
 	int status;

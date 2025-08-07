@@ -592,7 +592,7 @@ static struct i2c_driver pcon_driver = {
 	.driver = {
 		.name	= "pcon",
 	},
-	.probe_new	= pcon_probe,
+	.probe	= pcon_probe,
 	.id_table	= pcon_id,
 };
 

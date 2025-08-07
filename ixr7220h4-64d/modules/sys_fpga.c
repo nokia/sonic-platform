@@ -3468,7 +3468,7 @@ exit_pci_disable:
 	return status;
 }
 
-static int sys_fpga_stat_remove(struct platform_device *pdev)
+static void sys_fpga_stat_remove(struct platform_device *pdev)
 {
 	int cnt = 0;
 	sysfs_remove_group(&pdev->dev.kobj, &fpga_port_stat_group);
@@ -3480,7 +3480,6 @@ static int sys_fpga_stat_remove(struct platform_device *pdev)
 		pci_disable_device(fpga_ctl->pci_dev_addr[cnt]);
 	}
 
-	return 0;
 }
 
 static int sys_fpga_sfp_probe (struct platform_device *pdev)
@@ -3524,7 +3523,7 @@ exit:
 	return status;
 }
 
-static int __exit sys_fpga_sfp_remove(struct platform_device *pdev)
+static void __exit sys_fpga_sfp_remove(struct platform_device *pdev)
 {
 	struct pcie_fpga_dev_platform_data *pdata = NULL;
 
@@ -3533,7 +3532,6 @@ static int __exit sys_fpga_sfp_remove(struct platform_device *pdev)
 	sysfs_remove_bin_file(&pdev->dev.kobj, &pdata->eeprom_bin);
 	sysfs_remove_group(&pdev->dev.kobj, &fpga_eeprom_group);
 
-	return 0;
 }
 
 static struct platform_driver pcie_fpga_port_stat_driver = {

@@ -454,8 +454,7 @@ static const struct attribute_group dps_1600ab_29_a_group = {
 	.attrs = dps_1600ab_29_a_attributes,
 };
 
-static int dps_1600ab_29_a_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
+static int dps_1600ab_29_a_probe(struct i2c_client *client)
 {
 	struct dps_1600ab_29_a_data *data;
 	int status;

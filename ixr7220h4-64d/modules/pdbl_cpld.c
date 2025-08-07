@@ -89,8 +89,7 @@ static const struct attribute_group pdbl_cpld_group = {
     .attrs = pdbl_cpld_attributes,
 };
 
-static int pdbl_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int pdbl_cpld_probe(struct i2c_client *client)
 {
     int status;
      struct cpld_data *data = NULL;

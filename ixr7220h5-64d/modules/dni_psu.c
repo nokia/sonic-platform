@@ -399,7 +399,7 @@ static const struct attribute_group psu_group = {
     .attrs = psu_attributes,
 };
 
-static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int psu_probe(struct i2c_client *client)
 {
     struct psu_data *data;
     int status;

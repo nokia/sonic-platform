@@ -158,8 +158,7 @@ static const struct attribute_group scm_cpld_group = {
     .attrs = scm_cpld_attributes,
 };
 
-static int scm_cpld_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int scm_cpld_probe(struct i2c_client *client)
 {
     int status;
      struct cpld_data *data = NULL;
