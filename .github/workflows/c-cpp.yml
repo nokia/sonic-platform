@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     container: 
-      image: debian:bookworm
+      image: debian:trixie
       options: --user root
     steps:
     - name: install
