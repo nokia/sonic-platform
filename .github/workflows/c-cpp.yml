@@ -8,18 +8,33 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-24.04
+    container: 
+      image: debian:bookworm
+      options: --user root
     steps:
-    - uses: actions/checkout@v4
+    - name: install
+      run: |
+        apt-get update
+        apt-get install -y build-essential debhelper cmake git pkg-config \
+        python3 \
+        python3-pip \
+        python3-setuptools \
+        python3-wheel \
+        python3-build \
+        linux-headers-generic
+
+    - name: checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
     - name: build
       run: |
-        sudo apt-get update
-        sudo apt-get install build-essential debhelper
-        sudo apt-get install linux-headers-6.1.0-1036
+        git config --global --add safe.directory $(pwd)
         git submodule update --init --recursive
-        export KVERSION=$(find /lib/modules/ -name 6.1.0* | awk -F '/' '{print$4}')
+        export KVERSION=$(find /lib/modules/ -name 6.* | awk -F '/' '{print$4}')
         export CONFIGURED_ARCH=amd64
-        dpkg-buildpackage -rfakeroot -b -us -uc -tc -j$(nproc)
+        export KERNEL_SRC=/lib/modules/${KVERSION}
+        dpkg-buildpackage -b -us -uc -tc -j$(nproc)
         
