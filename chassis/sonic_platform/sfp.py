@@ -230,11 +230,11 @@ class MDIPC():
             ownerID = int.from_bytes(chan.mm[8:12],sys.byteorder)
             if (ownerID == tid):
                self.free_channel(chan.index)
-               logger.log_error("MDIPC termination handler({} {},{}): cleaning up channel {} with in-flight msgID {} and own {}".format(pid, tid, signum, chan.index, msgID, hex(own)))
+               logger.log_warning("MDIPC termination handler({} {},{}): cleaning up channel {} with in-flight msgID {} and own {}".format(pid, tid, signum, chan.index, msgID, hex(own)))
         self.Plock_release()
         self.Tmutex.release()
         self.dump_stats()
-        logger.log_error("MDIPC termination handler({} {},{}): cleaned up".format(pid, tid, signum))
+        logger.log_warning("MDIPC termination handler({} {},{}): cleaned up".format(pid, tid, signum))
         # signal.signal(signum, self.sighandlers[signum])
         sys.exit()
 
