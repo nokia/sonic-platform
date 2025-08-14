@@ -1,7 +1,7 @@
 [Unit]
 Description=Nokia-7250-IXR-X3b Platform Service
 After=sysinit.target
-Before=determine-reboot-cause.service
+Before=syncd.service determine-reboot-cause.service
 
 [Service]
 Type=oneshot

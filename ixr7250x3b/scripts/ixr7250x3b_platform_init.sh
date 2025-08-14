@@ -88,7 +88,6 @@ dev_conf_init
 
 if type sets_setup &> /dev/null ; then 
     sets_setup -d
-    sets_setup --wait-lock
 fi
 
 if type asic_rov_config &> /dev/null ; then 
@@ -149,6 +148,10 @@ if [ "$status" == "1" ]; then
     chmod 644 /sys/bus/i2c/devices/1-0054/eeprom
 else
     echo "SYSEEPROM file not foud"
+fi
+
+if type sets_setup &> /dev/null ; then 
+    sets_setup --wait-lock
 fi
 
 exit 0
