@@ -2,12 +2,13 @@ try:
     from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
     from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
     from sonic_py_common import logger
-    import time
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_actions')
 sonic_logger.set_min_log_priority_warning()
+
+SPEED_FOR_HOT_START = 40
 
 class SetFanSpeedAction(ThermalPolicyActionBase):
     """
@@ -54,6 +55,19 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
             for fandrawer in fan_info_obj.get_presence_fans():
                 for fan in fandrawer.get_all_fans():
                     fan.set_speed(int(speed))
+
+    @classmethod
+    def set_fan_speed_hot_start(cls, thermal_info_dict, last_drawer):
+        from .thermal_infos import FanInfo
+        if FanInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[FanInfo.INFO_NAME], FanInfo):
+            fan_info_obj = thermal_info_dict[FanInfo.INFO_NAME]
+            for fandrawer in fan_info_obj.get_presence_fans():
+                if fandrawer.get_index() == last_drawer:
+                    for fan in fandrawer.get_all_fans():
+                        fan.set_speed(100)
+                else:
+                    for fan in fandrawer.get_all_fans():
+                        fan.set_speed(int(SPEED_FOR_HOT_START))
 
 @thermal_json_object('fan.all.set_speed')
 class SetAllFanSpeedAction(SetFanSpeedAction):
@@ -114,32 +128,24 @@ class ThermalRecoverAction(SetFanSpeedAction):
         :param thermal_info_dict: A dictionary stores all thermal information.
         :return:
         """
-        SPEED_FOR_HOT_START = 40
-        TIME_FOR_HOT_START = 15
-
         from .thermal_infos import ThermalInfo
         if ThermalInfo.INFO_NAME in thermal_info_dict and \
            isinstance(thermal_info_dict[ThermalInfo.INFO_NAME], ThermalInfo):
-
             thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
-            if thermal_info_obj.is_set_fan_high_temp_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
-            elif thermal_info_obj.is_set_fan_default_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
-            elif thermal_info_obj.is_set_fan_ctl_speed():
+            if not thermal_info_obj.is_skip_fan_ctl():
                 fanctl_speed = thermal_info_obj.get_fanctl_speed()
-                last_drawer_event = thermal_info_obj.get_last_drawer_event()
-                if last_drawer_event:
-                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, SPEED_FOR_HOT_START)
-                    sonic_logger.log_warning(f"Last fan drawer inserted, set fan speed to {SPEED_FOR_HOT_START}% for {TIME_FOR_HOT_START} sec")
-                    time.sleep(TIME_FOR_HOT_START)
+                last_drawer_index = thermal_info_obj.get_last_drawer_event()
+                if last_drawer_index != 0:
+                    sonic_logger.log_warning(f"Last fan drawer has been inserted, executing hot start sequence.")
+                    ThermalRecoverAction.set_fan_speed_hot_start(thermal_info_dict, last_drawer_index)
                 else:
                     if fanctl_speed != 0:
                         ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, fanctl_speed)
                     else:
                         ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
                         sonic_logger.log_warning(f"Wrong fanctl_speed, use default fan speed {self.default_speed}")
-
+            else:
+                sonic_logger.log_warning(f"Skip fan speed control for hot start sequence.")
 
 @thermal_json_object('switch.shutdown')
 class SwitchPolicyAction(ThermalPolicyActionBase):
@@ -154,7 +160,29 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
         :param thermal_info_dict: A dictionary stores all thermal information.
         :return:
         """
-        sonic_logger.log_warning("Alarm for temperature critical is detected, reboot Device")
+        try:
+            import os
+            from sonic_platform.chassis import Chassis
+            for i in range(3):
+                fan_obj = Chassis().get_fan_drawer(i)
+                if fan_obj.get_presence():
+                    sonic_logger.log_warning(f"Fan {fan_obj.get_name()} speed: "
+                                             f"{fan_obj.get_fan(0).get_speed()}%, {fan_obj.get_fan(1).get_speed()}%, "
+                                             f"{fan_obj.get_fan(2).get_speed()}%, {fan_obj.get_fan(3).get_speed()}%.")
+                else:
+                    sonic_logger.log_warning(f"Fan {fan_obj.get_name()} not presence.")
+            for i in range(2):
+                psu_obj = Chassis().get_psu(i)
+                if psu_obj.get_presence():
+                    sonic_logger.log_warning(f"{psu_obj.get_name()}: {psu_obj.get_voltage()}V, "
+                                             f"{psu_obj.get_current()}A, {psu_obj.get_power()}W.")
+                else:
+                    sonic_logger.log_warning(f"{fan_obj.get_name()} not presence.")
+        except Exception as e:
+            sonic_logger.log_warning(" Fail to save fan and psu info {}".format(repr(e)))
+        
+        sonic_logger.log_error("Alarm for temperature critical is detected, reboot Device")
+        os.system('reboot')
 
 @thermal_json_object('thermal_control.control')
 class ControlThermalAlgoAction(ThermalPolicyActionBase):

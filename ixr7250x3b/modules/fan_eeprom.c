@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Nokia X3B FAN eeprom decoder
+ *  Nokia FAN eeprom decoder
  *
  *  Copyright (C) 2024 Nokia
  *
@@ -74,49 +74,70 @@ int decode_eeprom(struct i2c_client *client)
 {
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 	int i = 0;
-	u8 len;
+	int len;
+	int cpylen;
 
 	while (i < EEPROM_LEN) {
 		switch (ee_data->eeprom[i]) {
 		case kEeCleiCode:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->clei[0], &ee_data->eeprom[i], len);
+			if (len <= FIELD_LEN_MAX)
+				cpylen = len;
+			else 
+				cpylen = FIELD_LEN_MAX;
+			memcpy(&ee_data->clei[0], &ee_data->eeprom[i], cpylen);
 			ee_data->clei[len] = 0;
 			i += len;
 			break;
 		case kMfgDate:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->mfg_date[0], &ee_data->eeprom[i], len);
+			if (len <= FIELD_LEN_MAX)
+				cpylen = len;
+			else 
+				cpylen = FIELD_LEN_MAX;
+			memcpy(&ee_data->mfg_date[0], &ee_data->eeprom[i], cpylen);
 			ee_data->mfg_date[len] = 0;
 			i += len;
 			break;
 		case kMfgSerialNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->serial_number[0], &ee_data->eeprom[i], len);
+			if (len <= FIELD_LEN_MAX)
+				cpylen = len;
+			else 
+				cpylen = FIELD_LEN_MAX;
+			memcpy(&ee_data->serial_number[0], &ee_data->eeprom[i], cpylen);
 			ee_data->serial_number[len] = 0;
 			i += len;
 			break;
 		case kMfgPartNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->part_number[0], &ee_data->eeprom[i], len);
+			if (len <= FIELD_LEN_MAX)
+				cpylen = len;
+			else 
+				cpylen = FIELD_LEN_MAX;
+			memcpy(&ee_data->part_number[0], &ee_data->eeprom[i], cpylen);
 			ee_data->part_number[len] = 0;
 			i += len;
 			break;
 		case kMfgAssemblyNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->assembly_num[0], &ee_data->eeprom[i], len);
+			if (len <= FIELD_LEN_MAX)
+				cpylen = len;
+			else 
+				cpylen = FIELD_LEN_MAX;
+			memcpy(&ee_data->assembly_num[0], &ee_data->eeprom[i], cpylen);
 			ee_data->assembly_num[len] = 0;
 			i += len;
 			break;
 		case kHwDirectives:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->hw_directives, &ee_data->eeprom[i], len);
+			memcpy(&ee_data->hw_directives, &ee_data->eeprom[i], 4);
 			ee_data->hw_directives = swab32(ee_data->hw_directives);
 			i += len;
 			break;
@@ -129,13 +150,13 @@ int decode_eeprom(struct i2c_client *client)
 		case kPlatforms:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->platforms, &ee_data->eeprom[i], len);
+			memcpy(&ee_data->platforms, &ee_data->eeprom[i], 1);
 			i += len;
 			break;
 		case kCSumRec:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->checksum, &ee_data->eeprom[i], len);
+			memcpy(&ee_data->checksum, &ee_data->eeprom[i], 1);
 			i += len;
 			break;
 		default:

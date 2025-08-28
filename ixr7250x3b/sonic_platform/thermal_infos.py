@@ -6,7 +6,6 @@ except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('thermal_info')
-sonic_logger.set_min_log_priority_warning()
 
 FM = 3
 TI = 5
@@ -72,6 +71,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
     """
     # Fan information name
     INFO_NAME = 'thermal_info'
+    WARNING_THRESHHOLD = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 95.0, 95.0, 95.0, 95.0, 105.0, 105.0, 0.0]
 
     def __init__(self):
         self._old_threshold_level = -1
@@ -82,8 +82,8 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self.ps = 1
         self.mc = 100
         self.nc = 38
-        self.last_drawer_event = False
         self._fan_drawer = 0
+        self.last_drawer_insert = 0
 
     def collect(self, chassis):
         """
@@ -95,16 +95,21 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._t = []
         self._fan_speeds = []
         self._over_high_critical_threshold = False
-        self._set_fan_default_speed = False
-        self._set_fan_ctl_speed = False
-        self._set_fan_high_temp_speed = False
         
         num_of_thermals = chassis.get_num_thermals()
         for index in range(num_of_thermals):
-            temp_current = chassis.get_thermal(index).get_temperature()    
+            temp_obj = chassis.get_thermal(index)
+            temp_current = temp_obj.get_temperature()
             self._temps.insert(index, temp_current)
-            self._t.insert(index, chassis.get_thermal(index).get_high_threshold() - temp_current)
+            self._t.insert(index, temp_obj.get_high_threshold() - temp_current)
+            temp_crit_threshold = temp_obj.get_high_critical_threshold()
             
+            if temp_crit_threshold != 'N/A' and temp_current >= temp_crit_threshold:
+                self._over_high_critical_threshold = True
+                sonic_logger.log_warning(f"!!!Alarm: {temp_obj.get_name()} temperature is {temp_current}C!!!")
+            elif self.WARNING_THRESHHOLD[index] != 0 and temp_current >= self.WARNING_THRESHHOLD[index]:
+                sonic_logger.log_warning(f"!Warning: {temp_obj.get_name()} temperature is {temp_current}C!")
+
         t_min = min(self._t)
 
         self.good_fan = 0
@@ -115,9 +120,11 @@ class ThermalInfo(ThermalPolicyInfoBase):
                 self.fan_drawer += 1
                 for fan in fandrawer.get_all_fans():
                     fan_speed = fan.get_speed()
-                    if (fan_speed >= (self.nc - 5)) or (fan_speed <= self.mc):
+                    if fan_speed >= self.nc:
                         fan_speed_sum += fan_speed
                         self.good_fan += 1
+            else:
+                self.fan_not_presence = fandrawer.get_index()
         
         avg_fan_speed = round(fan_speed_sum / self.good_fan)
 
@@ -129,27 +136,17 @@ class ThermalInfo(ThermalPolicyInfoBase):
         else:
             self.fanctl_speed = avg_fan_speed - diff
 
-        self._set_fan_ctl_speed = True
+        if self.last_drawer_insert != 0:
+            self._skip_fan_ctl = True
+        else:
+            self._skip_fan_ctl = False
 
         if self._fan_drawer == 2 and self.fan_drawer == 3:
-            self.last_drawer_insert = True
+            self.last_drawer_insert = self.fan_not_presence
         else:
-            self.last_drawer_insert = False
+            self.last_drawer_insert = 0
+
         self._fan_drawer = self.fan_drawer
-
-    def is_set_fan_default_speed(self):
-        """
-        Retrieves if the temperature is warm up and over high threshold
-        :return: True if the temperature is warm up and over high threshold else False
-        """
-        return self._set_fan_default_speed
-
-    def is_set_fan_high_temp_speed(self):
-        """
-        Retrieves if the temperature is warm up and over high threshold
-        :return: True if the temperature is warm up and over high threshold else False
-        """
-        return self._set_fan_high_temp_speed
 
     def is_over_high_critical_threshold(self):
         """
@@ -157,13 +154,9 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return: True if the temperature is over high critical threshold else False
         """
         return self._over_high_critical_threshold
-
-    def is_set_fan_ctl_speed(self):
-        """
-        Retrieves if the temperature is warm up and over high threshold
-        :return: True if the temperature is warm up and over high threshold else False
-        """
-        return self._set_fan_ctl_speed
+    
+    def is_skip_fan_ctl(self):
+        return self._skip_fan_ctl
     
     def fc(self, t, f):
         m = (t - self.p)/TI

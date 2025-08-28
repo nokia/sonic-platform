@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Nokia X3B PSU eeprom decoder
+ *  Nokia PSU eeprom decoder
  *
  *  Copyright (C) 2024 Nokia
  *

@@ -1,5 +1,5 @@
 """"
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X3b
 
     listen for the SFP change event and return to chassis.
 """
@@ -7,7 +7,7 @@
 try:
     import time
     from sonic_py_common import logger
-    from sonic_platform.sysfs import read_sysfs_file, write_sysfs_file
+    from sonic_platform.sysfs import read_sysfs_file
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
@@ -25,7 +25,6 @@ REG_DIR = "/sys/bus/pci/devices/0000:05:00.0/"
 
 SYSLOG_IDENTIFIER = "sfp_event"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
-#sonic_logger.set_min_log_priority_info()
 
 class SfpEvent:
     ''' Listen to plugin/plugout cable events '''
@@ -38,7 +37,6 @@ class SfpEvent:
         # Get Transceiver status
         time.sleep(5)
         self.modprs_list = self._get_transceiver_status()
-        #sonic_logger.log_info(f"Initial SFP presence={str(self.modprs_list)}")
 
     def deinitialize(self):
         if self.handle is None:
