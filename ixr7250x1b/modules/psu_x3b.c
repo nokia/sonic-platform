@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Nokia X3B PSU Driver
+ *  Nokia PSU Driver
  *
  *  Copyright (C) 2024 Nokia
  *

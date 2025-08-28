@@ -21,7 +21,7 @@ load_kernel_drivers() {
     modprobe rtc_ds1307
     modprobe optoe
     modprobe at24
-    modprobe max31790
+    modprobe max31790_wd
     modprobe jc42
     modprobe psu_x3b
     modprobe fan_eeprom
@@ -105,18 +105,15 @@ echo tmp75 0x4a > /sys/bus/i2c/devices/i2c-19/new_device
 echo tmp75 0x4b > /sys/bus/i2c/devices/i2c-19/new_device
 
 #fan
-i2cset -y 11 0x20 0x0 0x26
-i2cset -y 12 0x20 0x0 0x26
-i2cset -y 13 0x20 0x0 0x26
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-11/new_device
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-12/new_device
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-13/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-11/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-12/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-13/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-11/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-12/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-13/new_device
+for idx in {1..3}
+do
+    prs=$(cat /sys/bus/pci/devices/0000:01:00.0/fandraw_${idx}_prs)
+    if [ "$prs" == "0" ]; then
+        echo max31790_wd 0x20 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+        echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+        echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+    fi
+done
 
 # PSU
 echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-14/new_device

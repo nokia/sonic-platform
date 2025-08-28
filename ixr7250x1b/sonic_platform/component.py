@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X1B
+    NOKIA 7250 IXR-X
 
     Module contains an implementation of SONiC Platform Base API and
     provides the Components' (e.g., BIOS, CPLD, FPGA, etc.) available in
