@@ -49,7 +49,7 @@ static void smbus_i2c_write(struct fan_led_data *data, u8 reg, u8 value)
 	mutex_lock(&data->update_lock);
 	res = i2c_smbus_write_byte_data(client, reg, value);
 	if (res < 0) {
-		dev_err(&client->dev, "I2C WRITE ERROR: reg(0x%02x) err %d\n", reg, res);
+		dev_warn(&client->dev, "I2C WRITE ERROR: reg(0x%02x) err %d\n", reg, res);
 	}
 	mutex_unlock(&data->update_lock);
 }

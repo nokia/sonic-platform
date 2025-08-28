@@ -47,16 +47,18 @@ def main():
             assembly_num = read_sysfs_file(fandraw.eeprom_dir + "assembly_num")
             platforms = read_sysfs_file(fandraw.eeprom_dir + "platforms")            
             print("        CLEI: {}, assembly_num: {}, platforms: {}, ".format(clei.strip(), 
-                                                                               assembly_num.strip(), 
-                                                                               platforms.strip())) 
+                                                                               assembly_num.strip(),
+                                                                               platforms.strip()))
             hw_type = read_sysfs_file(fandraw.eeprom_dir + "hw_type")
             hw_directives = read_sysfs_file(fandraw.eeprom_dir + "hw_directives")
             print("        hw_type: {}, hw_directives: {}".format(hw_type.strip(), hw_directives.strip()))
             for fan in fandraw.get_all_fans():
-                print("        {} Status: {}, Target Speed: {}%,  Speed: {}%".format(fan.get_name(), 
-                                                                                     fandraw.get_status(),
+                fan_status = fan.get_status()
+                rpm = read_sysfs_file(fan.get_fan_speed_reg)
+                print("        {} Status: {}, Target Speed: {}%,  Speed: {}%, RPM: {}".format(fan.get_name(),
+                                                                                     fan_status,
                                                                                     str(fan.get_target_speed()),
-                                                                                    str(fan.get_speed())))
+                                                                                    str(fan.get_speed()), int(rpm)))
     return
 
 

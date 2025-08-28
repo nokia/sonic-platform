@@ -1,17 +1,5 @@
 """
-    Nokia
-
-    Module contains an implementation of SONiC Platform Base API and
-    provides the PSUs' information which are available in the platform
-"""
-
-try:
-    import time
-except ImportError as e:
-    raise ImportError(str(e) + ' - required module not found') from e
-
-"""
-Nokia platform-specific sysfs class
+    Nokia platform-specific sysfs class
 """
 
 def read_sysfs_file(sysfs_file):

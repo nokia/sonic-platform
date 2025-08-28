@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X
 
     Module contains platform specific implementation of SONiC Platform
     Base API and provides the EEPROMs' information.
@@ -16,6 +16,7 @@ except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
 sonic_logger = logger.Logger('eeprom')
+sonic_logger.set_min_log_priority_info()
 
 class Eeprom(TlvInfoDecoder):
     """Nokia platform-specific EEPROM class"""
@@ -39,11 +40,11 @@ class Eeprom(TlvInfoDecoder):
             self.part_number = ''
             self.model_str = ''
             self.service_tag = ''
+            self.eeprom_tlv_dict = ''
         else:
             self.serial_number = 'N/A'
             self.part_number = 'N/A'
             self.model_str = 'N/A'
-            self.service_tag = 'N/A'
 
     def _load_system_eeprom(self):
         """
@@ -105,6 +106,7 @@ class Eeprom(TlvInfoDecoder):
                 "0x%X" % (self._TLV_CODE_PRODUCT_NAME), 'NA')
             self.service_tag = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
+            sonic_logger.log_info(f"serial_number:{self.serial_number}")
 
     def _get_eeprom_field(self, field_name):
         """
@@ -169,6 +171,9 @@ class Eeprom(TlvInfoDecoder):
         """
         Returns the servicetag number.
         """
+        if not self.service_tag:
+            self._load_system_eeprom()
+
         return self.service_tag
 
     def system_eeprom_info(self):
@@ -177,4 +182,7 @@ class Eeprom(TlvInfoDecoder):
         ONIE EEPROM format and values are their corresponding values
         found in the system EEPROM.
         """
+        if not self.eeprom_tlv_dict:
+            self._load_system_eeprom()
+
         return self.eeprom_tlv_dict

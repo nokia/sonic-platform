@@ -17,5 +17,5 @@ class Platform(PlatformBase):
     """
 
     def __init__(self):
-        PlatformBase.__init__(self)        
+        PlatformBase.__init__(self)
         self._chassis = Chassis()

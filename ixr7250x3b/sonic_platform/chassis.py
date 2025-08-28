@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X3b
     
     Module contains an implementation of SONiC Platform Base API and
     provides the platform information
@@ -38,12 +38,11 @@ COMPONENT_NUM = 3
 MAX_SELECT_DELAY = 10
 SYSLOG_IDENTIFIER = "chassis"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
-#sonic_logger.set_min_log_priority_info()
 
 class Chassis(ChassisBase):
     """
     Nokia platform-specific Chassis class
-        customized for the 7250 X3B platform.
+        customized for the 7250 X3b platform.
     """
 
     def __init__(self):
@@ -245,7 +244,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision value of chassis
         """
-        #Revision is always 0 for 7250-IXR-X3B
+        #Revision is always 0 for 7250-IXR-X3b
         return str(0)
 
     def get_system_eeprom_info(self):

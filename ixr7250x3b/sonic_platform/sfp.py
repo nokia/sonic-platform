@@ -2,7 +2,7 @@
     Name: sfp.py, version: 1.0
 
     Description: Module contains the definitions of SFP related APIs
-    for NOKIA 7250 IXR-X3B platform.
+    for NOKIA 7250 IXR-X3b platform.
 
     Copyright (c) 2024, Nokia
     All rights reserved.
@@ -27,7 +27,7 @@ sonic_logger.set_min_log_priority_info()
 
 class Sfp(SfpOptoeBase):
     """
-    Nokia IXR-7220 X3B Platform-specific Sfp refactor class
+    Nokia IXR-7220 X3b Platform-specific Sfp refactor class
     """
     instances = []
 
@@ -51,9 +51,6 @@ class Sfp(SfpOptoeBase):
 
         self._version_info = device_info.get_sonic_version_info()
         self.lastPresence = False
-
-        #sonic_logger.log_info(f"Sfp __init__ index {index} setting name to {self.name} "
-        #                       "and eeprom_path to {self.eeprom_path}")
 
         Sfp.instances.append(self)
 

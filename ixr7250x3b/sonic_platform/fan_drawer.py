@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X
 
     Module contains an implementation of SONiC Platform Base API and
     provides the Fan Drawer status which is available in the platform
@@ -17,7 +17,7 @@ FANS_PER_DRAWER = 4
 I2C_BUS = [11, 12, 13]
 FAN_INDEX_IN_DRAWER = [1, 2, 4, 5]
 EEPROM_INFO = ['54', 'fan_eeprom']
-DRIVER_INFO = ['20', 'max31790']
+DRIVER_INFO = ['20', 'max31790_wd']
 LED_INFO = ['60', 'fan_led']
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
@@ -35,13 +35,12 @@ class NokiaFanDrawer(FanDrawerBase):
         self.fan_direction_intake = "intake"
         self.i2c_index = I2C_BUS[index]
         self.eeprom_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{EEPROM_INFO[0]}/"
-        self.driver_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{DRIVER_INFO[0]}/"    
+        self.driver_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{DRIVER_INFO[0]}/"
         self.led_dir = f"/sys/bus/i2c/devices/{self.i2c_index}-00{LED_INFO[0]}/"
 
-        self.fan_wd_en = "i2cset -y {} 0x20 0x0 0x26"
         self.new_cmd = "echo {} 0x{} > /sys/bus/i2c/devices/i2c-{}/new_device"
         self.del_cmd = "echo 0x{} > /sys/bus/i2c/devices/i2c-{}/delete_device"
-        
+
     def get_index(self):
         """
         Retrieves the index of the Fan Drawer
@@ -59,20 +58,44 @@ class NokiaFanDrawer(FanDrawerBase):
         result = read_sysfs_file(self.reg_dir + f'fandraw_{self._index}_prs')
         if result == '0': # present
             if not os.path.exists(self.eeprom_dir):
-                os.system(self.new_cmd.format(EEPROM_INFO[1], EEPROM_INFO[0], self.i2c_index))
+                try:
+                    os.system(self.new_cmd.format(EEPROM_INFO[1], EEPROM_INFO[0], self.i2c_index))
+                except:
+                    return False
             if not os.path.exists(self.driver_dir):
-                os.system(self.fan_wd_en.format(self.i2c_index))
-                os.system(self.new_cmd.format(DRIVER_INFO[1], DRIVER_INFO[0], self.i2c_index))
+                try:
+                    os.system(self.new_cmd.format(DRIVER_INFO[1], DRIVER_INFO[0], self.i2c_index))
+                except:
+                    return False
             if not os.path.exists(self.led_dir):
-                os.system(self.new_cmd.format(LED_INFO[1], LED_INFO[0], self.i2c_index))
-            return True
+                try:
+                    os.system(self.new_cmd.format(LED_INFO[1], LED_INFO[0], self.i2c_index))
+                except:
+                    return False
+            
+            if os.path.exists(self.driver_dir+'fan_wd'):
+                result = read_sysfs_file(f"/sys/bus/i2c/devices/{self.i2c_index}-0020/fan_wd")
+                if result == '3':
+                    return True
+                else:
+                    write_sysfs_file(f"/sys/bus/i2c/devices/{self.i2c_index}-0020/fan_wd", '3')
+                    result = read_sysfs_file(f"/sys/bus/i2c/devices/{self.i2c_index}-0020/fan_wd")
+                    if result == '3':
+                        return True
+                    else:
+                        os.system(self.del_cmd.format(DRIVER_INFO[0], self.i2c_index))
+                        return False
+            else:
+                os.system(self.del_cmd.format(DRIVER_INFO[0], self.i2c_index))
+                return False
+
         # not present
         if os.path.exists(self.eeprom_dir):
-            os.system(self.del_cmd.format(EEPROM_INFO[0], self.i2c_index))
-        if os.path.exists(self.driver_dir):
-            os.system(self.del_cmd.format(DRIVER_INFO[0], self.i2c_index))
-        if os.path.exists(self.led_dir):
-            os.system(self.del_cmd.format(LED_INFO[0], self.i2c_index))
+            try:
+                os.system(self.del_cmd.format(EEPROM_INFO[0], self.i2c_index))
+            except:
+                return False
+        
         return False
 
     def get_model(self):

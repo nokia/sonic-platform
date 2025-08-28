@@ -6,14 +6,14 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-X3B_THERMALD_INTERVAL = 5
+THERMALD_INTERVAL = 5
 
 class ThermalManager(ThermalManagerBase):
     THERMAL_ALGORITHM_CONTROL_PATH = '/var/run/hw-management/config/suspend'
 
     @classmethod
     def get_interval(cls):
-        return X3B_THERMALD_INTERVAL
+        return THERMALD_INTERVAL
     
     @classmethod
     def start_thermal_control_algorithm(cls):

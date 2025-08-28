@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X
 
     Module contains an implementation of SONiC Platform Base API and
     provides the PSUs' information which are available in the platform
@@ -25,8 +25,6 @@ sonic_logger = logger.Logger('psu')
 sonic_logger.set_min_log_priority_error()
 
 class Psu(PsuBase):
-    """Nokia platform-specific PSU class for 7250 X3B """
-
     def __init__(self, psu_index):
         PsuBase.__init__(self)
         # PSU is 1-based in Nokia platforms

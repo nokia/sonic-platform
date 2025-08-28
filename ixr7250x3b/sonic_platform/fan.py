@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X
 
     Module contains an implementation of SONiC Platform Base API and
     provides the Fans' information which are available in the platform
@@ -29,7 +29,6 @@ EEPROM_ADDR = '54'
 LED_ADDR = '60'
 
 sonic_logger = logger.Logger('nokia_fan')
-sonic_logger.set_min_log_priority_info()
 
 class Fan(FanBase):
     """Nokia platform-specific Fan class"""
@@ -177,15 +176,26 @@ class Fan(FanBase):
         status = False
 
         if not self.fan_inited:
-            if self.fan_init():
-                status = True
-            return status
+            if not self.fan_init():
+                return status
         
         fan_speed = read_sysfs_file(self.get_fan_speed_reg)
         if (fan_speed != 'ERR'):
-            if (int(fan_speed) > WORKING_FAN_SPEED):
+            speed_in_rpm = int(fan_speed)
+            if speed_in_rpm == 0:
+                write_sysfs_file(self.pwm_enable_reg, '0')
+                time.sleep(0.1)
+                write_sysfs_file(self.pwm_enable_reg, '1')
+                time.sleep(0.1)
+                write_sysfs_file(self.fan_speed_enable_reg, '1')
+                fan_speed = read_sysfs_file(self.get_fan_speed_reg)
+                speed_in_rpm = int(fan_speed)
+            target_speed = self.get_target_speed()
+            if ((speed_in_rpm / self.max_fan_speed) > ((target_speed - 25) / 100)) and (speed_in_rpm > WORKING_FAN_SPEED):
                 status = True
-
+            else:
+                sonic_logger.log_warning(f"!Warning: {self.get_name()} speed: {speed_in_rpm} RPM, target speed: {target_speed}%")
+        
         return status
 
     def get_direction(self):
@@ -221,30 +231,20 @@ class Fan(FanBase):
         :param index: An integer, 1-based index of the FAN to query speed
         :return: integer, denoting front FAN speed
         """
-        speed = 0
-
         if not self.fan_inited:
             if not self.get_presence():
-                return speed
+                return 0
+        
+        if not self.get_status():
+            return 0
 
-        fan_speed = read_sysfs_file(self.get_fan_speed_reg)
-        if (fan_speed != 'ERR'):
-            speed_in_rpm = int(fan_speed)
-            if speed_in_rpm == 0:
-                write_sysfs_file(self.pwm_enable_reg, '0')
-                time.sleep(0.1)
-                write_sysfs_file(self.pwm_enable_reg, '1')
-                time.sleep(0.1)
-                write_sysfs_file(self.fan_speed_enable_reg, '1')
-                fan_speed = read_sysfs_file(self.get_fan_speed_reg)
-                speed_in_rpm = int(fan_speed)
-        else:
-            speed_in_rpm = 0
-
-        speed = round(100*speed_in_rpm/self.max_fan_speed)
-
-        return min(speed, 100)
-
+        fan_duty = read_sysfs_file(self.set_fan_speed_reg)
+        if fan_duty != 'ERR':
+            dutyspeed = int(fan_duty)
+            fan_speed = round(dutyspeed / 2.55)
+            return fan_speed
+        return 0
+    
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -270,12 +270,12 @@ class Fan(FanBase):
             if not self.get_presence():
                 return False
         
-        if speed >= 70 and speed <= 100:
-            fan_duty_cycle = round(2 * speed + 55)
-        elif speed >= 20 and speed < 70:
-            fan_duty_cycle = round(2.25 * speed + 38)
-        else:
+        if speed >= 20 and speed <= 100:
+            fan_duty_cycle = round(speed * 2.55)
+        elif speed >= 0 and speed < 20:
             fan_duty_cycle = 0
+        else:
+            return False
 
         pwm_enable = read_sysfs_file(self.pwm_enable_reg)
         if pwm_enable == '0':
@@ -328,11 +328,6 @@ class Fan(FanBase):
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':
             dutyspeed = int(fan_duty)
-            if dutyspeed >= 195 and dutyspeed <= 255:
-                target_speed = round((dutyspeed - 55) / 2)
-            elif dutyspeed >= 83 and dutyspeed < 195:
-                target_speed = round((dutyspeed - 38) / 2.25)
-            else:
-                target_speed = 0
+            target_speed = round(dutyspeed / 2.55)
             return target_speed
         return 0
