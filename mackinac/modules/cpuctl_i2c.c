@@ -151,7 +151,7 @@ static int ctl_i2c_read(CTLDEV *pdev, u8 addr, u8 *data, u16 len)
 	return rlen;
 }
 
-static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32 end)
+static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32 end, int delay_before_check)
 {
 	int rc;
 	u32 val;
@@ -216,7 +216,18 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	if (debug & CTL_DEBUG_I2C)
 		dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x \n", __FUNCTION__, val);
 
+	if (delay_before_check)
+		udelay(100);
+
 	rc = ctl_i2c_check_status(pdev);
+
+	if ((rc == -ENXIO) && (delay_before_check == 0)) {
+		/* special handling for condition where NOACK is indicated falsely.
+		   we will re-enter this function but with a delay before ctl_i2c_check_status
+		   */
+		rc = ctl_i2c_write(pdev,addr,buf,len,start,end,1);
+	}
+
 	if (rc == 0)
 		rc = wlen;
 
@@ -355,7 +366,7 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 			u8 *wbuf = msgs[i].buf;
 			if (wrbytes == 0) {
 				/* ackpoll */
-				rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, 1, 1);
+				rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, 1, 1, 0);
 			}
 			else
 			{
@@ -370,7 +381,7 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 					else {
 						end = 0;
 					}
-					rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, start, end);
+					rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, start, end, 0);
 					if (rc < 0)
 						break;
 					start = 0;
