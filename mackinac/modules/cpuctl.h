@@ -27,7 +27,9 @@
 #define CPUCTL_NUM_MEM_REGIONS 1
 #define CPUCTL_MINORS_MAX 1
 #define N_SPI_MINORS 4
-
+#define CTL_MAX_I2C_CHANS   64
+#define CTL_THROTTLE_MIN 5
+#define CTL_THROTTLE_MAX 30
 typedef struct
 {
 	struct list_head list;
@@ -35,9 +37,16 @@ typedef struct
 	struct i2c_adapter adapter;
 	struct i2c_mux_core *ctlmuxcore;
 	const struct attribute_group *sysfs;
+	struct _chan_stats {
+		u64 last_xfer;
+		u32 backoff_cnt;
+		u32 throttle_cnt;
+		u8 throttle_min;
+	}chan_stats[CTL_MAX_I2C_CHANS];
 	u8 phys_chan;
 	u8 virt_chan;
 	s8 current_modsel;
+	u8 modsel_active;
 	struct ctlvariant *ctlv;
 	int minor;
 	int enabled;
@@ -211,8 +220,6 @@ static inline void ctl_reg8_write(CTLDEV *p, unsigned offset, u8 value)
 #define MISCIO4_IO_VERM_IMM_RGB_RST_N_BIT       (0xff << 16)
 #define MISCIO4_IO_VERM_IMM_PLL_RST_N_BIT       (1 << 24)
 #define MISCIO4_IO_VERM_IMM_PLL2_RST_N_BIT      (1 << 25)
-
-#define CTL_MAX_I2C_CHANS   32
 
 #define IS_HW_CARD_TYPE_HORNET_R2 0
 

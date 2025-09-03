@@ -113,6 +113,22 @@ static ssize_t jer_avs_show(struct device *dev, struct device_attribute *devattr
 	return uint_show(buf, val & 0xffff);
 }
 
+static ssize_t chan_stats_show(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+	CTLDEV *pdev = dev_get_drvdata(dev);
+	int i;
+	char* p = buf;
+	p += sprintf(p, "chan\tthmin\tthcnt\tbackcnt\n");
+	for(i=0;i<pdev->ctlv->nchans;i++) {
+		p += sprintf(p, "chan%02d\t%d\t%d\t%d\n", i, 
+			pdev->chan_stats[i].throttle_min,
+			pdev->chan_stats[i].throttle_cnt,
+			pdev->chan_stats[i].backoff_cnt
+		);
+	}
+	return (p - buf);
+}
+
 static ssize_t bus_speed_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	CTLDEV *pdev = dev_get_drvdata(dev);
@@ -418,6 +434,7 @@ static ssize_t led_mgmt_actv_store(struct device *dev, struct device_attribute *
 static DEVICE_ATTR_RW(jer_reset_seq);
 static DEVICE_ATTR_RW(bus_speed);
 static DEVICE_ATTR_RO(jer_avs);
+static DEVICE_ATTR_RO(chan_stats);
 
 static SENSOR_DEVICE_ATTR(fandraw_1_prs, S_IRUGO, fandraw_prs_show, NULL, 0);
 static SENSOR_DEVICE_ATTR(fandraw_2_prs, S_IRUGO, fandraw_prs_show, NULL, 1);
@@ -603,6 +620,7 @@ static struct attribute *io_vermilion_ctl_attrs[] = {
 	&dev_attr_port_prs_reg1.attr,
 	&dev_attr_port_prs_reg2.attr,
 	&dev_attr_code_ver.attr,
+	&dev_attr_chan_stats.attr,
 
 	&sensor_dev_attr_port_1_prs.dev_attr.attr,
 	&sensor_dev_attr_port_2_prs.dev_attr.attr,

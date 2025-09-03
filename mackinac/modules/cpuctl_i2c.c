@@ -151,7 +151,7 @@ static int ctl_i2c_read(CTLDEV *pdev, u8 addr, u8 *data, u16 len)
 	return rlen;
 }
 
-static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32 end, int delay_before_check)
+static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32 end, unsigned bus, unsigned delay_before_check)
 {
 	int rc;
 	u32 val;
@@ -159,6 +159,8 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	u32 shift = 24;
 	u32 wlen = len;
 	u32 xlen = 0;
+	u64 wstart;
+	static const unsigned max_backoff = 20;
 
 	if (start) {
 		/* first byte for device address */
@@ -212,20 +214,36 @@ static int ctl_i2c_write(CTLDEV *pdev, u8 addr, u8 *buf, u16 len, u32 start, u32
 	val |= (0x1f << CTL_I2C_CNTR_base_timer_o);
 	val |= ((xlen - 1) << CTL_I2C_CNTR_xmt_cnt_o) | CTL_I2C_CNTR_write_req_b |
 		   CTL_I2C_CNTR_no_restart | start | end;
+	wstart = ktime_get_ns();
 	ctl_reg_write(pdev, CTL_I2C_CNTR, val);
 	if (debug & CTL_DEBUG_I2C)
 		dev_dbg(&pdev->pcidev->dev, "%s cntr 0x%08x \n", __FUNCTION__, val);
 
 	if (delay_before_check)
-		udelay(100);
+		udelay(delay_before_check);
 
 	rc = ctl_i2c_check_status(pdev);
 
-	if ((rc == -ENXIO) && (delay_before_check == 0)) {
-		/* special handling for condition where NOACK is indicated falsely.
-		   we will re-enter this function but with a delay before ctl_i2c_check_status
-		   */
-		rc = ctl_i2c_write(pdev,addr,buf,len,start,end,1);
+	if ((rc == -ENXIO) && pdev->modsel_active) {
+		/* special optic handling */
+		if (delay_before_check <= max_backoff) {
+			u64 now = ktime_get_ns();
+			unsigned dur = (now - wstart)/1000;
+			unsigned since_last = (wstart - pdev->chan_stats[pdev->virt_chan].last_xfer)/1000;
+			dev_warn(&pdev->pcidev->dev, "i2c NOACK after %dus dev %d-%04x dbc %d sl %dus\n",
+				dur, bus, addr, delay_before_check, since_last);
+			/* for condition where NOACK is indicated falsely,
+			   we will re-enter and retry the cmd but with a delay before ctl_i2c_check_status
+			*/
+			pdev->chan_stats[pdev->virt_chan].backoff_cnt++;
+			if (pdev->chan_stats[pdev->virt_chan].throttle_min >= CTL_THROTTLE_MIN && pdev->chan_stats[pdev->virt_chan].throttle_min < CTL_THROTTLE_MAX)
+				pdev->chan_stats[pdev->virt_chan].throttle_min++;
+			rc = ctl_i2c_write(pdev,addr,buf,len,start,end,bus,(delay_before_check+5));
+		}
+		else {
+			dev_dbg(&pdev->pcidev->dev, "%s NOACK final for dev %d-%04x \n", __FUNCTION__,
+				bus, addr);
+		}
 	}
 
 	if (rc == 0)
@@ -366,7 +384,7 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 			u8 *wbuf = msgs[i].buf;
 			if (wrbytes == 0) {
 				/* ackpoll */
-				rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, 1, 1, 0);
+				rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, 1, 1, bus, 0);
 			}
 			else
 			{
@@ -381,7 +399,7 @@ static int ctl_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 					else {
 						end = 0;
 					}
-					rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, start, end, 0);
+					rc = ctl_i2c_write(pdev, msgs[i].addr, wbuf, wrbytes, start, end, bus, 0);
 					if (rc < 0)
 						break;
 					start = 0;
@@ -443,6 +461,9 @@ static int ctl_select_chan(struct i2c_mux_core *muxc, u32 chan)
 	pdev->virt_chan = chan;
 	if (pchan->modsel >= 0) {
 		/* phys_chan has modsel */
+		pdev->modsel_active=1;
+		if (pdev->chan_stats[chan].throttle_min == 0)
+			pdev->chan_stats[chan].throttle_min = CTL_THROTTLE_MIN;
 		if (pchan->modsel != pdev->current_modsel) {
 			unsigned int offset;
 			u32 val;
@@ -456,6 +477,15 @@ static int ctl_select_chan(struct i2c_mux_core *muxc, u32 chan)
 			ctl_reg_write(pdev,offset,val);
 			msleep(5);
 			pdev->current_modsel = pchan->modsel;
+		} else {
+			/* same device */
+			unsigned dur = (ktime_get_ns() - pdev->chan_stats[chan].last_xfer)/1000;
+			if (dur < pdev->chan_stats[chan].throttle_min) {
+				/* need min time between subsequent cmds */
+				pdev->chan_stats[chan].throttle_cnt++;
+				dev_dbg(&pdev->pcidev->dev, "%s chan %d dur %d\n", __FUNCTION__,chan,dur);
+				udelay(pdev->chan_stats[chan].throttle_min - dur);
+			}
 		}
 	}
 
@@ -474,6 +504,8 @@ static int ctl_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 
 	pchan = &pdev->ctlv->pchanmap[chan];
 	pdev->phys_chan = 0;
+	pdev->modsel_active=0;
+	pdev->chan_stats[chan].last_xfer = ktime_get_ns();
 	return rc;
 }
 
@@ -503,6 +535,11 @@ int ctl_i2c_probe(CTLDEV *pdev)
 
 		/* make a dummy mux device */
 		nchans = pdev->ctlv->nchans;
+		if (nchans > CTL_MAX_I2C_CHANS){
+			dev_err(&pdev->pcidev->dev, "%s nchans %d > %d\n", __FUNCTION__, nchans,CTL_MAX_I2C_CHANS);
+			return -EINVAL;
+		}
+
 		pdev->current_modsel = -1;
 		pdev->ctlmuxcore = i2c_mux_alloc(&pdev->adapter, &pdev->pcidev->dev, nchans, sizeof(struct ctlmux), 0,
 										 ctl_select_chan, ctl_deselect_mux);
