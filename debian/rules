@@ -16,22 +16,20 @@ PYTHON3        ?= python3
 PACKAGE_PRE_NAME := sonic-platform-nokia
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
-#KERNEL_SRC :=  /lib/modules/4.19.39
 
 
-MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= chassis ixr7220h3 ixr7220h4-32d ixr7220h5-32d ixr7220h5-64d ixr7220h4-64d \
+MOD_SRC_DIR := $(shell pwd)
+MODULE_DIRS := chassis ixr7220h3 ixr7220h4-32d ixr7220h5-32d ixr7220h5-64d ixr7220h4-64d \
   ixr7220h5-64o ixr7250x1b ixr7250x3b ixr7220d4
-BRIDGE_DRIVER_TARGETS :=ixr7250x1b ixr7250x3b
+BRIDGE_DRIVER_TARGETS := ixr7250x1b ixr7250x3b
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
 PLATFORM_DIR := sonic_platform
 CONF_DIR := conf
 BLDENV := $(shell lsb_release -cs)
-
-DO_BRIDGE_PACKAGE=$(BRIDGE_DRIVER_TARGETS)
-ACTIVE_MODULE_DIRS=$(MODULE_DIRS)
+DO_BRIDGE_PACKAGE := $(BRIDGE_DRIVER_TARGETS)
+ACTIVE_MODULE_DIRS := $(MODULE_DIRS)
 
 %:
 	dh $@ --with systemd,python3 --buildsystem=pybuild
@@ -50,17 +48,16 @@ build:
 			cp /tmp/sbin/ethtool debian/sonic-platform-nokia-chassis/opt/srlinux/bin; \
 		fi \
 	fi
-
 ifneq (,$(DO_BRIDGE_PACKAGE))
-	KERNEL_SRC=$(KERNEL_SRC) $(MAKE) -C $(MOD_SRC_DIR)/mackinac
+	$(MAKE) KERNEL_SRC=$(KERNEL_SRC) -C $(MOD_SRC_DIR)/mackinac
 endif
-	#make modules -C $(KERNEL_SRC)/build M=$(MODULE_SRC)
 	(for mod in $(ACTIVE_MODULE_DIRS); do \
 		$(MAKE) modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
 		$(PYTHON3) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 		cd $(MOD_SRC_DIR); \
 	done)
+	touch $@
 
 binary: binary-arch binary-indep
 	# Nothing to do
@@ -68,7 +65,7 @@ binary: binary-arch binary-indep
 binary-arch:
 	# Nothing to do
 
-binary-indep:
+binary-indep: build
 # temporary commented out
 #	dh_testdir
 	dh_installdirs
