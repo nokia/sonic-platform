@@ -84,6 +84,10 @@ echo tmp1075 0x48 > /sys/bus/i2c/devices/i2c-20/new_device
 # Enumerate Fan controller
 echo emc2305 0x2d > /sys/bus/i2c/devices/i2c-17/new_device
 echo emc2305 0x4c > /sys/bus/i2c/devices/i2c-17/new_device
+for ch in {1..5}; do
+    echo 128 > /sys/bus/i2c/devices/17-002d/hwmon/hwmon*/pwm${ch}
+    echo 128 > /sys/bus/i2c/devices/17-004c/hwmon/hwmon*/pwm${ch}
+done
 
 # Enumerate PCA9555(GPIO Mux)
 echo pca9555 0x27 > /sys/bus/i2c/devices/i2c-18/new_device

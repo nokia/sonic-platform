@@ -75,6 +75,11 @@ echo dps_1600ab_29_a  0x58 > /sys/bus/i2c/devices/i2c-8/new_device
 echo emc2305 0x4c > /sys/bus/i2c/devices/i2c-10/new_device
 echo emc2305 0x2d > /sys/bus/i2c/devices/i2c-10/new_device
 echo emc2305 0x2e > /sys/bus/i2c/devices/i2c-10/new_device
+for ch in {1..5}; do
+    echo 128 > /sys/bus/i2c/devices/10-004c/hwmon/hwmon*/pwm${ch}
+    echo 128 > /sys/bus/i2c/devices/10-002d/hwmon/hwmon*/pwm${ch}
+    echo 128 > /sys/bus/i2c/devices/10-002e/hwmon/hwmon*/pwm${ch}
+done
 
 # Enumerate Thermal Sensor
 echo tmp75 0x4f > /sys/bus/i2c/devices/i2c-10/new_device
