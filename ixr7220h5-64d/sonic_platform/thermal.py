@@ -26,8 +26,8 @@ class Thermal(ThermalBase):
                     "16-004f", "17-004e", "17-004f", "19-0049"]
     THERMAL_NAME = ["CPU Board", "MB Front", "PSU Top", "MB Right", "MB MAC", 
                     "MB Left", "Fan Right", "Fan Left", "PSU Bottom", "ASIC TH5", "CPU"]
-    THRESHHOLD = [72.0, 60.0, 60.0, 58.0, 82.0, 63.0, 59.0, 60.0, 66.0, 92.0, 95.0]
-    CRITICAL_THRESHHOLD = [75.0, 63.0, 63.0, 61.0, 85.0, 66.0, 62.0, 63.0, 69.0, 95.0, 100.0]
+    THRESHHOLD = [72.0, 70.0, 60.0, 60.0, 91.0, 53.0, 57.0, 57.0, 66.0, 100.0, 95.0]
+    CRITICAL_THRESHHOLD = [75.0, 73.0, 63.0, 63.0, 96.0, 56.0, 60.0, 60.0, 69.0, 105.0, 100.0]
 
     def __init__(self, thermal_index):
         ThermalBase.__init__(self)
