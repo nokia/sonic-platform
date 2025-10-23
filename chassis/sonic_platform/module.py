@@ -15,6 +15,7 @@ try:
     from sonic_py_common import daemon_base, device_info
     from swsscommon import swsscommon
     import time
+    import os
     from sonic_py_common.logger import Logger
 
 except ImportError as e:
@@ -40,6 +41,8 @@ NOKIA_MODULE_HWSKU_INFO_FIELD = 'hwsku_info'
 
 MODULE_ADMIN_DOWN = 0
 
+NOKIA_LINECARD_INFO_KEY_TEMPLATE = 'LINE-CARD'
+NOKIA_MODULE_EEPROM_INFO_FIELD = 'eeprom_info'
 class Module(ModuleBase):
     """Nokia IXR-7250 Platform-specific Module class"""
 
@@ -62,6 +65,7 @@ class Module(ModuleBase):
         self.timestamp = 0
         self.midplane = ""
         self.midplane_status = False
+        self.process_name = os.getenv("SUPERVISOR_PROCESS_NAME")
         self.reset()
 
     def reset(self):
@@ -119,8 +123,8 @@ class Module(ModuleBase):
                 eeprom_info= dict(fvs)
                 return eval(eeprom_info['eeprom_info'])
         return None
-    
-    def _update_module_hwsku_info_to_supervisor(self, default):
+  
+    def _update_lc_info_to_supervisor(self, default):
         if self.get_type() != self.MODULE_TYPE_LINE or self._is_cpm:
             return
         else:
@@ -131,8 +135,15 @@ class Module(ModuleBase):
                 self.description = default
             else:
                 self.description = hwsku
-            module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_HWSKU_INFO_FIELD, str(self.description))]) 
+            module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_HWSKU_INFO_FIELD, str(self.description))])
             nokia_hwsku_tbl.set(self.get_name(), module_fvs)
+            
+            eeprom_info_table = swsscommon.Table(chassis_state_db,
+                                                 NOKIA_MODULE_EEPROM_INFO_TABLE)
+            module_key = "%s%s" % (NOKIA_LINECARD_INFO_KEY_TEMPLATE, str(self.hw_slot-1))
+            eeprom_dict = self.eeprom.get_system_eeprom_info()
+            module_fvs = swsscommon.FieldValuePairs([(NOKIA_MODULE_EEPROM_INFO_FIELD, str(eeprom_dict))])
+            eeprom_info_table.set(module_key, module_fvs)
         return None
     
     def _get_lc_module_description(self):
@@ -193,7 +204,7 @@ class Module(ModuleBase):
                         self.description = desc
                 else:
                     if nokia_common._get_my_slot() == self.hw_slot:
-                        self._update_module_hwsku_info_to_supervisor(self.description)
+                        self._update_lc_info_to_supervisor(self.description)
                 
             if module_info.num_asic != 0:
                 i = 0
