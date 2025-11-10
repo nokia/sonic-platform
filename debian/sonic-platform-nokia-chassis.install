@@ -12,3 +12,4 @@ chassis/utils/blacklist.conf etc/modprobe.d
 chassis/utils/nokia_cpm_force_reboot_imm_slot.sh opt/srlinux/bin
 common/utils/nokia-asic-thermal.py opt/srlinux/bin
 common/service/nokia-asic-thermal.service lib/systemd/system
+common/service/fstrim.timer/timer-override.conf lib/systemd/system/fstrim.timer.d
