@@ -407,7 +407,16 @@ save_ndk_cores() {
         save_file $core_file  $core_dir false true
     done
 }
-
+save_ndk_qfpga_info_log() {
+    echo "Copy ndk qfpga info log files"
+    qfpga_info_dir=qfpga_info
+    if [ -e /etc/opt/srlinux/ndk_qfpga_info.log.1 ]; then
+        save_file /etc/opt/srlinux/ndk_qfpga_info.log.1 $qfpga_info_dir false true
+    fi
+    if [ -e /etc/opt/srlinux/ndk_qfpga_info.log ]; then
+        save_file /etc/opt/srlinux/ndk_qfpga_info.log $qfpga_info_dir false true
+    fi
+}
 main() {
     local start_t=0
     local end_t=0
@@ -451,6 +460,7 @@ main() {
     save_ndk_cores
     # save_syslog_file
     save_ndk_pcon_info
+    save_ndk_qfpga_info_log
     
     end_t=$(date +%s%3N)
     save_file $TECHSUPPORT_TIME_INFO "" false true
