@@ -528,8 +528,7 @@ static struct h6_fan_data *h6_fan_update_device(struct device
 	return data;
 }
 
-static int h6_fan_probe(struct i2c_client *client,
-			       const struct i2c_device_id *dev_id)
+static int h6_fan_probe(struct i2c_client *client)
 {
 	struct h6_fan_data *data;
 	int status;

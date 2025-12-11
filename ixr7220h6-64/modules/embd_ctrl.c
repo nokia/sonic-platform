@@ -108,8 +108,7 @@ static const struct attribute_group embd_ctrl_group = {
     .attrs = embd_ctrl_attributes,
 };
 
-static int embd_ctrl_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int embd_ctrl_probe(struct i2c_client *client)
 {
     int status = 0;
     struct ec_data *data = NULL;
