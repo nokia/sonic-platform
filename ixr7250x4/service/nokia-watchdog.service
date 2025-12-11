@@ -1,0 +1,10 @@
+[Unit]
+Description=Nokia IXR-7250 watchdog service
+After=sysinit.target
+
+[Service]
+Type=simple
+ExecStart=nice -n -10 /bin/bash /usr/local/bin/nokia-watchdog.sh start
+
+[Install]
+WantedBy=multi-user.target
