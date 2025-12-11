@@ -741,8 +741,7 @@ static const struct attribute_group port_cpld1_group = {
     .attrs = port_cpld1_attributes,
 };
 
-static int port_cpld1_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int port_cpld1_probe(struct i2c_client *client)
 {
     int status;
     struct cpld_data *data = NULL;

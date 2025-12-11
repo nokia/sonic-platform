@@ -166,8 +166,7 @@ static const struct attribute_group sys_fpga_group = {
     .attrs = sys_fpga_attributes,
 };
 
-static int sys_fpga_probe(struct i2c_client *client,
-        const struct i2c_device_id *dev_id)
+static int sys_fpga_probe(struct i2c_client *client)
 {
     int status;
     struct cpld_data *data = NULL;

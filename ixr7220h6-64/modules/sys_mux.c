@@ -139,10 +139,10 @@ static void sys_mux_cleanup(struct i2c_mux_core *muxc)
 /*
  * I2C init/probing/exit functions
  */
-static int sys_mux_probe(struct i2c_client *client,
-			       const struct i2c_device_id *id)
+static int sys_mux_probe(struct i2c_client *client)
 {
-	struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
+	struct i2c_adapter *adap = client->adapter;
 	struct device *dev = &client->dev;
 	struct sys_mux_data *data;
 	struct i2c_mux_core *muxc;
@@ -166,7 +166,7 @@ static int sys_mux_probe(struct i2c_client *client,
 
 	/* Now create an adapter for each channel */
 	for (i = 0; i < chips[data->type].nchans; i++) {
-		ret = i2c_mux_add_adapter(muxc, 0, i, 0);
+		ret = i2c_mux_add_adapter(muxc, 0, i);
 		if (ret)
 			goto exit_mux;
 	}
