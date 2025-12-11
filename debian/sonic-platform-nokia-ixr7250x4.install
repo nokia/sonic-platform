@@ -1,0 +1,6 @@
+ixr7250x4/conf/cpuctl.conf etc/modprobe.d
+ixr7250x4/scripts/ixr7250x4_platform_init.sh usr/local/bin
+ixr7250x4/service/ixr7250x4_platform_init.service etc/systemd/system
+ixr7250x4/scripts/nokia-watchdog.sh usr/local/bin
+ixr7250x4/service/nokia-watchdog.service etc/systemd/system
+ixr7250x4/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-nokia_ixr7250_x4-r0
