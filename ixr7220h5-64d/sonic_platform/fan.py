@@ -32,7 +32,7 @@ FAN_INDEX_IN_DRAWER = [(3, 4),
                        (3, 4),
                        (1, 2)]
 GPIO_DIR = "/sys/class/gpio/gpio{}/"
-GPIO_PORT = [9939, 9938, 9937, 9936]
+GPIO_PORT = [803, 802, 801, 800]
 FPGA_DIR = "/sys/kernel/sys_fpga/"
 I2C_BUS = [33, 32, 31, 30]
 sonic_logger = logger.Logger('fan')
@@ -235,7 +235,8 @@ class Fan(FanBase):
             range(10, 20): 40,
             range(20, 30): 64,
             range(30, 40): 90,
-            range(40, 54): 115,
+            range(40, 47): 115,
+            range(47, 54): 128,
             range(54, 66): 153,
             range(66, 76): 179,
             range(76, 86): 204,
@@ -299,6 +300,7 @@ class Fan(FanBase):
             64: 25,
             90: 35,
             115: 45,
+            128: 50,
             153: 60,
             179: 70,
             204: 80,

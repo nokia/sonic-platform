@@ -39,7 +39,7 @@ FAN_INDEX_IN_DRAWER = [(1, 2),
                        (1, 2),
                        (3, 4)]
 GPIO_DIR = "/sys/class/gpio/gpio{}/"
-GPIO_PORT = [10038, 10039, 10040, 10041, 10042, 10043, 10044]
+GPIO_PORT = [698, 699, 700, 701, 702, 703, 704]
 FPGA_FAN_LED = "/sys/kernel/delta_fpga/fan-tray-led"
 INDEX_FAN_LED = [0, 4, 8, 12, 16, 20 , 24]
 sonic_logger = logger.Logger('fan')

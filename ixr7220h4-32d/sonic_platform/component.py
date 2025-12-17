@@ -167,20 +167,20 @@ class Component(ComponentBase):
             if not os.path.isfile('/tmp/vme_h4_32d'):
                 print("ERROR: the cpld upgrade tool /tmp/vme_h4_32d doesn't exist ")
                 return False
-            write_sysfs_file("/sys/class/gpio/export", str(10054))
-            write_sysfs_file("/sys/class/gpio/gpio10054/value", str(1))
+            write_sysfs_file("/sys/class/gpio/export", str(666))
+            write_sysfs_file("/sys/class/gpio/gpio666/value", str(1))
             self.CPLD_UPDATE_COMMAND[1] = 'jtag0'
             self.CPLD_UPDATE_COMMAND[2] = image_name
             try:
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            write_sysfs_file("/sys/class/gpio/gpio10054/value", str(0))
-            write_sysfs_file("/sys/class/gpio/unexport", str(10054))
-            print("\nCPUPLD firmware upgraded!\n")
+            write_sysfs_file("/sys/class/gpio/gpio666/value", str(0))
+            write_sysfs_file("/sys/class/gpio/unexport", str(666))
+            print("\nCPUPLD firmware update has ended\n")
             print("!!!System will reboot in 10 sec!!!")
-            time.sleep(10)
-            write_sysfs_file("/sys/kernel/delta_fpga/sys-pwr", str(1))
+            time.sleep(7)
+            self._power_cycle()
             return True
         
         elif self.name == "SWPLD2" or self.name == "SWPLD3":
@@ -188,22 +188,25 @@ class Component(ComponentBase):
             if not os.path.isfile('/tmp/vme_h4_32d'):
                 print("ERROR: the cpld upgrade tool /tmp/vme_h4_32d doesn't exist ")
                 return False
-            write_sysfs_file("/sys/class/gpio/export", str(10055))
-            write_sysfs_file("/sys/class/gpio/gpio10055/value", str(1))
+            write_sysfs_file("/sys/class/gpio/export", str(667))
+            write_sysfs_file("/sys/class/gpio/gpio667/value", str(1))
             self.CPLD_UPDATE_COMMAND[1] = 'jtag1'
             self.CPLD_UPDATE_COMMAND[2] = image_name
             try:
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            self.CPLD_UPDATE_COMMAND[2] = 'h4_32d_swpld_refresh.vme'
+            if self.name == "SWPLD2":
+                self.CPLD_UPDATE_COMMAND[2] = 'h4_32d_swpld2_refresh.vme'
+            else:
+                self.CPLD_UPDATE_COMMAND[2] = 'h4_32d_swpld3_refresh.vme'
             try:
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            write_sysfs_file("/sys/class/gpio/gpio10055/value", str(0))
-            write_sysfs_file("/sys/class/gpio/unexport", str(10055))
-            print("\nSWPLD2/3 firmware upgraded!\n")
+            write_sysfs_file("/sys/class/gpio/gpio667/value", str(0))
+            write_sysfs_file("/sys/class/gpio/unexport", str(667))
+            print("\nSWPLD2/3 firmware update has ended\n")
             return True
             
         elif self.name == "SysFPGA":
@@ -223,10 +226,10 @@ class Component(ComponentBase):
                 subprocess.run(self.FPGA_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade SysFPGA: rc={e.returncode}")
-            print("\nSysFPGA firmware upgraded!\n")
+            print("\nSysFPGA firmware update has ended\n")
             print("!!!System will reboot in 10 sec!!!")
-            time.sleep(10)
-            write_sysfs_file("/sys/kernel/delta_fpga/sys-pwr", str(1))
+            time.sleep(7)
+            self._power_cycle()
             return True
             
         elif self.name == "BIOS":
@@ -239,7 +242,7 @@ class Component(ComponentBase):
                 subprocess.run(self.BIOS_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade BIOS: rc={e.returncode}")
-            print("\nBIOS upgraded!\n")
+            print("\nBIOS update has ended\n")
             return True
 
         return False
@@ -276,3 +279,8 @@ class Component(ComponentBase):
         """
         return "N/A"
     
+    def _power_cycle(self):
+        os.system('sync')
+        os.system('sync')
+        time.sleep(3)
+        write_sysfs_file("/sys/kernel/delta_fpga/sys-pwr", str(1))

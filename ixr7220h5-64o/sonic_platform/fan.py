@@ -32,7 +32,7 @@ FAN_INDEX_IN_DRAWER = [(3, 4),
                        (3, 4),
                        (1, 2)]
 GPIO_DIR = "/sys/class/gpio/gpio{}/"
-GPIO_PORT = [9939, 9938, 9937, 9936]
+GPIO_PORT = [803, 802, 801, 800]
 FPGA_DIR = "/sys/kernel/sys_fpga/"
 I2C_BUS = [25, 24, 23, 22]
 sonic_logger = logger.Logger('fan')

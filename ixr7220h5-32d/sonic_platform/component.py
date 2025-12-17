@@ -182,12 +182,12 @@ class Component(ComponentBase):
             if not os.path.isfile('/tmp/vme_h5'):
                 print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
-            write_sysfs_file("/sys/class/gpio/export", str(10099))
-            write_sysfs_file("/sys/class/gpio/export", str(10076))
-            write_sysfs_file("/sys/class/gpio/gpio10099/direction", "out")
-            write_sysfs_file("/sys/class/gpio/gpio10076/direction", "out")
-            write_sysfs_file("/sys/class/gpio/gpio10099/value", str(1))
-            write_sysfs_file("/sys/class/gpio/gpio10076/value", str(1))
+            write_sysfs_file("/sys/class/gpio/export", str(627))
+            write_sysfs_file("/sys/class/gpio/export", str(604))
+            write_sysfs_file("/sys/class/gpio/gpio627/direction", "out")
+            write_sysfs_file("/sys/class/gpio/gpio604/direction", "out")
+            write_sysfs_file("/sys/class/gpio/gpio627/value", str(1))
+            write_sysfs_file("/sys/class/gpio/gpio604/value", str(1))
             self.CPLD_UPDATE_COMMAND[1] = 'jtag0'
             self.CPLD_UPDATE_COMMAND[2] = image_name
             try:
@@ -201,10 +201,10 @@ class Component(ComponentBase):
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
             self.gpio_set("/dev/gpiochip0", 105, 0)
-            write_sysfs_file("/sys/class/gpio/gpio10076/value", str(0))
-            write_sysfs_file("/sys/class/gpio/gpio10099/value", str(0))
-            write_sysfs_file("/sys/class/gpio/unexport", str(10076))
-            write_sysfs_file("/sys/class/gpio/unexport", str(10099))
+            write_sysfs_file("/sys/class/gpio/gpio604/value", str(0))
+            write_sysfs_file("/sys/class/gpio/gpio627/value", str(0))
+            write_sysfs_file("/sys/class/gpio/unexport", str(604))
+            write_sysfs_file("/sys/class/gpio/unexport", str(627))
             print("\nCPUPLD firmware upgraded!\n")
             return True
 
@@ -213,8 +213,8 @@ class Component(ComponentBase):
             if not os.path.isfile('/tmp/vme_h5'):
                 print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
-            write_sysfs_file("/sys/class/gpio/export", str(9953))
-            write_sysfs_file("/sys/class/gpio/gpio9953/value", str(1))
+            write_sysfs_file("/sys/class/gpio/export", str(769))
+            write_sysfs_file("/sys/class/gpio/gpio769/value", str(1))
             self.CPLD_UPDATE_COMMAND[1] = 'jtag1'
             self.CPLD_UPDATE_COMMAND[2] = image_name
             try:
@@ -226,8 +226,8 @@ class Component(ComponentBase):
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            write_sysfs_file("/sys/class/gpio/gpio9953/value", str(0))
-            write_sysfs_file("/sys/class/gpio/unexport", str(9953))
+            write_sysfs_file("/sys/class/gpio/gpio769/value", str(0))
+            write_sysfs_file("/sys/class/gpio/unexport", str(769))
             print("\nSWPLD2 firmware upgraded!\n")
             return True
     
@@ -236,8 +236,8 @@ class Component(ComponentBase):
             if not os.path.isfile('/tmp/vme_h5'):
                 print("ERROR: the cpld upgrade tool /tmp/vme_h5 doesn't exist ")
                 return False
-            write_sysfs_file("/sys/class/gpio/export", str(9953))
-            write_sysfs_file("/sys/class/gpio/gpio9953/value", str(1))
+            write_sysfs_file("/sys/class/gpio/export", str(769))
+            write_sysfs_file("/sys/class/gpio/gpio769/value", str(1))
             self.CPLD_UPDATE_COMMAND[1] = 'jtag1'
             self.CPLD_UPDATE_COMMAND[2] = image_name
             try:
@@ -249,8 +249,8 @@ class Component(ComponentBase):
                 subprocess.run(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade CPLD: rc={e.returncode}")
-            write_sysfs_file("/sys/class/gpio/gpio9953/value", str(0))
-            write_sysfs_file("/sys/class/gpio/unexport", str(9953))
+            write_sysfs_file("/sys/class/gpio/gpio769/value", str(0))
+            write_sysfs_file("/sys/class/gpio/unexport", str(769))
             print("\nSWPLD3 firmware upgraded!\n")
             return True
 
@@ -273,8 +273,8 @@ class Component(ComponentBase):
                 print(f"ERROR: Failed to upgrade SysFPGA: rc={e.returncode}")
             print("\nSysFPGA firmware upgraded!\n")
             print("!!!The system will reboot in 10 sec!!!")
-            time.sleep(10)
-            write_sysfs_file("/sys/kernel/sys_fpga/sys_pwr", str(1))
+            time.sleep(7)
+            self._power_cycle()
             return True
 
         elif self.name == "BIOS":
@@ -345,4 +345,10 @@ class Component(ComponentBase):
         except (OSError, IOError) as e:
             print(f"ERROR: {e.errno}, Setting line value: " + e.strerror)
         os.close(request.fd)
+
+    def _power_cycle(self):
+        os.system('sync')
+        os.system('sync')
+        time.sleep(3)
+        write_sysfs_file("/sys/kernel/sys_fpga/sys_pwr", str(1))
 

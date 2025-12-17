@@ -17,7 +17,7 @@ FANS_PER_DRAWER = 2
 FAN_PN_F2B = "3HE20602AA"
 FAN_PN_B2F = "3HE20603AA"
 GPIO_DIR = "/sys/class/gpio/gpio{}/"
-GPIO_PORT = [9939, 9938, 9937, 9936]
+GPIO_PORT = [803, 802, 801, 800]
 FPGA_DIR = "/sys/kernel/sys_fpga/"
 I2C_BUS = [25, 24, 23, 22]
 

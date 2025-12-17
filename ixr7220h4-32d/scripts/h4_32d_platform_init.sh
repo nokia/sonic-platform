@@ -126,10 +126,10 @@ else
 fi
 
 #Enumerate GPIO port
-for port in {38..44}
+for port in {698..704}
 do
-    echo 100${port} > /sys/class/gpio/export
-    echo in > /sys/class/gpio/gpio100${port}/direction
+    echo ${port} > /sys/class/gpio/export
+    echo in > /sys/class/gpio/gpio${port}/direction
     sleep 0.1
 done
 
