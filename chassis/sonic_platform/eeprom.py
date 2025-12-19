@@ -6,6 +6,8 @@
 #
 #############################################################################
 import os
+import struct
+import binascii
 
 from sonic_py_common.logger import Logger
 from platform_ndk import nokia_common
@@ -16,6 +18,11 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 logger = Logger()
+
+# ONIE TlvInfo constants
+TLV_INFO_HEADER = b"TlvInfo"
+TLV_INFO_VERSION = 0x01
+TLV_CRC32_TYPE = 0xFE
 
 #
 # CACHE_XXX stuffs are supposted to be moved to the base classes
@@ -38,7 +45,8 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
                 # use /tmp to instead
                 cache_file = os.path.join("/tmp", CACHE_FILE)
                 pass
-        if not os.path.exists(cache_file):
+
+        if not os.path.exists(cache_file) or not self.validate_eeprom_cache(cache_file):
             channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_EEPROM_SERVICE)
             if not channel or not stub:
                 raise RuntimeError(str(e) + "Unable to fetch eeprom info from platform-ndk")
@@ -94,6 +102,76 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
                     break
 
                 tlv_index += eeprom[tlv_index+1] + 2
+
+    def validate_eeprom_cache(self, file_path):
+        if not os.path.exists(file_path):
+            return False
+        try:
+            with open(file_path, "rb") as f:
+                data = f.read()
+        except IOError as e:
+            logger.log_error("Unable to read file {}".format(file_path))
+            return False
+
+        # Minimum size check: header (8) + version (1) + length (2) + CRC TLV (6)
+        if len(data) < 17:
+            logger.log_warning("File {} too short to be a valid ONIE EEPROM".format(file_path))
+            return False
+
+        # Check magic header
+        if data[0:7] != TLV_INFO_HEADER:
+            logger.log_warning("Missing 'TlvInfo' header")
+            return False
+
+        # Check version
+        version = data[8]
+        if version != TLV_INFO_VERSION:
+            logger.log_warning("Unsupported TLV version {}. Expected {}".format(version, TLV_INFO_VERSION))
+            return False
+
+        # Read total length (big-endian)
+        total_len = struct.unpack(">H", data[9:11])[0]
+        if total_len + 11 != len(data):
+            logger.log_warning("Length mismatch!")
+            return False
+
+        # Parse TLVs
+        offset = 11
+        crc_expected = None
+        tlv_count = 0
+
+        while offset < len(data):
+            if offset + 2 > len(data):
+                logger.log_warning("TLV entry truncated.")
+                return False
+
+            tlv_type = data[offset]
+            tlv_len = data[offset + 1]
+            offset += 2
+
+            if offset + tlv_len > len(data):
+                logger.log_warning("TLV value exceeds file size.")
+                return False
+
+            tlv_value = data[offset:offset + tlv_len]
+            offset += tlv_len
+            tlv_count += 1
+            if tlv_type == TLV_CRC32_TYPE:
+                if tlv_len != 4:
+                    logger.log_warning("CRC32 TLV length must be 4.")
+                    return False
+                crc_expected = struct.unpack(">I", tlv_value)[0]
+
+        # CRC check
+        if crc_expected is None:
+            logger.log_warning("Missing CRC32 TLV.")
+            return False
+
+        crc_calc = binascii.crc32(data[0:-4]) & 0xFFFFFFFF
+        if crc_calc != crc_expected:
+            logger.log_warning("CRC32 mismatch: expected 0x{}, got 0x{}".format(hex(crc_expected), hex(crc_calc)))
+            return False
+        return True
 
     def get_base_mac(self):
         """
