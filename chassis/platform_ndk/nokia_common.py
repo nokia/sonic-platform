@@ -395,6 +395,22 @@ def _reboot_imm(slot):
         ret = _cpm_reboot_IMMs(slot)
     return ret
 
+def _restart_lc_system_service(imm_slot, service_file):
+    if imm_slot < 1 or imm_slot > NOKIA_MAX_IMM_SLOTS:
+        return
+    channel, stub = midplane_channel_setup(NOKIA_GRPC_CHASSIS_SERVICE, imm_slot)
+    if not channel or not stub:
+        return False
+    response = stub.RestartSystemService(platform_ndk_pb2.ReqModuleInfoPb(hw_slot=imm_slot, service_name=service_file))
+    if response.response_status.status_code != platform_ndk_pb2.ResponseCode.NDK_SUCCESS:
+        print('Failed to restart Linecard Slot {} system service \"{}\"'.format(imm_slot, service_file))
+        rv = False
+    else:
+        print('Restart Linecard Slot {} system service \"{}\" success'.format(imm_slot, service_file))
+        rv = True
+    channel_shutdown(channel)
+    return rv
+
 def _force_reboot_imm(slot):
     if slot < 1 or slot > NOKIA_MAX_IMM_SLOTS:
         return
