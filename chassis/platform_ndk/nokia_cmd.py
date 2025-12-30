@@ -1180,6 +1180,11 @@ def set_reboot_linecard(slot):
     logger.log_warning("nokia_cmd reboots linecard slot {}".format(slot))
     nokia_common._reboot_imm(slot)
 
+def set_restart_lc_system_service(slot, service_name):
+    print("nokia_cmd restart system service '{}' on linecard slot {}".format(service_name, slot))
+    logger.log_warning("nokia_cmd restart system service '{}' on linecard slot {}".format(service_name, slot))
+    nokia_common._restart_lc_system_service(slot, service_name)
+
 def set_log_restore_default():
     channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_UTIL_SERVICE)
     if not channel or not stub:
@@ -2197,6 +2202,11 @@ def main():
     set_reboot_linecard_parser = setsubparsers.add_parser('reboot-linecard', help='Reboot linecard from Supervisor')
     set_reboot_linecard_parser.add_argument('slot', type=int, help='Linecard slot number starts from 1 to 8')
     set_reboot_linecard_parser.add_argument('force', nargs='?', type=str, help='Continue without prompt for confirmation')
+
+    # set restart_lc_system_service
+    set_restart_lc_system_service_parser = setsubparsers.add_parser('restart-lc-system-service', help='Restart linecard system service from Supervisor')
+    set_restart_lc_system_service_parser.add_argument('slot', type=int, help='Linecard slot number starts from 1 to 8')
+    set_restart_lc_system_service_parser.add_argument('service', type=str, help='Service filename. Current support: interfaces-config.service')
     
     set_ndk_monitor_action_parser = setsubparsers.add_parser('ndk-monitor-action', help='Change the NDK monitor_action value (warn or reboot) in starup_debug.json file')
     set_ndk_monitor_action_parser.add_argument('action', nargs='?', help='Choices: warn, reboot or default')
@@ -2394,10 +2404,26 @@ def main():
                 if ans.strip().upper() != "Y":
                     print("Operation abort!")
                     return
-            
-            set_reboot_linecard(slot)        
+
+            set_reboot_linecard(slot)
+        elif args.setcmd == 'restart-lc-system-service':
+            supported_list = ["interfaces-config.service"]
+            if not nokia_common.is_cpm():
+                print('Command is only supported on Supervisor card')
+                return
+            slot = d['slot']
+            if slot < 1 or slot > 8:
+                print("Error: Invalid slot number. Linecard slot number starts from 1 to 8")
+                return
+            service_name = d['service']
+            if service_name not in supported_list:
+                print("Error: Service name \"{}\" is not in supported list".format(service_name))
+                print("Supported list: " + ", ".join(supported_list))
+                return
+            set_restart_lc_system_service(slot, service_name)
         else:
             set_parser.print_help()
+        
     elif args.cmd == 'request':
         if args.reqcmd == 'devmgr-admintech':
             if d['filepath'] is None:
