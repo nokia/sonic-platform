@@ -19,11 +19,15 @@ except ImportError as e:
 
 SYSFS_DIR = ["/sys/class/dmi/id/",
              "/sys/bus/i2c/devices/1-0060/",
-             "/sys/bus/i2c/devices/73-0061/",
-             "/sys/bus/i2c/devices/89-0064/",
-             "/sys/bus/i2c/devices/90-0065/",
-             "/sys/bus/i2c/devices/79-0033/hwmon/hwmon*/",
-             "/sys/bus/i2c/devices/80-0033/hwmon/hwmon*/"]
+             "/sys/bus/i2c/devices/134-0071/",
+             "/sys/bus/i2c/devices/148-0074/",
+             "/sys/bus/i2c/devices/149-0075/",
+             "/sys/bus/i2c/devices/152-0076/",
+             "/sys/bus/i2c/devices/153-0076/",
+             "/sys/bus/i2c/devices/150-0073/",
+             "/sys/bus/i2c/devices/151-0073/",
+             "/sys/bus/i2c/devices/144-0032/hwmon/hwmon*/",
+             "/sys/bus/i2c/devices/145-0033/hwmon/hwmon*/"]
 
 class Component(ComponentBase):
     """Nokia platform-specific Component class"""
@@ -32,17 +36,26 @@ class Component(ComponentBase):
         ["BIOS", "Basic Input/Output System"],
         ["SYS_FPGA", "Used for managing CPU board"],
         ["SYS_CPLD", "Used for managing BCM chip, PSUs and LEDs"],
-        ["PORT_CPLD0", "Used for managing PORT 1-16, 33-48, SFP28"],
-        ["PORT_CPLD1", "Used for managing PORT 17-32, 49-64"],
+        ["PORT_CPLD0", "Used for managing PORT 33-48, 65-80"],
+        ["PORT_CPLD1", "Used for managing PORT 49-64, 81-96, SFP28"],
+        ["PORT_CPLD_TL", "Used for managing PORT 1-16"],
+        ["PORT_CPLD_TR", "Used for managing PORT 17-32"],
+        ["PORT_CPLD_BL", "Used for managing PORT 97-112"],
+        ["PORT_CPLD_BR", "Used for managing PORT 113-128"],
         ["FCM0_CPLD", "Used for managing upper fan drawers"],
         ["FCM1_CPLD", "Used for managing lower fan drawers"] ]
-    DEV_NAME = [" ", " ", "MAIN_CPLD", "MAIN_CPLD", "MAIN_CPLD", "FAN0_CPLD", "FAN1_CPLD"]
-    TFR_NAME = [" ", " ", "h6_128_sys_cpld_tfr.vme", "h6_128_port_cpld0_tfr.vme",
-                "h6_128_port_cpld1_tfr.vme", "h6_128_fan_cpld_tfr.vme", "h6_128_fan_cpld_tfr.vme"]
+    DEV_NAME = [" ", " ", "MAIN_CPLD", "MAIN_CPLD", "MAIN_CPLD", "MAIN_CPLD", 
+                "MAIN_CPLD", "MAIN_CPLD","MAIN_CPLD", "FAN0_CPLD", "FAN1_CPLD"]
+    TFR_NAME = [" ", " ", "h6_64_sys_cpld_tfr.vme", "h6_64_port_cpld0_tfr.vme",
+                "h6_64_port_cpld1_tfr.vme", "h6_64_port_cpld_tl_tfr.vme", 
+                "h6_64_port_cpld_tr_tfr.vme", "h6_64_port_cpld_bl_tfr.vme",
+                "h6_64_port_cpld_br_tfr.vme", "h6_64_fan_cpld_tfr.vme", 
+                "h6_64_fan_cpld_tfr.vme"]
 
-    BIOS_UPDATE_COMMAND = ['./afulnx_128', '', '/B', '/P', '/N', '/K']
+    BIOS_UPDATE_COMMAND = ['./afulnx_64', '', '/B', '/P', '/N', '/K']
     FPGA_CHECK_COMMAND = ['./fpga_spi_flash.sh', '-rid']
     FPGA_UPDATE_COMMAND = ['./fpga_spi_flash.sh', '-upd', '', '-all']
+    CPLD_CHECK_COMMAND = ['./cpldupd', '-s', '']
     CPLD_UPDATE_COMMAND = ['./cpldupd', '-u', '', '']
 
     def __init__(self, component_index):
@@ -68,12 +81,6 @@ class Component(ComponentBase):
             result = None
 
         return result
-
-    def _get_cpld_version(self):
-        if self.name == "BIOS":
-            return read_sysfs_file(self.sysfs_dir + "bios_version")
-        else:
-            return read_sysfs_file(self.sysfs_dir + "version")
 
     def get_name(self):
         """
@@ -149,7 +156,10 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
-        return self._get_cpld_version()
+        if self.name == "BIOS":
+            return read_sysfs_file(self.sysfs_dir + "bios_version")
+        else:
+            return read_sysfs_file(self.sysfs_dir + "version")
 
     def install_firmware(self, image_path):
         """
@@ -163,16 +173,14 @@ class Component(ComponentBase):
         """
         image_name = ntpath.basename(image_path)
 
-        # check whether the image file exists
         os.chdir("/tmp")
         if not os.path.isfile(image_name):
             print(f"ERROR: the image {image_name} doesn't exist in /tmp")
             return False
 
         if self.name == "BIOS":
-            # check whether the BIOS upgrade tool exists
-            if not os.path.isfile('/tmp/afulnx_128'):
-                print("ERROR: the BIOS upgrade tool /tmp/afulnx_128 doesn't exist ")
+            if not os.path.isfile('/tmp/afulnx_64'):
+                print("ERROR: the BIOS upgrade tool /tmp/afulnx_64 doesn't exist ")
                 return False
             self.BIOS_UPDATE_COMMAND[1] = image_name
             try:
@@ -183,7 +191,6 @@ class Component(ComponentBase):
             print("\nBIOS update has ended\n")
         
         elif self.name == "SYS_FPGA":
-            # check whether the fpga upgrade tool exists
             if not os.path.isfile('/tmp/fpga_spi_flash.sh'):
                 print("ERROR: the fpga upgrade tool /tmp/fpga_spi_flash.sh doesn't exist ")
                 return False
@@ -213,12 +220,15 @@ class Component(ComponentBase):
             self._power_cycle()
 
         else:
-            # check whether the cpld upgrade tool exists
             if not os.path.isfile('/tmp/cpldupd'):
                 print("ERROR: the cpld upgrade tool /tmp/cpldupd doesn't exist ")
                 return False
-            val = [" ", " ", "0x4", "0x2", "0x1", "0x10", "0x8"]
-            write_sysfs_file("/sys/bus/i2c/devices/1-0060/hitless", val[self.index])
+            self.CPLD_CHECK_COMMAND[2] = self.dev_name
+            try:
+                subprocess.run(self.CPLD_CHECK_COMMAND, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                print(f"ERROR: Failed to Scan Jtag chain for {self.name}: rc={e.returncode}")
+                return False
             self.CPLD_UPDATE_COMMAND[2] = self.dev_name
             self.CPLD_UPDATE_COMMAND[3] = image_name
             try:
@@ -232,11 +242,10 @@ class Component(ComponentBase):
             except subprocess.CalledProcessError as e:
                 print(f"ERROR: Failed to upgrade {self.name}: rc={e.returncode}")
                 return False
-            write_sysfs_file("/sys/bus/i2c/devices/1-0060/hitless", "0x0")
             print(f"\n{self.name} firmware update has ended\n")
         
         return True
-
+     
     def update_firmware(self, image_path):
         """
         Updates firmware of the component
@@ -248,10 +257,14 @@ class Component(ComponentBase):
         Args:
             image_path: A string, path to firmware image
 
+        Returns:
+            Boolean False if image_path doesn't exist instead of throwing an exception error
+            Nothing when the update is successful
+
         Raises:
             RuntimeError: update failed
         """
-        return False
+        return self.install_firmware(image_path)
 
     def get_available_firmware_version(self, image_path):
         """
@@ -265,13 +278,17 @@ class Component(ComponentBase):
         Returns:
             A string containing the available firmware version of the component
         """
-        return "N/A"
+        if image_path:    
+            image_name = ntpath.basename(image_path)
+            return image_name
 
+        return 'NA'
+    
     def _power_cycle(self):
         os.system('sync')
         os.system('sync')
         time.sleep(3)
         for i in range(4):
-            file_path = f"/sys/bus/i2c/devices/{i+94}-00{hex(0x58+i)[2:]}/psu_rst"
+            file_path = f"/sys/bus/i2c/devices/{i+136}-00{hex(0x58+i)[2:]}/psu_rst"
             if os.path.exists(file_path):
                 write_sysfs_file(file_path, "Reset\n")

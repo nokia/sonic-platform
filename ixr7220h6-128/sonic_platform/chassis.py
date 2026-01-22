@@ -31,10 +31,10 @@ MAX_SELECT_DELAY = 10
 FAN_DRAWERS = 8
 FANS_PER_DRAWER = 2
 PSU_NUM = 4
-THERMAL_NUM = 21
-COMPONENT_NUM = 7
+THERMAL_NUM = 20
+COMPONENT_NUM = 11
 
-CPLD_DIR = "/sys/bus/i2c/devices/73-0061/"
+CPLD_DIR = "/sys/bus/i2c/devices/134-0071/"
 SYSFPGA_DIR  = "/sys/bus/i2c/devices/1-0060/"
 BUS_IDX = [1,2,9,10,17,18,25,26,33,34,41,42,49,50,57,58,65,66,73,74,81,82,89,90,97,98,105,106,113,114,121,122,
            3,4,11,12,19,20,27,28,35,36,43,44,51,52,59,60,67,68,75,76,83,84,91,92,99,100,107,108,115,116,123,124,
@@ -98,9 +98,9 @@ class Chassis(ChassisBase):
             psu = Psu(i)
             self._psu_list.append(psu)
 
-        # for i in range(COMPONENT_NUM):
-        #     component = Component(i)
-        #     self._component_list.append(component)
+        for i in range(COMPONENT_NUM):
+            component = Component(i)
+            self._component_list.append(component)
 
     def get_sfp(self, index):
         """
@@ -289,6 +289,8 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
+        return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+    
         result = read_sysfs_file(SYSFPGA_DIR + "reset_cause")
 
         if (int(result, 16) & 0x10) >> 4 == 1:
@@ -361,6 +363,7 @@ class Chassis(ChassisBase):
         Returns:
             bool: True if system LED state is set successfully, False if not
         """
+        return False
         color_to_value = {
             'blue': '0x3',
             'green': '0x5',
@@ -387,6 +390,7 @@ class Chassis(ChassisBase):
             A string, one of the valid LED color strings which could be vendor
             specified.
         """
+        return 'N/A'
         result = read_sysfs_file(CPLD_DIR + 'led_sys')
         val = int(result, 16)
         if (val & 0x8) == 0x8:

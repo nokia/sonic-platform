@@ -24,7 +24,8 @@ load_kernel_drivers() {
 
 h6-128_profile()
 {
-    MAC_ADDR=$(ip link show eth0 | grep ether | awk '{print $2}')
+    #MAC_ADDR=$(ip link show eth0 | grep ether | awk '{print $2}')
+    MAC_ADDR=$(sudo decode-syseeprom -m)
     sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g" /usr/share/sonic/device/x86_64-nokia_ixr7220_h6_128-r0/Nokia-IXR7220-H6-128/profile.ini
     echo "Nokia-IXR7220-H6-128: Updated switch mac address ${MAC_ADDR}"
 }
@@ -56,6 +57,8 @@ echo sys_fpga 0x60 > /sys/bus/i2c/devices/i2c-1/new_device
 echo mux_fpga 0x77 > /sys/bus/i2c/devices/i2c-1/new_device
 sleep 1
 echo mux_sys_cpld 0x72 > /sys/bus/i2c/devices/i2c-134/new_device
+
+echo sys_cpld 0x71 > /sys/bus/i2c/devices/i2c-134/new_device
 
 echo mux_fcm 0x75 > /sys/bus/i2c/devices/i2c-144/new_device
 echo mux_fcm 0x76 > /sys/bus/i2c/devices/i2c-145/new_device
@@ -104,7 +107,6 @@ for i in {0..3}; do
 done
 
 echo embd_ctrl 0x21 > /sys/bus/i2c/devices/i2c-0/new_device
-echo jc42 0x18 > /sys/bus/i2c/devices/i2c-0/new_device
 echo lm75 0x48 > /sys/bus/i2c/devices/i2c-143/new_device
 echo lm75 0x48 > /sys/bus/i2c/devices/i2c-154/new_device
 echo lm75 0x49 > /sys/bus/i2c/devices/i2c-154/new_device
@@ -137,14 +139,14 @@ done
 echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-130/new_device
 echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-131/new_device
 
-exit
+h6-128_profile
+
+/usr/local/bin/set_ps.py
 
 for ch in {1..8}; do
     echo 60 > /sys/bus/i2c/devices/144-0032/hwmon/hwmon*/fan${ch}_pwm
     echo 60 > /sys/bus/i2c/devices/145-0033/hwmon/hwmon*/fan${ch}_pwm
 done
-
-h6-128_profile
 
 exit
 

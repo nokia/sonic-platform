@@ -32,16 +32,11 @@
 #define VER_MAJOR_REG           0x00
 #define VER_MINOR_REG           0x01
 #define SCRATCH_REG             0x04
-#define PSU_GOOD_REG            0x0B
-#define PSU_PRES_REG            0x0C
-#define RST_GROUP1_REG          0x11
-#define OSFP_EFUSE_REG0         0x70
-#define SYS_LED_REG0            0x80
-#define SYS_LED_REG1            0x81
+#define SYS_LED_REG2            0x8
+#define SYS_LED_REG3            0x9
+#define OSFP_EFUSE_REG0         0x10
 
-// REG BIT FIELD POSITION or MASK
-
-static const unsigned short cpld_address_list[] = {0x61, I2C_CLIENT_END};
+static const unsigned short cpld_address_list[] = {0x71, I2C_CLIENT_END};
 
 struct cpld_data {
     struct i2c_client *client;
@@ -84,7 +79,7 @@ static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, ch
     reg_major = cpld_i2c_read(data, VER_MAJOR_REG);
     reg_minor = cpld_i2c_read(data, VER_MINOR_REG);
 
-    return sprintf(buf, "%d.%d\n", reg_major, reg_minor);
+    return sprintf(buf, "%02x.%02x\n", reg_major, reg_minor);
 }
 
 static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf)
@@ -115,42 +110,20 @@ static ssize_t set_scratch(struct device *dev, struct device_attribute *devattr,
     return count;
 }
 
-static ssize_t show_psu_ok(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-
-    val = cpld_i2c_read(data, PSU_GOOD_REG);
-
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t show_psu_pres(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-
-    val = cpld_i2c_read(data, PSU_PRES_REG);
-
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t show_led0(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_led2(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val = 0;
     u8 mask = 0xF;
 
-    val = cpld_i2c_read(data, SYS_LED_REG0);
+    val = cpld_i2c_read(data, SYS_LED_REG2);
     if (sda->index == 0) mask = 0xF;
     else mask = 0x3;
     return sprintf(buf, "0x%x\n", (val>>sda->index) & mask);
 }
 
-static ssize_t set_led0(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+static ssize_t set_led2(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
@@ -169,28 +142,28 @@ static ssize_t set_led0(struct device *dev, struct device_attribute *devattr, co
         return -EINVAL;
     }
     reg_mask = (~(mask << sda->index)) & 0xFF;
-    reg_val = cpld_i2c_read(data, SYS_LED_REG0);
+    reg_val = cpld_i2c_read(data, SYS_LED_REG2);
     reg_val = reg_val & reg_mask;
     usr_val = usr_val << sda->index;
-    cpld_i2c_write(data, SYS_LED_REG0, (reg_val | usr_val));
+    cpld_i2c_write(data, SYS_LED_REG2, (reg_val | usr_val));
 
     return count;
 }
 
-static ssize_t show_led1(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_led3(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val = 0;
     u8 mask = 0xF;
 
-    val = cpld_i2c_read(data, SYS_LED_REG1);
+    val = cpld_i2c_read(data, SYS_LED_REG3);
     if (sda->index == 0) mask = 0xF;
     else mask = 0x3;
     return sprintf(buf, "0x%x\n", (val>>sda->index) & mask);
 }
 
-static ssize_t set_led1(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+static ssize_t set_led3(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
@@ -209,46 +182,10 @@ static ssize_t set_led1(struct device *dev, struct device_attribute *devattr, co
         return -EINVAL;
     }
     reg_mask = (~(mask << sda->index)) & 0xFF;
-    reg_val = cpld_i2c_read(data, SYS_LED_REG1);
+    reg_val = cpld_i2c_read(data, SYS_LED_REG3);
     reg_val = reg_val & reg_mask;
     usr_val = usr_val << sda->index;
-    cpld_i2c_write(data, SYS_LED_REG1, (reg_val | usr_val));
-
-    return count;
-}
-
-static ssize_t show_rst1(struct device *dev, struct device_attribute *devattr, char *buf)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
-
-    val = cpld_i2c_read(data, RST_GROUP1_REG);
-
-    return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t set_rst1(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 reg_val = 0;
-    u8 usr_val = 0;
-    u8 mask;
-
-    int ret = kstrtou8(buf, 10, &usr_val);
-    if (ret != 0) {
-        return ret;
-    }
-    if (usr_val > 1) {
-        return -EINVAL;
-    }
-
-    mask = (~(1 << sda->index)) & 0xFF;
-    reg_val = cpld_i2c_read(data, RST_GROUP1_REG);
-    reg_val = reg_val & mask;
-    usr_val = usr_val << sda->index;
-    cpld_i2c_write(data, RST_GROUP1_REG, (reg_val | usr_val));
+    cpld_i2c_write(data, SYS_LED_REG3, (reg_val | usr_val));
 
     return count;
 }
@@ -285,42 +222,22 @@ static ssize_t set_osfp_efuse(struct device *dev, struct device_attribute *devat
 static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(scratch, S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
 
-static SENSOR_DEVICE_ATTR(psu1_ok, S_IRUGO, show_psu_ok, NULL, 0);
-static SENSOR_DEVICE_ATTR(psu2_ok, S_IRUGO, show_psu_ok, NULL, 1);
-static SENSOR_DEVICE_ATTR(psu3_ok, S_IRUGO, show_psu_ok, NULL, 2);
-static SENSOR_DEVICE_ATTR(psu4_ok, S_IRUGO, show_psu_ok, NULL, 3);
-static SENSOR_DEVICE_ATTR(psu1_pres, S_IRUGO, show_psu_pres, NULL, 4);
-static SENSOR_DEVICE_ATTR(psu2_pres, S_IRUGO, show_psu_pres, NULL, 5);
-static SENSOR_DEVICE_ATTR(psu3_pres, S_IRUGO, show_psu_pres, NULL, 6);
-static SENSOR_DEVICE_ATTR(psu4_pres, S_IRUGO, show_psu_pres, NULL, 7);
+//static SENSOR_DEVICE_ATTR(led_sys, S_IRUGO | S_IWUSR, show_led0, set_led0, 0);
+static SENSOR_DEVICE_ATTR(led_psu, S_IRUGO, show_led3, NULL, 0);
+//static SENSOR_DEVICE_ATTR(led_loc, S_IRUGO | S_IWUSR, show_led2, set_led2, 0);
+static SENSOR_DEVICE_ATTR(led_fan, S_IRUGO | S_IWUSR, show_led2, set_led2, 4);
 
-static SENSOR_DEVICE_ATTR(led_sys, S_IRUGO | S_IWUSR, show_led0, set_led0, 0);
-static SENSOR_DEVICE_ATTR(led_psu, S_IRUGO, show_led0, NULL, 4);
-static SENSOR_DEVICE_ATTR(led_loc, S_IRUGO | S_IWUSR, show_led1, set_led1, 0);
-static SENSOR_DEVICE_ATTR(led_fan, S_IRUGO | S_IWUSR, show_led1, set_led1, 4);
-
-static SENSOR_DEVICE_ATTR(mac_pcie_rst, S_IRUGO | S_IWUSR, show_rst1, set_rst1, 3);
 static SENSOR_DEVICE_ATTR(osfp_efuse, S_IRUGO | S_IWUSR, show_osfp_efuse, set_osfp_efuse, 0);
 
 static struct attribute *sys_cpld_attributes[] = {
     &sensor_dev_attr_version.dev_attr.attr,
     &sensor_dev_attr_scratch.dev_attr.attr,
 
-    &sensor_dev_attr_psu1_ok.dev_attr.attr,
-    &sensor_dev_attr_psu2_ok.dev_attr.attr,
-    &sensor_dev_attr_psu3_ok.dev_attr.attr,
-    &sensor_dev_attr_psu4_ok.dev_attr.attr,
-    &sensor_dev_attr_psu1_pres.dev_attr.attr,
-    &sensor_dev_attr_psu2_pres.dev_attr.attr,
-    &sensor_dev_attr_psu3_pres.dev_attr.attr,
-    &sensor_dev_attr_psu4_pres.dev_attr.attr,
-
-    &sensor_dev_attr_led_sys.dev_attr.attr,
+    //&sensor_dev_attr_led_sys.dev_attr.attr,
     &sensor_dev_attr_led_psu.dev_attr.attr,
-    &sensor_dev_attr_led_loc.dev_attr.attr,
+    //&sensor_dev_attr_led_loc.dev_attr.attr,
     &sensor_dev_attr_led_fan.dev_attr.attr,
 
-    &sensor_dev_attr_mac_pcie_rst.dev_attr.attr,
     &sensor_dev_attr_osfp_efuse.dev_attr.attr,
 
     NULL
@@ -360,9 +277,9 @@ static int sys_cpld_probe(struct i2c_client *client)
         goto exit;
     }
 
-    int i;
-    for (i=0;i<8;i++) cpld_i2c_write(data, OSFP_EFUSE_REG0+i, 0xFF);
-    data->osfp_efuse = 1;
+    // int i;
+    // for (i=0;i<8;i++) cpld_i2c_write(data, OSFP_EFUSE_REG0+i, 0xFF);
+    // data->osfp_efuse = 1;
 
     return 0;
 
@@ -379,7 +296,7 @@ static void sys_cpld_remove(struct i2c_client *client)
 
 static const struct of_device_id sys_cpld_of_ids[] = {
     {
-        .compatible = "nokia,sys_cpld",
+        .compatible = "sys_cpld",
         .data       = (void *) 0,
     },
     { },

@@ -32,11 +32,9 @@
 #define HW_BOARD_VER_REG                 0x00
 #define VER_MAJOR_REG                    0x01
 #define VER_MINOR_REG                    0x02
-#define BMC_TIMING_FCM_PSU_PRESENT_REG   0x07
+#define PSU_PRESENT_REG                  0x07
 #define SSD_PRESENT_REG                  0x08
 #define PSU_POWERGOOD_REG                0x51
-
-// REG BIT FIELD POSITION or MASK
 
 static const unsigned short cpld_address_list[] = {0x60, I2C_CLIENT_END};
 
@@ -80,7 +78,7 @@ static ssize_t show_hw_board_ver(struct device *dev, struct device_attribute *de
     return sprintf(buf, "0x%x\n", val);
 }
 
-static ssize_t show_fpga_ver(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     u8 reg_major = 0;
@@ -89,16 +87,16 @@ static ssize_t show_fpga_ver(struct device *dev, struct device_attribute *devatt
     reg_major = cpld_i2c_read(data, VER_MAJOR_REG);
     reg_minor = cpld_i2c_read(data, VER_MINOR_REG);
 
-    return sprintf(buf, "%d.%d\n", reg_major, reg_minor);
+    return sprintf(buf, "%02x.%02x\n", reg_major, reg_minor);
 }
 
-static ssize_t show_bmc_timing_fcm_psu_present(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_psu_present(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val = 0;
 
-    val = cpld_i2c_read(data, BMC_TIMING_FCM_PSU_PRESENT_REG);
+    val = cpld_i2c_read(data, PSU_PRESENT_REG);
     return sprintf(buf, "%d\n", (val>>sda->index) & 0x1 ? 1:0);
 }
 
@@ -124,21 +122,21 @@ static ssize_t show_ssd_present(struct device *dev, struct device_attribute *dev
 
 // sysfs attributes
 static SENSOR_DEVICE_ATTR(hw_board_version, S_IRUGO, show_hw_board_ver, NULL, 0);
-static SENSOR_DEVICE_ATTR(fpga_version, S_IRUGO, show_fpga_ver, NULL, 0);
+static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(psu1_ok, S_IRUGO, show_psu_ok, NULL, 0);
 static SENSOR_DEVICE_ATTR(psu2_ok, S_IRUGO, show_psu_ok, NULL, 1);
 static SENSOR_DEVICE_ATTR(psu3_ok, S_IRUGO, show_psu_ok, NULL, 2);
 static SENSOR_DEVICE_ATTR(psu4_ok, S_IRUGO, show_psu_ok, NULL, 3);
-static SENSOR_DEVICE_ATTR(psu1_pres, S_IRUGO, show_bmc_timing_fcm_psu_present, NULL, 3);
-static SENSOR_DEVICE_ATTR(psu2_pres, S_IRUGO, show_bmc_timing_fcm_psu_present, NULL, 2);
-static SENSOR_DEVICE_ATTR(psu3_pres, S_IRUGO, show_bmc_timing_fcm_psu_present, NULL, 1);
-static SENSOR_DEVICE_ATTR(psu4_pres, S_IRUGO, show_bmc_timing_fcm_psu_present, NULL, 0);
+static SENSOR_DEVICE_ATTR(psu1_pres, S_IRUGO, show_psu_present, NULL, 3);
+static SENSOR_DEVICE_ATTR(psu2_pres, S_IRUGO, show_psu_present, NULL, 2);
+static SENSOR_DEVICE_ATTR(psu3_pres, S_IRUGO, show_psu_present, NULL, 1);
+static SENSOR_DEVICE_ATTR(psu4_pres, S_IRUGO, show_psu_present, NULL, 0);
 static SENSOR_DEVICE_ATTR(ssd1_pres, S_IRUGO, show_ssd_present, NULL, 1);
 static SENSOR_DEVICE_ATTR(ssd2_pres, S_IRUGO, show_ssd_present, NULL, 0);
 
 static struct attribute *sys_fpga_attributes[] = {
     &sensor_dev_attr_hw_board_version.dev_attr.attr,
-    &sensor_dev_attr_fpga_version.dev_attr.attr,
+    &sensor_dev_attr_version.dev_attr.attr,
     &sensor_dev_attr_psu1_ok.dev_attr.attr,
     &sensor_dev_attr_psu2_ok.dev_attr.attr,
     &sensor_dev_attr_psu3_ok.dev_attr.attr,
@@ -201,7 +199,7 @@ static void sys_fpga_remove(struct i2c_client *client)
 
 static const struct of_device_id sys_fpga_of_ids[] = {
     {
-        .compatible = "nokia,sys_fpga",
+        .compatible = "sys_fpga",
         .data       = (void *) 0,
     },
     { },

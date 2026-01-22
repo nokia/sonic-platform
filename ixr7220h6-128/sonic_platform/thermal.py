@@ -15,31 +15,31 @@ except ImportError as e:
 
 sonic_logger = logger.Logger('thermal')
 
-THERMAL_NUM = 21
+THERMAL_NUM = 20
 
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
     HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
-    I2C_DEV_LIST = ["0-0018", "143-0048", "154-004b", "154-004c", "154-004d",
+    I2C_DEV_LIST = ["143-0048", "154-004b", "154-004c", "154-004d",
                     "154-0049", "154-0048", "154-004a", "174-0048", "177-0048",
                     "180-0048", "183-0048", "167-004d","168-004e", "161-004d",
                     "162-004e", "0-0021", "0-0021"]
-    THERMAL_NAME = ["CPU Board", "Carrier Board", "MB Top U34", "MB Top U178", "MB Bottom U196",
+    THERMAL_NAME = ["Carrier Board", "MB Top U34", "MB Top U178", "MB Bottom U196",
                     "MB Bottom U183", "MB Top U3", "MB Top U15", "LDB Left", "LDB Right",
                     "UDB Left", "UDB Right", "Top FCM 1", "Top FCM 2", "Bottom FCM 1",
                     "Bottom FCM 2",  "CPU", "DDR", "Max Port Temp.",  "SSD",
                     "ASIC TH6"]
 
-    THRESHHOLD = [65.0, 66.0, 68.0, 62.0, 75.0,
-                  105.0, 105.0, 105.0, 78.0, 65.0,
-                  66.0, 66.0, 95.0, 70.0, 85.0,
-                  85.0, 95.0, 70.0, 85.0,70.0,
+    THRESHHOLD = [62.0, 75.0, 75.0, 75.0, 
+                  75.0, 75.0, 75.0, 60.0, 60.0, 
+                  60.0, 60.0, 60.0, 60.0, 62.0, 
+                  62.0, 95.0, 70.0, 75.0, 70.0, 
                   95.0]
-    CRITICAL_THRESHHOLD = [70.0, 70.0, 72.0, 67.0, 80.0,
-                           115.0, 115.0, 115.0, 80.0, 70.0,
-                           69.0, 69.0, 99.0, 80.0, 90.0,
-                           90.0, 99.0, 80.0, 90.0,80.0,
+    CRITICAL_THRESHHOLD = [70.0, 85.0, 85.0, 85.0, 
+                           85.0, 85.0, 85.0, 70.0, 70.0, 
+                           70.0, 70.0, 70.0, 70.0, 72.0, 
+                           72.0, 99.0, 80.0, 77.0, 80.0, 
                            100.0]
 
     def __init__(self, thermal_index, sfps):
@@ -192,9 +192,7 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        if self.index == THERMAL_NUM:
-            return 103.0
-        return 80.0
+        return self.CRITICAL_THRESHHOLD[self.index - 1]
 
     def set_high_critical_threshold(self):
         """

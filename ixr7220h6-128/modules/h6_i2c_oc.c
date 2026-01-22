@@ -1,7 +1,7 @@
 // Driver for Nokia-7220-IXR-H6-128 Router
 /*
- * Copyright (C) 2025 Accton Technology Corporation.
- * Copyright (C) 2025 Nokia Corporation. 
+ * Copyright (C) 2026 Accton Technology Corporation.
+ * Copyright (C) 2026 Nokia Corporation. 
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
