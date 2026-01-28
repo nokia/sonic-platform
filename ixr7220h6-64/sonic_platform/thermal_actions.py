@@ -21,8 +21,8 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         """
         Constructor of SetFanSpeedAction
         """
-        self.default_speed = 46
-        self.threshold1_speed=73        
+        self.default_speed = 40
+        self.threshold1_speed= 53
         self.hightemp_speed = 100
         self.speed = self.default_speed
 
