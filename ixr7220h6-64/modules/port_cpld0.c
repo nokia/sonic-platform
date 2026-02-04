@@ -120,7 +120,7 @@ static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, ch
     reg_major = cpld_i2c_read(data, VER_MAJOR_REG);
     reg_minor = cpld_i2c_read(data, VER_MINOR_REG);
 
-    return sprintf(buf, "%d.%d\n", reg_major, reg_minor);
+    return sprintf(buf, "%02x.%02x\n", reg_major, reg_minor);
 }
 
 static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf)

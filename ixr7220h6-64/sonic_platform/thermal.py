@@ -28,13 +28,14 @@ class Thermal(ThermalBase):
                     "MB MAC", "MB Center 2", "MB Right", "MB Front Right", "FCM Upper",
                     "FCM Lower", "CPU", "DDR", "Max Port Temp.","SSD",
                     "ASIC TH6"]
-    THRESHHOLD = [59.0, 59.0, 31.0, 68.0, 94.0,
-                  94.0, 99.0, 72.0, 59.0, 54.0,
-                  44.0, 90.0, 64.0, 64.0, 59.0,
-                  89.0]
+    THRESHHOLD = [65.0, 65.0, 60.0, 85.0, 99.0,
+                  99.0, 110.0, 85.0, 72.0, 67.0,
+                  65.0, 94.0, 75.0, 75.0, 75.0,
+                  95.0]
+
     CRITICAL_THRESHHOLD = [70.0, 70.0, 65.0, 90.0, 100.0,
                            100.0, 115.0, 90.0, 77.0, 72.0,
-                           70.0, 99.0, 80.0, 75.0, 80.0,
+                           70.0, 99.0, 80.0, 77.0, 80.0,
                            100.0]
 
     def __init__(self, thermal_index, sfps):
@@ -49,7 +50,7 @@ class Thermal(ThermalBase):
         self.thermal_high_crit_threshold_file = None
         self.thermal_temperature_file = None
 
-        if self.index == THERMAL_NUM - 1: #SSD
+        if self.index == THERMAL_NUM - 1:
             self.device_path = glob.glob("/sys/block/sda/device/hwmon/*")
             if len(self.device_path) > 0:
                 self.thermal_temperature_file = self.device_path[0] + "/temp1_input"

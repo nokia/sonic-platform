@@ -397,7 +397,7 @@ static ssize_t fan_show_value(struct device *dev, struct device_attribute *da,
 		ret = sprintf(buf, "0x%02x\n", data->reg_val[FAN_PCB_REG]);
 		break;
 	case FAN_FW_VERSION:
-		ret = sprintf(buf, "%d.%d\n",
+		ret = sprintf(buf, "%02x.%02x\n",
 					data->reg_val[FAN_MAJOR_VERSION_REG],
 					data->reg_val[FAN_MINOR_VERSION_REG]);
 		break;
