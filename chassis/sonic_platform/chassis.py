@@ -38,6 +38,7 @@ REBOOT_CAUSE_DIR = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = os.path.join(REBOOT_CAUSE_DIR, "reboot-cause.txt")
 REBOOT_CAUSE_UNKNOWN = "Unknown"
 HEARTBEAT_WITH_SUPERVISOR_LOST = "Heartbeat with the Supervisor card lost"
+UNABLE_TO_REACH_CPM = "Unable to reach CPM"
 
 class Chassis(ChassisBase):
     """
@@ -155,6 +156,8 @@ class Chassis(ChassisBase):
                 if "Unknown (watchdog or others)" in response.reboot_reason and "Kernel Panic" in reboot_cause:
                     return reason
                 elif HEARTBEAT_WITH_SUPERVISOR_LOST in response.reboot_reason and HEARTBEAT_WITH_SUPERVISOR_LOST in reboot_cause:
+                    return reason
+                elif UNABLE_TO_REACH_CPM in response.reboot_reason and UNABLE_TO_REACH_CPM in reboot_cause:
                     return reason
                 reason = (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, response.reboot_reason)
         return reason
