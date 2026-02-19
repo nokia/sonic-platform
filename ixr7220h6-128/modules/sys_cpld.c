@@ -277,9 +277,9 @@ static int sys_cpld_probe(struct i2c_client *client)
         goto exit;
     }
 
-    // int i;
-    // for (i=0;i<8;i++) cpld_i2c_write(data, OSFP_EFUSE_REG0+i, 0xFF);
-    // data->osfp_efuse = 1;
+    int i;
+    for (i=0;i<8;i++) cpld_i2c_write(data, OSFP_EFUSE_REG0+i, 0xFF);
+    data->osfp_efuse = 1;
 
     return 0;
 

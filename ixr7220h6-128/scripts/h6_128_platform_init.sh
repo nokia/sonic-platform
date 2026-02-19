@@ -10,7 +10,7 @@ load_kernel_drivers() {
     rmmod i2c-piix4
     rmmod i2c_designware_platform
     modprobe igb
-    modprobe amd-xgbe
+#    modprobe amd-xgbe
     modprobe i2c_designware_platform
 
     modprobe i2c-i801

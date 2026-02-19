@@ -34,7 +34,7 @@ class Psu(PsuBase):
         self.index = psu_index + 1
         self.psu_dir = f"/sys/bus/i2c/devices/{I2C_BUS[psu_index]}-00{PSU_ADDR[psu_index]}/"
         self.eeprom_dir = f"/sys/bus/i2c/devices/{I2C_BUS[psu_index]}-00{EEPROM_ADDR[psu_index]}/"
-        self.new_psu_cmd = f"echo dni_psu 0x{PSU_ADDR[psu_index]} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
+        self.new_psu_cmd = f"echo pmbus_psu 0x{PSU_ADDR[psu_index]} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
         self.new_eeprom_cmd = f"echo eeprom_fru 0x{EEPROM_ADDR[psu_index]} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
         self.del_eeprom_cmd = f"echo 0x{EEPROM_ADDR[psu_index]} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/delete_device"
 

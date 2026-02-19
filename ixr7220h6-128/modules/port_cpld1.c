@@ -42,6 +42,7 @@
 #define PORT_RST_REG0           0x78
 #define PORT_MODPRS_REG0        0x88
 #define PORT_PWGOOD_REG0        0x90
+#define PORT_ENABLE_REG0        0x98
 
 static const unsigned short cpld_address_list[] = {0x75, I2C_CLIENT_END};
 
@@ -307,15 +308,42 @@ static ssize_t show_modprs_reg(struct device *dev, struct device_attribute *deva
     return sprintf(buf, "0x%02x\n", val);
 }
 
-static ssize_t show_port_pwgood(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_port_en(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val = 0;
 
-    val = cpld_i2c_read(data, PORT_PWGOOD_REG0 + (sda->index / 8));
+    return sprintf(buf, "na\n");
+    val = cpld_i2c_read(data, PORT_ENABLE_REG0 + (sda->index / 8));
 
     return sprintf(buf, "%d\n", (val>>(sda->index % 8)) & 0x1 ? 1:0);
+}
+
+static ssize_t set_port_en(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
+    u8 reg_val = 0;
+    u8 usr_val = 0;
+    u8 mask;
+
+    return 0;
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret;
+    }
+    if (usr_val > 1) {
+        return -EINVAL;
+    }
+
+    mask = (~(1 << (sda->index % 8))) & 0xFF;
+    reg_val = cpld_i2c_read(data, PORT_ENABLE_REG0 + (sda->index / 8));
+    reg_val = reg_val & mask;
+    usr_val = usr_val << (sda->index % 8);
+    cpld_i2c_write(data, PORT_ENABLE_REG0 + (sda->index / 8), (reg_val | usr_val));
+
+    return count;
 }
 
 // sysfs attributes
@@ -435,38 +463,38 @@ static SENSOR_DEVICE_ATTR(modprs_reg2, S_IRUGO, show_modprs_reg, NULL, 1);
 static SENSOR_DEVICE_ATTR(modprs_reg3, S_IRUGO, show_modprs_reg, NULL, 2);
 static SENSOR_DEVICE_ATTR(modprs_reg4, S_IRUGO, show_modprs_reg, NULL, 3);
 
-static SENSOR_DEVICE_ATTR(port_1_pwgood, S_IRUGO, show_port_pwgood, NULL, 0);
-static SENSOR_DEVICE_ATTR(port_2_pwgood, S_IRUGO, show_port_pwgood, NULL, 1);
-static SENSOR_DEVICE_ATTR(port_3_pwgood, S_IRUGO, show_port_pwgood, NULL, 2);
-static SENSOR_DEVICE_ATTR(port_4_pwgood, S_IRUGO, show_port_pwgood, NULL, 3);
-static SENSOR_DEVICE_ATTR(port_5_pwgood, S_IRUGO, show_port_pwgood, NULL, 4);
-static SENSOR_DEVICE_ATTR(port_6_pwgood, S_IRUGO, show_port_pwgood, NULL, 5);
-static SENSOR_DEVICE_ATTR(port_7_pwgood, S_IRUGO, show_port_pwgood, NULL, 6);
-static SENSOR_DEVICE_ATTR(port_8_pwgood, S_IRUGO, show_port_pwgood, NULL, 7);
-static SENSOR_DEVICE_ATTR(port_9_pwgood, S_IRUGO, show_port_pwgood, NULL, 8);
-static SENSOR_DEVICE_ATTR(port_10_pwgood, S_IRUGO, show_port_pwgood, NULL, 9);
-static SENSOR_DEVICE_ATTR(port_11_pwgood, S_IRUGO, show_port_pwgood, NULL, 10);
-static SENSOR_DEVICE_ATTR(port_12_pwgood, S_IRUGO, show_port_pwgood, NULL, 11);
-static SENSOR_DEVICE_ATTR(port_13_pwgood, S_IRUGO, show_port_pwgood, NULL, 12);
-static SENSOR_DEVICE_ATTR(port_14_pwgood, S_IRUGO, show_port_pwgood, NULL, 13);
-static SENSOR_DEVICE_ATTR(port_15_pwgood, S_IRUGO, show_port_pwgood, NULL, 14);
-static SENSOR_DEVICE_ATTR(port_16_pwgood, S_IRUGO, show_port_pwgood, NULL, 15);
-static SENSOR_DEVICE_ATTR(port_17_pwgood, S_IRUGO, show_port_pwgood, NULL, 16);
-static SENSOR_DEVICE_ATTR(port_18_pwgood, S_IRUGO, show_port_pwgood, NULL, 17);
-static SENSOR_DEVICE_ATTR(port_19_pwgood, S_IRUGO, show_port_pwgood, NULL, 18);
-static SENSOR_DEVICE_ATTR(port_20_pwgood, S_IRUGO, show_port_pwgood, NULL, 19);
-static SENSOR_DEVICE_ATTR(port_21_pwgood, S_IRUGO, show_port_pwgood, NULL, 20);
-static SENSOR_DEVICE_ATTR(port_22_pwgood, S_IRUGO, show_port_pwgood, NULL, 21);
-static SENSOR_DEVICE_ATTR(port_23_pwgood, S_IRUGO, show_port_pwgood, NULL, 22);
-static SENSOR_DEVICE_ATTR(port_24_pwgood, S_IRUGO, show_port_pwgood, NULL, 23);
-static SENSOR_DEVICE_ATTR(port_25_pwgood, S_IRUGO, show_port_pwgood, NULL, 24);
-static SENSOR_DEVICE_ATTR(port_26_pwgood, S_IRUGO, show_port_pwgood, NULL, 25);
-static SENSOR_DEVICE_ATTR(port_27_pwgood, S_IRUGO, show_port_pwgood, NULL, 26);
-static SENSOR_DEVICE_ATTR(port_28_pwgood, S_IRUGO, show_port_pwgood, NULL, 27);
-static SENSOR_DEVICE_ATTR(port_29_pwgood, S_IRUGO, show_port_pwgood, NULL, 28);
-static SENSOR_DEVICE_ATTR(port_30_pwgood, S_IRUGO, show_port_pwgood, NULL, 29);
-static SENSOR_DEVICE_ATTR(port_31_pwgood, S_IRUGO, show_port_pwgood, NULL, 30);
-static SENSOR_DEVICE_ATTR(port_32_pwgood, S_IRUGO, show_port_pwgood, NULL, 31);
+static SENSOR_DEVICE_ATTR(port_1_en, S_IRUGO, show_port_en, set_port_en, 0);
+static SENSOR_DEVICE_ATTR(port_2_en, S_IRUGO, show_port_en, set_port_en, 1);
+static SENSOR_DEVICE_ATTR(port_3_en, S_IRUGO, show_port_en, set_port_en, 2);
+static SENSOR_DEVICE_ATTR(port_4_en, S_IRUGO, show_port_en, set_port_en, 3);
+static SENSOR_DEVICE_ATTR(port_5_en, S_IRUGO, show_port_en, set_port_en, 4);
+static SENSOR_DEVICE_ATTR(port_6_en, S_IRUGO, show_port_en, set_port_en, 5);
+static SENSOR_DEVICE_ATTR(port_7_en, S_IRUGO, show_port_en, set_port_en, 6);
+static SENSOR_DEVICE_ATTR(port_8_en, S_IRUGO, show_port_en, set_port_en, 7);
+static SENSOR_DEVICE_ATTR(port_9_en, S_IRUGO, show_port_en, set_port_en, 8);
+static SENSOR_DEVICE_ATTR(port_10_en, S_IRUGO, show_port_en, set_port_en, 9);
+static SENSOR_DEVICE_ATTR(port_11_en, S_IRUGO, show_port_en, set_port_en, 10);
+static SENSOR_DEVICE_ATTR(port_12_en, S_IRUGO, show_port_en, set_port_en, 11);
+static SENSOR_DEVICE_ATTR(port_13_en, S_IRUGO, show_port_en, set_port_en, 12);
+static SENSOR_DEVICE_ATTR(port_14_en, S_IRUGO, show_port_en, set_port_en, 13);
+static SENSOR_DEVICE_ATTR(port_15_en, S_IRUGO, show_port_en, set_port_en, 14);
+static SENSOR_DEVICE_ATTR(port_16_en, S_IRUGO, show_port_en, set_port_en, 15);
+static SENSOR_DEVICE_ATTR(port_17_en, S_IRUGO, show_port_en, set_port_en, 16);
+static SENSOR_DEVICE_ATTR(port_18_en, S_IRUGO, show_port_en, set_port_en, 17);
+static SENSOR_DEVICE_ATTR(port_19_en, S_IRUGO, show_port_en, set_port_en, 18);
+static SENSOR_DEVICE_ATTR(port_20_en, S_IRUGO, show_port_en, set_port_en, 19);
+static SENSOR_DEVICE_ATTR(port_21_en, S_IRUGO, show_port_en, set_port_en, 20);
+static SENSOR_DEVICE_ATTR(port_22_en, S_IRUGO, show_port_en, set_port_en, 21);
+static SENSOR_DEVICE_ATTR(port_23_en, S_IRUGO, show_port_en, set_port_en, 22);
+static SENSOR_DEVICE_ATTR(port_24_en, S_IRUGO, show_port_en, set_port_en, 23);
+static SENSOR_DEVICE_ATTR(port_25_en, S_IRUGO, show_port_en, set_port_en, 24);
+static SENSOR_DEVICE_ATTR(port_26_en, S_IRUGO, show_port_en, set_port_en, 25);
+static SENSOR_DEVICE_ATTR(port_27_en, S_IRUGO, show_port_en, set_port_en, 26);
+static SENSOR_DEVICE_ATTR(port_28_en, S_IRUGO, show_port_en, set_port_en, 27);
+static SENSOR_DEVICE_ATTR(port_29_en, S_IRUGO, show_port_en, set_port_en, 28);
+static SENSOR_DEVICE_ATTR(port_30_en, S_IRUGO, show_port_en, set_port_en, 29);
+static SENSOR_DEVICE_ATTR(port_31_en, S_IRUGO, show_port_en, set_port_en, 30);
+static SENSOR_DEVICE_ATTR(port_32_en, S_IRUGO, show_port_en, set_port_en, 31);
 
 static struct attribute *port_cpld1_attributes[] = {
     &sensor_dev_attr_version.dev_attr.attr,
@@ -585,38 +613,38 @@ static struct attribute *port_cpld1_attributes[] = {
     &sensor_dev_attr_modprs_reg3.dev_attr.attr,
     &sensor_dev_attr_modprs_reg4.dev_attr.attr,
 
-    &sensor_dev_attr_port_1_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_2_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_3_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_4_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_5_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_6_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_7_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_8_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_9_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_10_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_11_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_12_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_13_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_14_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_15_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_16_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_17_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_18_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_19_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_20_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_21_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_22_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_23_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_24_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_25_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_26_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_27_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_28_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_29_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_30_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_31_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_32_pwgood.dev_attr.attr,
+    &sensor_dev_attr_port_1_en.dev_attr.attr,
+    &sensor_dev_attr_port_2_en.dev_attr.attr,
+    &sensor_dev_attr_port_3_en.dev_attr.attr,
+    &sensor_dev_attr_port_4_en.dev_attr.attr,
+    &sensor_dev_attr_port_5_en.dev_attr.attr,
+    &sensor_dev_attr_port_6_en.dev_attr.attr,
+    &sensor_dev_attr_port_7_en.dev_attr.attr,
+    &sensor_dev_attr_port_8_en.dev_attr.attr,
+    &sensor_dev_attr_port_9_en.dev_attr.attr,
+    &sensor_dev_attr_port_10_en.dev_attr.attr,
+    &sensor_dev_attr_port_11_en.dev_attr.attr,
+    &sensor_dev_attr_port_12_en.dev_attr.attr,
+    &sensor_dev_attr_port_13_en.dev_attr.attr,
+    &sensor_dev_attr_port_14_en.dev_attr.attr,
+    &sensor_dev_attr_port_15_en.dev_attr.attr,
+    &sensor_dev_attr_port_16_en.dev_attr.attr,
+    &sensor_dev_attr_port_17_en.dev_attr.attr,
+    &sensor_dev_attr_port_18_en.dev_attr.attr,
+    &sensor_dev_attr_port_19_en.dev_attr.attr,
+    &sensor_dev_attr_port_20_en.dev_attr.attr,
+    &sensor_dev_attr_port_21_en.dev_attr.attr,
+    &sensor_dev_attr_port_22_en.dev_attr.attr,
+    &sensor_dev_attr_port_23_en.dev_attr.attr,
+    &sensor_dev_attr_port_24_en.dev_attr.attr,
+    &sensor_dev_attr_port_25_en.dev_attr.attr,
+    &sensor_dev_attr_port_26_en.dev_attr.attr,
+    &sensor_dev_attr_port_27_en.dev_attr.attr,
+    &sensor_dev_attr_port_28_en.dev_attr.attr,
+    &sensor_dev_attr_port_29_en.dev_attr.attr,
+    &sensor_dev_attr_port_30_en.dev_attr.attr,
+    &sensor_dev_attr_port_31_en.dev_attr.attr,
+    &sensor_dev_attr_port_32_en.dev_attr.attr,
 
     NULL
 };

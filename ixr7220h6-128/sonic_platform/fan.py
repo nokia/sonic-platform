@@ -14,8 +14,8 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 FANS_PER_DRAWER = 2
-MAX_FAN_F_SPEED = 13600
-MAX_FAN_R_SPEED = 15400
+MAX_FAN_F_SPEED = 15400
+MAX_FAN_R_SPEED = 13600
 FAN_TOLERANCE = 50
 WORKING_FAN_SPEED = 2000
 

@@ -36,10 +36,6 @@ COMPONENT_NUM = 11
 
 CPLD_DIR = "/sys/bus/i2c/devices/134-0071/"
 SYSFPGA_DIR  = "/sys/bus/i2c/devices/1-0060/"
-BUS_IDX = [1,2,9,10,17,18,25,26,33,34,41,42,49,50,57,58,65,66,73,74,81,82,89,90,97,98,105,106,113,114,121,122,
-           3,4,11,12,19,20,27,28,35,36,43,44,51,52,59,60,67,68,75,76,83,84,91,92,99,100,107,108,115,116,123,124,
-           5,6,13,14,21,22,29,30,37,38,45,46,53,54,61,62,69,70,77,78,85,86,93,94,101,102,109,110,117,118,125,126,
-           7,8,15,16,23,24,31,32,39,40,47,48,55,56,63,64,71,72,79,80,87,88,95,96,103,104,111,112,119,120,127,128,129,130]
 
 SYSLOG_IDENTIFIER = "chassis"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
@@ -59,7 +55,7 @@ class Chassis(ChassisBase):
         # then create the sfp nodes
         eeprom_path = "/sys/bus/i2c/devices/{}-0050/eeprom"
         for index in range(PORT_START, PORT_START + PORT_END):
-            port_i2c_map = PORT_I2C_START + BUS_IDX[index-1] - 1
+            port_i2c_map = PORT_I2C_START + index - 1
             port_eeprom_path = eeprom_path.format(port_i2c_map)
             if not os.path.exists(port_eeprom_path):
                 sonic_logger.log_info(f"path {port_eeprom_path} didnt exist")

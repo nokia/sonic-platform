@@ -33,16 +33,18 @@
 #define VER_MINOR_REG           0x01
 #define SCRATCH_REG             0x04
 #define PORT_LPMODE_REG0        0x70
-#define PORT_ENABLE_REG0        0x72
+#define PORT_EFUSE_REG0         0x72
 #define PORT_RST_REG0           0x78
 #define PORT_MODPRS_REG0        0x88
 #define PORT_PWGOOD_REG0        0x90
+#define PORT_ENABLE_REG0        0x98
 
 static const unsigned short cpld_address_list[] = {0x73, 0x76, I2C_CLIENT_END};
 
 struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
+    int port_efuse;
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -225,15 +227,33 @@ static ssize_t show_modprs_reg(struct device *dev, struct device_attribute *deva
     return sprintf(buf, "0x%02x\n", val);
 }
 
-static ssize_t show_port_pwgood(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_port_efuse(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val = 0;
+    
+    return sprintf(buf, "%s\n", (data->port_efuse) ? "Enabled":"Disabled");
+}
 
-    val = cpld_i2c_read(data, PORT_PWGOOD_REG0 + (sda->index / 8));
+static ssize_t set_port_efuse(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    const char *str_en = "Enable\n";
+    const char *str_dis = "Disable\n";
+    
+    if (strcmp(buf, str_en) == 0) {
+        cpld_i2c_write(data, PORT_EFUSE_REG0, 0xFF);
+        cpld_i2c_write(data, PORT_EFUSE_REG0+1, 0xFF);
+        data->port_efuse = 1;
+    }
+    else if (strcmp(buf, str_dis) == 0) {
+        cpld_i2c_write(data, PORT_EFUSE_REG0, 0x0);
+        cpld_i2c_write(data, PORT_EFUSE_REG0+1, 0x0);
+        data->port_efuse = 0;
+    }
+    else
+        return -EINVAL;
 
-    return sprintf(buf, "%d\n", (val>>(sda->index % 8)) & 0x1 ? 1:0);
+    return count;
 }
 
 static ssize_t show_port_en(struct device *dev, struct device_attribute *devattr, char *buf)
@@ -242,6 +262,7 @@ static ssize_t show_port_en(struct device *dev, struct device_attribute *devattr
     struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val = 0;
 
+    return sprintf(buf, "na\n");
     val = cpld_i2c_read(data, PORT_ENABLE_REG0 + (sda->index / 8));
 
     return sprintf(buf, "%d\n", (val>>(sda->index % 8)) & 0x1 ? 1:0);
@@ -255,6 +276,7 @@ static ssize_t set_port_en(struct device *dev, struct device_attribute *devattr,
     u8 usr_val = 0;
     u8 mask;
 
+    return 0;
     int ret = kstrtou8(buf, 10, &usr_val);
     if (ret != 0) {
         return ret;
@@ -330,39 +352,24 @@ static SENSOR_DEVICE_ATTR(port_16_prs, S_IRUGO, show_port_prs, NULL, 15);
 static SENSOR_DEVICE_ATTR(modprs_reg1, S_IRUGO, show_modprs_reg, NULL, 0);
 static SENSOR_DEVICE_ATTR(modprs_reg2, S_IRUGO, show_modprs_reg, NULL, 1);
 
-static SENSOR_DEVICE_ATTR(port_1_pwgood, S_IRUGO, show_port_pwgood, NULL, 0);
-static SENSOR_DEVICE_ATTR(port_2_pwgood, S_IRUGO, show_port_pwgood, NULL, 1);
-static SENSOR_DEVICE_ATTR(port_3_pwgood, S_IRUGO, show_port_pwgood, NULL, 2);
-static SENSOR_DEVICE_ATTR(port_4_pwgood, S_IRUGO, show_port_pwgood, NULL, 3);
-static SENSOR_DEVICE_ATTR(port_5_pwgood, S_IRUGO, show_port_pwgood, NULL, 4);
-static SENSOR_DEVICE_ATTR(port_6_pwgood, S_IRUGO, show_port_pwgood, NULL, 5);
-static SENSOR_DEVICE_ATTR(port_7_pwgood, S_IRUGO, show_port_pwgood, NULL, 6);
-static SENSOR_DEVICE_ATTR(port_8_pwgood, S_IRUGO, show_port_pwgood, NULL, 7);
-static SENSOR_DEVICE_ATTR(port_9_pwgood, S_IRUGO, show_port_pwgood, NULL, 8);
-static SENSOR_DEVICE_ATTR(port_10_pwgood, S_IRUGO, show_port_pwgood, NULL, 9);
-static SENSOR_DEVICE_ATTR(port_11_pwgood, S_IRUGO, show_port_pwgood, NULL, 10);
-static SENSOR_DEVICE_ATTR(port_12_pwgood, S_IRUGO, show_port_pwgood, NULL, 11);
-static SENSOR_DEVICE_ATTR(port_13_pwgood, S_IRUGO, show_port_pwgood, NULL, 12);
-static SENSOR_DEVICE_ATTR(port_14_pwgood, S_IRUGO, show_port_pwgood, NULL, 13);
-static SENSOR_DEVICE_ATTR(port_15_pwgood, S_IRUGO, show_port_pwgood, NULL, 14);
-static SENSOR_DEVICE_ATTR(port_16_pwgood, S_IRUGO, show_port_pwgood, NULL, 15);
+static SENSOR_DEVICE_ATTR(port_1_en, S_IRUGO, show_port_en, set_port_en, 0);
+static SENSOR_DEVICE_ATTR(port_2_en, S_IRUGO, show_port_en, set_port_en, 1);
+static SENSOR_DEVICE_ATTR(port_3_en, S_IRUGO, show_port_en, set_port_en, 2);
+static SENSOR_DEVICE_ATTR(port_4_en, S_IRUGO, show_port_en, set_port_en, 3);
+static SENSOR_DEVICE_ATTR(port_5_en, S_IRUGO, show_port_en, set_port_en, 4);
+static SENSOR_DEVICE_ATTR(port_6_en, S_IRUGO, show_port_en, set_port_en, 5);
+static SENSOR_DEVICE_ATTR(port_7_en, S_IRUGO, show_port_en, set_port_en, 6);
+static SENSOR_DEVICE_ATTR(port_8_en, S_IRUGO, show_port_en, set_port_en, 7);
+static SENSOR_DEVICE_ATTR(port_9_en, S_IRUGO, show_port_en, set_port_en, 8);
+static SENSOR_DEVICE_ATTR(port_10_en, S_IRUGO, show_port_en, set_port_en, 9);
+static SENSOR_DEVICE_ATTR(port_11_en, S_IRUGO, show_port_en, set_port_en, 10);
+static SENSOR_DEVICE_ATTR(port_12_en, S_IRUGO, show_port_en, set_port_en, 11);
+static SENSOR_DEVICE_ATTR(port_13_en, S_IRUGO, show_port_en, set_port_en, 12);
+static SENSOR_DEVICE_ATTR(port_14_en, S_IRUGO, show_port_en, set_port_en, 13);
+static SENSOR_DEVICE_ATTR(port_15_en, S_IRUGO, show_port_en, set_port_en, 14);
+static SENSOR_DEVICE_ATTR(port_16_en, S_IRUGO, show_port_en, set_port_en, 15);
 
-static SENSOR_DEVICE_ATTR(port_1_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 0);
-static SENSOR_DEVICE_ATTR(port_2_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 1);
-static SENSOR_DEVICE_ATTR(port_3_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 2);
-static SENSOR_DEVICE_ATTR(port_4_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 3);
-static SENSOR_DEVICE_ATTR(port_5_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 4);
-static SENSOR_DEVICE_ATTR(port_6_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 5);
-static SENSOR_DEVICE_ATTR(port_7_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 6);
-static SENSOR_DEVICE_ATTR(port_8_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 7);
-static SENSOR_DEVICE_ATTR(port_9_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 8);
-static SENSOR_DEVICE_ATTR(port_10_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 9);
-static SENSOR_DEVICE_ATTR(port_11_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 10);
-static SENSOR_DEVICE_ATTR(port_12_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 11);
-static SENSOR_DEVICE_ATTR(port_13_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 12);
-static SENSOR_DEVICE_ATTR(port_14_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 13);
-static SENSOR_DEVICE_ATTR(port_15_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 14);
-static SENSOR_DEVICE_ATTR(port_16_en, S_IRUGO | S_IWUSR, show_port_en, set_port_en, 15);
+static SENSOR_DEVICE_ATTR(port_efuse, S_IRUGO | S_IWUSR, show_port_efuse, set_port_efuse, 0);
 
 static struct attribute *port_cpld2_attributes[] = {
     &sensor_dev_attr_version.dev_attr.attr,
@@ -422,23 +429,6 @@ static struct attribute *port_cpld2_attributes[] = {
     &sensor_dev_attr_modprs_reg1.dev_attr.attr,
     &sensor_dev_attr_modprs_reg2.dev_attr.attr,
 
-    &sensor_dev_attr_port_1_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_2_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_3_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_4_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_5_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_6_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_7_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_8_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_9_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_10_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_11_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_12_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_13_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_14_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_15_pwgood.dev_attr.attr,
-    &sensor_dev_attr_port_16_pwgood.dev_attr.attr,
-
     &sensor_dev_attr_port_1_en.dev_attr.attr,
     &sensor_dev_attr_port_2_en.dev_attr.attr,
     &sensor_dev_attr_port_3_en.dev_attr.attr,
@@ -455,6 +445,8 @@ static struct attribute *port_cpld2_attributes[] = {
     &sensor_dev_attr_port_14_en.dev_attr.attr,
     &sensor_dev_attr_port_15_en.dev_attr.attr,
     &sensor_dev_attr_port_16_en.dev_attr.attr,
+
+    &sensor_dev_attr_port_efuse.dev_attr.attr,
 
     NULL
 };
@@ -492,8 +484,10 @@ static int port_cpld2_probe(struct i2c_client *client)
         dev_err(&client->dev, "CPLD INIT ERROR: Cannot create sysfs\n");
         goto exit;
     }
-
+    
     dump_reg(data);
+    cpld_i2c_write(data, PORT_EFUSE_REG0, 0xFF);
+    cpld_i2c_write(data, PORT_EFUSE_REG0+1, 0xFF);
     dev_info(&client->dev, "[PORT_CPLD2]Reseting PORTs ...\n");
     cpld_i2c_write(data, PORT_LPMODE_REG0, 0x0);
     cpld_i2c_write(data, PORT_LPMODE_REG0+1, 0x0);
