@@ -58,7 +58,7 @@ class Psu(PsuBase):
 
         channel, stub = nokia_common.channel_setup(nokia_common.NOKIA_GRPC_PSU_SERVICE)
         if not channel or not stub:
-            return status
+            return False
         ret, response = nokia_common.try_grpc(stub.GetPsuStatusInfo,
                                               platform_ndk_pb2.ReqPsuInfoPb(psu_idx=self.index))
         nokia_common.channel_shutdown(channel)
