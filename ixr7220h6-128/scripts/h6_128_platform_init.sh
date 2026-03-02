@@ -24,10 +24,9 @@ load_kernel_drivers() {
 
 h6-128_profile()
 {
-    #MAC_ADDR=$(ip link show eth0 | grep ether | awk '{print $2}')
     MAC_ADDR=$(sudo decode-syseeprom -m)
-    sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g" /usr/share/sonic/device/x86_64-nokia_ixr7220_h6_128-r0/Nokia-IXR7220-H6-128/profile.ini
-    echo "Nokia-IXR7220-H6-128: Updated switch mac address ${MAC_ADDR}"
+    sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g" /usr/share/sonic/device/x86_64-nokia_ixr7220_h6_128-r0/Nokia-IXR7220-H6-P128/profile.ini
+    echo "Nokia-IXR7220-H6-P128: Updated switch mac address ${MAC_ADDR}"
 }
 
 file_exists() {
