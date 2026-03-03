@@ -140,8 +140,6 @@ echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-131/new_device
 
 h6-128_profile
 
-/usr/local/bin/set_ps.py
-
 for ch in {1..8}; do
     echo 60 > /sys/bus/i2c/devices/144-0032/hwmon/hwmon*/fan${ch}_pwm
     echo 60 > /sys/bus/i2c/devices/145-0033/hwmon/hwmon*/fan${ch}_pwm
