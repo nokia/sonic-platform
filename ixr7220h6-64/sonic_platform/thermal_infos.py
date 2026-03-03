@@ -71,10 +71,14 @@ class ThermalInfo(ThermalPolicyInfoBase):
     def __init__(self):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
-        self._num_fan_levels = 1
-        self._level_up_threshold =   [[55, 60, 65, 55, 65, 100, 100, 100, 75, 60, 55, 55, 85, 65, 65, 60, 80]]
+        self._num_fan_levels = 3
+        self._level_up_threshold = [[44, 44, 15, 58, 88, 87, 90, 65, 43, 43, 30, 83, 56, 58, 47, 73],
+                                    [52, 50, 29, 65, 92, 92, 94, 70, 49, 50, 41, 88, 61, 68, 51, 86],
+                                    [57, 55, 37, 70, 97, 97, 99, 75, 55, 55, 46, 93, 66, 73, 55, 91]]
 
-        self._level_down_threshold = [[45, 36, 45, 45, 50, 68,  68,  68,  60, 36, 45, 45, 68, 40, 45, 35, 55]]
+        self._level_down_threshold = [[33, 31, 12, 46, 72, 73, 75, 51, 31, 30, 25, 70, 42, 50, 33, 70],
+                                      [41, 39, 25, 53, 77, 77, 78, 56, 39, 41, 32, 78, 48, 60, 40, 75],
+                                      [49, 48, 33, 61, 84, 84, 86, 62, 44, 48, 37, 83, 54, 69, 47, 80]]
 
     def collect(self, chassis):
         """
@@ -86,6 +90,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._over_high_critical_threshold = False
         self._set_fan_default_speed = False
         self._set_fan_threshold_one_speed = False
+        self._set_fan_threshold_two_speed = False
         self._set_fan_high_temp_speed = False
 
         # Calculate average temp within the device
@@ -98,7 +103,6 @@ class ThermalInfo(ThermalPolicyInfoBase):
         min_level = [self._num_fan_levels for i in range(num_of_thermals)]
         for index in range(num_of_thermals):
             for level in range(self._num_fan_levels):
-
                 if self._temps[index]>self._level_up_threshold[level][index]:
                     if max_level<level+1:
                         max_level=level+1
@@ -117,7 +121,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         #set fan to max speed if one fan is down
         for fan in chassis.get_all_fans():
             if not fan.get_status() :
-                self._current_threshold_level = 2
+                self._current_threshold_level = 3
 
        # Decide fan speed based on threshold level
         if self._current_threshold_level != self._old_threshold_level:
@@ -126,6 +130,8 @@ class ThermalInfo(ThermalPolicyInfoBase):
             elif self._current_threshold_level == 1:
                 self._set_fan_threshold_one_speed = True
             elif self._current_threshold_level == 2:
+                self._set_fan_threshold_two_speed = True
+            elif self._current_threshold_level == 3:
                 self._set_fan_high_temp_speed = True
 
         self._old_threshold_level=self._current_threshold_level
@@ -143,6 +149,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         :return: True if the temperature is warm up and over high threshold else False
         """
         return self._set_fan_threshold_one_speed
+
+    def is_set_fan_threshold_two_speed(self):
+        """
+        Retrieves if the temperature is warm up and over high threshold
+        :return: True if the temperature is warm up and over high threshold else False
+        """
+        return self._set_fan_threshold_two_speed
 
     def is_set_fan_high_temp_speed(self):
         """

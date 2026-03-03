@@ -437,6 +437,16 @@ static ssize_t show_psu_led(struct device *dev, struct device_attribute *dev_att
     return sprintf(buf, "%d\n", val);
 }
 
+static ssize_t show_psu_stat(struct device *dev, struct device_attribute *dev_attr, char *buf)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    int val;
+
+    val = psu_read_word(client, PSU_REG_STATUS);
+
+    return sprintf(buf, "0x%04x\n", val);
+}
+
 /* sysfs attributes */
 static SENSOR_DEVICE_ATTR(psu_v_in, S_IRUGO, for_vin, NULL, PSU_V_IN);
 static SENSOR_DEVICE_ATTR(psu_v_out, S_IRUGO, for_vout_data, NULL, PSU_V_OUT);
@@ -455,6 +465,7 @@ static SENSOR_DEVICE_ATTR(psu_rst, S_IRUGO | S_IWUSR, show_psu_rst, set_psu_rst,
 static SENSOR_DEVICE_ATTR(psu_ioc, S_IRUGO, show_psu_ioc, NULL, 0);
 static SENSOR_DEVICE_ATTR(psu_rev, S_IRUGO, show_psu_rev, NULL, 0);
 static SENSOR_DEVICE_ATTR(psu_led, S_IRUGO, show_psu_led, NULL, 0);
+static SENSOR_DEVICE_ATTR(psu_stat, S_IRUGO, show_psu_stat, NULL, 0);
 
 static struct attribute *psu_attributes[] = {
     &sensor_dev_attr_psu_v_in.dev_attr.attr,
@@ -474,6 +485,7 @@ static struct attribute *psu_attributes[] = {
     &sensor_dev_attr_psu_ioc.dev_attr.attr,
     &sensor_dev_attr_psu_rev.dev_attr.attr,
     &sensor_dev_attr_psu_led.dev_attr.attr,
+    &sensor_dev_attr_psu_stat.dev_attr.attr,
     NULL
 };
 
@@ -485,6 +497,7 @@ static int psu_probe(struct i2c_client *client)
 {
     struct psu_data *data;
     int status;
+    int val;
 
     if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_WORD_DATA | I2C_FUNC_SMBUS_BLOCK_DATA))
     {
@@ -513,6 +526,16 @@ static int psu_probe(struct i2c_client *client)
         dev_info(&client->dev, "sysfs_create_group failed!!!\n");
         kfree(data);
         return status;
+    }
+
+    val = psu_read_word(client, PSU_REG_STATUS);
+    if (((val>>4)&0x1) == 1)
+    {
+        dev_warn(&client->dev, "PSU latched, resetting\n");
+        status = psu_write_byte_pec(client, PSU_REG_OPERATION, 0x60);
+        if (status < 0) {
+            dev_warn(&client->dev, "%s WRITE ERROR: reg(0x%02x) err %d\n", PSU_DRIVER_NAME, PSU_REG_OPERATION, status);
+        }
     }
 
     return 0;

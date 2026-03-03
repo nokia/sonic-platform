@@ -32,6 +32,11 @@
 #define CPU_TEMP_REG            0x10
 #define MEM0_TEMP_REG           0x12
 #define MEM1_TEMP_REG           0x13
+#define DATE_YEAR_REG           0xFB
+#define DATE_MONTH_REG          0xFC
+#define DATE_DAY_REG            0xFD
+#define VER_MAJOR_REG           0xFE
+#define VER_MINOR_REG           0xFF
 
 static const unsigned short ec_address_list[] = {0x21, I2C_CLIENT_END};
 
@@ -92,15 +97,41 @@ static ssize_t show_mem1_temperature(struct device *dev, struct device_attribute
     return sprintf(buf, "%d\n", (s8)val * 1000);
 }
 
+static ssize_t show_ec_date(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct ec_data *data = dev_get_drvdata(dev);
+    u8 year = 0;
+    u8 month = 0;
+    u8 day = 0;
+    year = ec_i2c_read(data, DATE_YEAR_REG);
+    month = ec_i2c_read(data, DATE_MONTH_REG);
+    day = ec_i2c_read(data, DATE_DAY_REG);
+    return sprintf(buf, "%d/%d/%d\n", day, month, year);
+}
+
+static ssize_t show_ec_ver(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct ec_data *data = dev_get_drvdata(dev);
+    u8 ver_major = 0;
+    u8 ver_minor = 0;
+    ver_major = ec_i2c_read(data, DATE_YEAR_REG);
+    ver_major = ec_i2c_read(data, DATE_MONTH_REG);
+    return sprintf(buf, "%2x.%2x\n", ver_major, ver_minor);
+}
+
 // sysfs attributes
 static SENSOR_DEVICE_ATTR(cpu_temperature, S_IRUGO, show_cpu_temperature, NULL, 0);
 static SENSOR_DEVICE_ATTR(mem0_temperature, S_IRUGO, show_mem0_temperature, NULL, 0);
 static SENSOR_DEVICE_ATTR(mem1_temperature, S_IRUGO, show_mem1_temperature, NULL, 0);
+static SENSOR_DEVICE_ATTR(ec_date, S_IRUGO, show_ec_date, NULL, 0);
+static SENSOR_DEVICE_ATTR(ec_ver, S_IRUGO, show_ec_ver, NULL, 0);
 
 static struct attribute *embd_ctrl_attributes[] = {
     &sensor_dev_attr_cpu_temperature.dev_attr.attr,
     &sensor_dev_attr_mem0_temperature.dev_attr.attr,
     &sensor_dev_attr_mem1_temperature.dev_attr.attr,
+    &sensor_dev_attr_ec_date.dev_attr.attr,
+    &sensor_dev_attr_ec_ver.dev_attr.attr,
     NULL
 };
 

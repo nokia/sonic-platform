@@ -69,12 +69,6 @@ class Component(ComponentBase):
 
         return result
 
-    def _get_cpld_version(self):
-        if self.name == "BIOS":
-            return read_sysfs_file(self.sysfs_dir + "bios_version")
-        else:
-            return read_sysfs_file(self.sysfs_dir + "version")
-
     def get_name(self):
         """
         Retrieves the name of the component
@@ -149,7 +143,10 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
-        return self._get_cpld_version()
+        if self.name == "BIOS":
+            return read_sysfs_file(self.sysfs_dir + "bios_version")
+        else:
+            return read_sysfs_file(self.sysfs_dir + "version")
 
     def install_firmware(self, image_path):
         """
@@ -251,7 +248,7 @@ class Component(ComponentBase):
         Raises:
             RuntimeError: update failed
         """
-        return False
+        return self.install_firmware(image_path)
 
     def get_available_firmware_version(self, image_path):
         """
@@ -265,7 +262,11 @@ class Component(ComponentBase):
         Returns:
             A string containing the available firmware version of the component
         """
-        return "N/A"
+        if image_path:    
+            image_name = ntpath.basename(image_path)
+            return image_name
+
+        return 'NA'
 
     def _power_cycle(self):
         os.system('sync')

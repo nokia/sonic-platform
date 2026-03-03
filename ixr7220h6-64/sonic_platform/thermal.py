@@ -15,27 +15,28 @@ except ImportError as e:
 
 sonic_logger = logger.Logger('thermal')
 
-THERMAL_NUM = 17
+THERMAL_NUM = 16
 
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
 
     HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
-    I2C_DEV_LIST = ["0-0018", "77-0049", "77-0048", "98-004d", "98-004b",
-                    "98-004c", "98-004a", "101-0048", "98-0049", "98-0048",
-                    "111-004d", "119-004d", "0-0021","0-0021"]
-    THERMAL_NAME = ["CPU Board", "CB Left", "CB Right", "SFP Board", "MB Left",
-                    "MB Center 1", "MB MAC", "MB Center 2", "MB Right", "MB Front Right",
-                    "FCM Upper", "FCM Lower", "CPU", "DDR", "Max Port Temp.", 
-                    "SSD", "ASIC TH6"]
-    THRESHHOLD = [65.0, 66.0, 68.0, 62.0, 75.0,
-                  105.0, 105.0, 105.0, 78.0, 65.0,
-                  66.0, 66.0, 95.0, 70.0, 85.0,
-                  70.0, 95.0]
-    CRITICAL_THRESHHOLD = [70.0, 70.0, 72.0, 67.0, 80.0,
-                           115.0, 115.0, 115.0, 80.0, 70.0,
-                           69.0, 69.0, 99.0, 80.0, 90.0,
-                           80.0, 100.0]
+    I2C_DEV_LIST = ["77-0049", "77-0048", "98-004d", "98-004b", "98-004c",
+                    "98-004a", "101-0048", "98-0049", "98-0048", "111-004d",
+                    "119-004d", "0-0021","0-0021"]
+    THERMAL_NAME = ["CB Left", "CB Right", "SFP Board", "MB Left", "MB Center 1",
+                    "MB MAC", "MB Center 2", "MB Right", "MB Front Right", "FCM Upper",
+                    "FCM Lower", "CPU", "DDR", "Max Port Temp.","SSD",
+                    "ASIC TH6"]
+    THRESHHOLD = [65.0, 65.0, 60.0, 85.0, 99.0,
+                  99.0, 110.0, 85.0, 72.0, 67.0,
+                  65.0, 94.0, 75.0, 75.0, 75.0,
+                  95.0]
+
+    CRITICAL_THRESHHOLD = [70.0, 70.0, 65.0, 90.0, 100.0,
+                           100.0, 115.0, 90.0, 77.0, 72.0,
+                           70.0, 99.0, 80.0, 77.0, 80.0,
+                           100.0]
 
     def __init__(self, thermal_index, sfps):
         ThermalBase.__init__(self)
@@ -49,7 +50,7 @@ class Thermal(ThermalBase):
         self.thermal_high_crit_threshold_file = None
         self.thermal_temperature_file = None
 
-        if self.index == THERMAL_NUM - 1: #SSD
+        if self.index == THERMAL_NUM - 1:
             self.device_path = glob.glob("/sys/block/sda/device/hwmon/*")
             if len(self.device_path) > 0:
                 self.thermal_temperature_file = self.device_path[0] + "/temp1_input"
@@ -189,9 +190,7 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        if self.index == THERMAL_NUM:
-            return 103.0
-        return 80.0
+        return self.CRITICAL_THRESHHOLD[self.index - 1]
 
     def set_high_critical_threshold(self):
         """

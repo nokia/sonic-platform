@@ -100,7 +100,6 @@ done
 
 # thermal
 echo embd_ctrl 0x21 > /sys/bus/i2c/devices/i2c-0/new_device
-echo jc42 0x18 > /sys/bus/i2c/devices/i2c-0/new_device
 echo lm75 0x48 > /sys/bus/i2c/devices/i2c-77/new_device
 echo lm75 0x49 > /sys/bus/i2c/devices/i2c-77/new_device
 echo tmp464 0x48 > /sys/bus/i2c/devices/i2c-101/new_device
