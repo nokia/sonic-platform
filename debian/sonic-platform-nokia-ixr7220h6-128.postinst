@@ -3,7 +3,6 @@
 #
 # see: dh_installdeb(1)
 
-chmod a+x /usr/local/bin/set_ps.py
 chmod a+x /usr/local/bin/h6_128_platform_init.sh
 systemctl enable h6_128_platform_init.service
 systemctl start h6_128_platform_init.service
