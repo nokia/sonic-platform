@@ -177,7 +177,7 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
                     sonic_logger.log_warning(f"{psu_obj.get_name()}: {psu_obj.get_voltage()}V, "
                                              f"{psu_obj.get_current()}A, {psu_obj.get_power()}W.")
                 else:
-                    sonic_logger.log_warning(f"{fan_obj.get_name()} not presence.")
+                    sonic_logger.log_warning(f"{psu_obj.get_name()} not presence.")
         except Exception as e:
             sonic_logger.log_warning(" Fail to save fan and psu info {}".format(repr(e)))
         
