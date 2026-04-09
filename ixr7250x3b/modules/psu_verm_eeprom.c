@@ -15,7 +15,7 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 
-#define EEPROM_NAME      "psu_eeprom"
+#define EEPROM_NAME      "psu_verm_eeprom"
 #define EEPROM_LEN       128
 #define FIELD_LEN_MAX    16
 
@@ -46,7 +46,7 @@ struct menuee_data {
 	u8 checksum;
 };
 
-int cache_eeprom(struct i2c_client *client)
+static int cache_eeprom(struct i2c_client *client)
 {
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 
@@ -63,45 +63,61 @@ int cache_eeprom(struct i2c_client *client)
 	return 0;
 }
 
-int decode_eeprom(struct i2c_client *client)
+static int decode_eeprom(struct i2c_client *client)
 {
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 	int i = 0;
-	u8 len;
+	u8 len, cpylen;
 
 	while (i < EEPROM_LEN) {
+		if (i + 1 >= EEPROM_LEN)
+			break;
 		switch (ee_data->eeprom[i]) {
 		case kEeCleiCode:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->clei[0], &ee_data->eeprom[i], len);
-			ee_data->clei[len] = 0;
+			if (i + len > EEPROM_LEN)
+				return 0;
+			cpylen = min_t(u8, len, FIELD_LEN_MAX - 1);
+			memcpy(ee_data->clei, &ee_data->eeprom[i], cpylen);
+			ee_data->clei[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgDate:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->mfg_date[0], &ee_data->eeprom[i], len);
-			ee_data->mfg_date[len] = 0;
+			if (i + len > EEPROM_LEN)
+				return 0;
+			cpylen = min_t(u8, len, FIELD_LEN_MAX - 1);
+			memcpy(ee_data->mfg_date, &ee_data->eeprom[i], cpylen);
+			ee_data->mfg_date[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgSerialNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->serial_number[0], &ee_data->eeprom[i], len);
-			ee_data->serial_number[len] = 0;
+			if (i + len > EEPROM_LEN)
+				return 0;
+			cpylen = min_t(u8, len, FIELD_LEN_MAX - 1);
+			memcpy(ee_data->serial_number, &ee_data->eeprom[i], cpylen);
+			ee_data->serial_number[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgPartNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			memcpy(&ee_data->part_number[0], &ee_data->eeprom[i], len);
-			ee_data->part_number[len] = 0;
+			if (i + len > EEPROM_LEN)
+				return 0;
+			cpylen = min_t(u8, len, FIELD_LEN_MAX - 1);
+			memcpy(ee_data->part_number, &ee_data->eeprom[i], cpylen);
+			ee_data->part_number[cpylen] = 0;
 			i += len;
 			break;
 		case kHwDirectives:
 			i++;
 			len = ee_data->eeprom[i++];
+			if (i + len > EEPROM_LEN || len > sizeof(ee_data->hw_directives))
+				return 0;
 			memcpy(&ee_data->hw_directives, &ee_data->eeprom[i], len);
 			ee_data->hw_directives = swab32(ee_data->hw_directives);
 			i += len;
@@ -109,12 +125,16 @@ int decode_eeprom(struct i2c_client *client)
 		case kHwType:
 			i++;
 			len = ee_data->eeprom[i++];
+			if (i + len > EEPROM_LEN || len > sizeof(ee_data->hw_type))
+				return 0;
 			memcpy(&ee_data->hw_type, &ee_data->eeprom[i], len);
 			i += len;
 			break;
 		case kCSumRec:
 			i++;
 			len = ee_data->eeprom[i++];
+			if (i + len > EEPROM_LEN || len > sizeof(ee_data->checksum))
+				return 0;
 			memcpy(&ee_data->checksum, &ee_data->eeprom[i], len);
 			i += len;
 			break;
@@ -129,7 +149,15 @@ int decode_eeprom(struct i2c_client *client)
 static ssize_t eeprom_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	struct menuee_data *data = dev_get_drvdata(dev);
-	return sprintf(buf, "%s\n", data->eeprom);
+	int i = 0;
+	int len = 0;
+	for (i = 0; i < EEPROM_LEN; i++) {
+		if (data->eeprom[i] == 0)
+			len += sprintf(buf + len, ".");
+		else
+			len += sprintf(buf + len, "%c", data->eeprom[i]);
+	}
+	return len;
 }
 
 static ssize_t part_number_show(struct device *dev, struct device_attribute *devattr, char *buf)
@@ -206,7 +234,6 @@ static int eeprom_probe(struct i2c_client *client)
 		return -ENOMEM;
 	}
 
-	//data->client = client;
 	mutex_init(&data->lock);
 	i2c_set_clientdata(client, data);
 	
@@ -248,12 +275,12 @@ static struct i2c_driver eeprom_driver = {
 	.address_list     = normal_i2c,
 };
 
-static int __init psu_eeprom_init(void)
+static int __init psu_verm_eeprom_init(void)
 {
 	return i2c_add_driver(&eeprom_driver);
 }
 
-static void __exit psu_eeprom_exit(void)
+static void __exit psu_verm_eeprom_exit(void)
 {
 	i2c_del_driver(&eeprom_driver);
 }
@@ -262,5 +289,5 @@ MODULE_DESCRIPTION("PSU eeprom sysfs driver");
 MODULE_AUTHOR("Nokia");
 MODULE_LICENSE("GPL");
 
-module_init(psu_eeprom_init);
-module_exit(psu_eeprom_exit);
+module_init(psu_verm_eeprom_init);
+module_exit(psu_verm_eeprom_exit);

@@ -16,9 +16,9 @@ except ImportError as e:
 FANS_PER_DRAWER = 4
 I2C_BUS = [11, 12, 13]
 FAN_INDEX_IN_DRAWER = [1, 2, 4, 5]
-EEPROM_INFO = ['54', 'fan_eeprom']
+EEPROM_INFO = ['54', 'fan_verm_eeprom']
 DRIVER_INFO = ['20', 'max31790_wd']
-LED_INFO = ['60', 'fan_led']
+LED_INFO = ['60', 'fan_verm_led']
 REG_DIR = "/sys/bus/pci/devices/0000:01:00.0/"
 
 sonic_logger = logger.Logger('fan_drawer')
