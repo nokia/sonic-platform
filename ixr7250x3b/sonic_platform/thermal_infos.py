@@ -180,7 +180,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         return round(result)
     
     def get_fanctl_speed(self):
-        if (self.fanctl_speed >= self.nc or self.fanctl_speed <= self.mc):
+        if (self.fanctl_speed >= self.nc and self.fanctl_speed <= self.mc):
             return self.fanctl_speed
         else:
             return 0

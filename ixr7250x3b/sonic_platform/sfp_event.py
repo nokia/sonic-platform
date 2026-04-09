@@ -1,4 +1,4 @@
-""""
+"""
     NOKIA 7250 IXR-X3b
 
     listen for the SFP change event and return to chassis.

@@ -48,7 +48,9 @@ class Psu(PsuBase):
         """
         active_psus = 0
         for i in range(PSU_NUM):
-            if self.get_status():
+            psu_dir = f"/sys/bus/i2c/devices/{I2C_BUS[i]}-00{PSU_ADDR}/"
+            result = read_sysfs_file(psu_dir + "psu_status")        
+            if (int(result, 10) & 0x800) >> 11 == 0:
                 active_psus = active_psus + 1
 
         return active_psus

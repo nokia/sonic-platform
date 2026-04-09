@@ -139,7 +139,7 @@ status=$?
 if [ "$status" == "1" ]; then
     chmod 644 /sys/bus/i2c/devices/1-0054/eeprom
 else
-    echo "SYSEEPROM file not foud"
+    echo "SYSEEPROM file not found"
 fi
 
 exit 0

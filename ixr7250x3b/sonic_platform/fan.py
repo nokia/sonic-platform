@@ -323,7 +323,7 @@ class Fan(FanBase):
         """
         if not self.fan_inited:
             if not self.get_presence():
-                return False
+                return 0
         
         fan_duty = read_sysfs_file(self.set_fan_speed_reg)
         if fan_duty != 'ERR':
