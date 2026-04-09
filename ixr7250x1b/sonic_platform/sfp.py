@@ -28,7 +28,7 @@ sonic_logger.set_min_log_priority_info()
 
 class Sfp(SfpOptoeBase):
     """
-    Nokia IXR-7220 X1b Platform-specific Sfp refactor class
+    Nokia IXR-7250 X1b Platform-specific Sfp refactor class
     """
     instances = []
 
@@ -150,7 +150,7 @@ class Sfp(SfpOptoeBase):
         """
         Retrieves the operational status of the device
         """
-        status = True
+        status = False
         reset = self.get_reset_status()
         if self.get_presence():
             if not reset:

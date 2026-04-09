@@ -15,7 +15,7 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 
-#define EEPROM_NAME      "fan_eeprom"
+#define EEPROM_NAME      "fan_verm_eeprom"
 #define EEPROM_LEN       128
 #define FIELD_LEN_MAX    16
 
@@ -50,7 +50,7 @@ struct menuee_data {
 	u8 checksum;
 };
 
-int cache_eeprom(struct i2c_client *client)
+static int cache_eeprom(struct i2c_client *client)
 {
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 	int status;
@@ -70,68 +70,68 @@ int cache_eeprom(struct i2c_client *client)
 	return 0;
 }
 
-int decode_eeprom(struct i2c_client *client)
+static int decode_eeprom(struct i2c_client *client)
 {
 	struct menuee_data *ee_data = i2c_get_clientdata(client);
 	int i = 0;
-	int len;
-	int cpylen;
+	u8 len = 0;
+	int cpylen = 0;
 
 	while (i < EEPROM_LEN) {
 		switch (ee_data->eeprom[i]) {
 		case kEeCleiCode:
 			i++;
 			len = ee_data->eeprom[i++];
-			if (len <= FIELD_LEN_MAX)
+			if (len < FIELD_LEN_MAX)
 				cpylen = len;
-			else 
-				cpylen = FIELD_LEN_MAX;
+			else
+				cpylen = FIELD_LEN_MAX - 1;
 			memcpy(&ee_data->clei[0], &ee_data->eeprom[i], cpylen);
-			ee_data->clei[len] = 0;
+			ee_data->clei[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgDate:
 			i++;
 			len = ee_data->eeprom[i++];
-			if (len <= FIELD_LEN_MAX)
+			if (len < FIELD_LEN_MAX)
 				cpylen = len;
-			else 
-				cpylen = FIELD_LEN_MAX;
+			else
+				cpylen = FIELD_LEN_MAX - 1;
 			memcpy(&ee_data->mfg_date[0], &ee_data->eeprom[i], cpylen);
-			ee_data->mfg_date[len] = 0;
+			ee_data->mfg_date[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgSerialNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			if (len <= FIELD_LEN_MAX)
+			if (len < FIELD_LEN_MAX)
 				cpylen = len;
-			else 
-				cpylen = FIELD_LEN_MAX;
+			else
+				cpylen = FIELD_LEN_MAX - 1;
 			memcpy(&ee_data->serial_number[0], &ee_data->eeprom[i], cpylen);
-			ee_data->serial_number[len] = 0;
+			ee_data->serial_number[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgPartNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			if (len <= FIELD_LEN_MAX)
+			if (len < FIELD_LEN_MAX)
 				cpylen = len;
-			else 
-				cpylen = FIELD_LEN_MAX;
+			else
+				cpylen = FIELD_LEN_MAX - 1;
 			memcpy(&ee_data->part_number[0], &ee_data->eeprom[i], cpylen);
-			ee_data->part_number[len] = 0;
+			ee_data->part_number[cpylen] = 0;
 			i += len;
 			break;
 		case kMfgAssemblyNum:
 			i++;
 			len = ee_data->eeprom[i++];
-			if (len <= FIELD_LEN_MAX)
+			if (len < FIELD_LEN_MAX)
 				cpylen = len;
-			else 
-				cpylen = FIELD_LEN_MAX;
+			else
+				cpylen = FIELD_LEN_MAX - 1;
 			memcpy(&ee_data->assembly_num[0], &ee_data->eeprom[i], cpylen);
-			ee_data->assembly_num[len] = 0;
+			ee_data->assembly_num[cpylen] = 0;
 			i += len;
 			break;
 		case kHwDirectives:
@@ -171,7 +171,7 @@ static ssize_t eeprom_show(struct device *dev, struct device_attribute *devattr,
 {
 	struct menuee_data *data = dev_get_drvdata(dev);
 	int i = 0;
-	int len;
+	int len = 0;
 	for (i = 0; i < EEPROM_LEN; i++) {
 		if (data->eeprom[i] == 0)
 			len += sprintf(buf + len, ".");
@@ -272,7 +272,6 @@ static int eeprom_probe(struct i2c_client *client)
 		return -ENOMEM;
 	}
 
-	//data->client = client;
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->lock);
 
@@ -314,12 +313,12 @@ static struct i2c_driver eeprom_driver = {
 		.address_list     = normal_i2c,
 };
 
-static int __init fan_eeprom_init(void)
+static int __init fan_verm_eeprom_init(void)
 {
 	return i2c_add_driver(&eeprom_driver);
 }
 
-static void __exit fan_eeprom_exit(void)
+static void __exit fan_verm_eeprom_exit(void)
 {
 	i2c_del_driver(&eeprom_driver);
 }
@@ -328,5 +327,5 @@ MODULE_DESCRIPTION("FAN eeprom sysfs driver");
 MODULE_AUTHOR("Nokia");
 MODULE_LICENSE("GPL");
 
-module_init(fan_eeprom_init);
-module_exit(fan_eeprom_exit);
+module_init(fan_verm_eeprom_init);
+module_exit(fan_verm_eeprom_exit);

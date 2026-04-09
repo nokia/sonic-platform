@@ -16,16 +16,16 @@
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/err.h>
-#include <linux/of_device.h>
 #include <linux/of.h>
+#include <linux/delay.h>
 
 #define MAX_FAN_DUTY_CYCLE        100
 #define PMBUS_CODE_STATUS_WORD    0x79
-#define PSU_DRIVER_NAME           "psu_x3b"
+#define PSU_DRIVER_NAME           "psu_verm"
 
 static const unsigned short normal_i2c[] = { 0x5b, I2C_CLIENT_END };
 
-struct x3b_psu_data {
+struct psu_verm_data {
 	struct device	*hwmon_dev;
 	struct mutex	update_lock;
 	char		valid;
@@ -54,13 +54,13 @@ static ssize_t for_fan_target(struct device *dev, struct device_attribute \
 								*dev_attr, char *buf);
 static ssize_t for_vout_data(struct device *dev, struct device_attribute \
 							*dev_attr, char *buf);
-static int x3b_psu_read_byte(struct i2c_client *client, u8 reg);
-static int x3b_psu_read_word(struct i2c_client *client, u8 reg);
-static int x3b_psu_write_word(struct i2c_client *client, u8 reg, \
+static int psu_verm_read_byte(struct i2c_client *client, u8 reg);
+static int psu_verm_read_word(struct i2c_client *client, u8 reg);
+static int psu_verm_write_word(struct i2c_client *client, u8 reg, \
 								u16 value);
-static struct x3b_psu_data *x3b_psu_update_device(struct device *dev);
+static struct psu_verm_data *psu_verm_update_device(struct device *dev);
 
-enum x3b_psu_sysfs_attributes {
+enum psu_verm_sysfs_attributes {
 	PSU_V_IN,
 	PSU_V_OUT,
 	PSU_I_IN,
@@ -86,7 +86,7 @@ static ssize_t set_fan_duty_cycle_input(struct device *dev, struct device_attrib
 {
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
 	struct i2c_client *client = to_i2c_client(dev);
-	struct x3b_psu_data *data = i2c_get_clientdata(client);
+	struct psu_verm_data *data = i2c_get_clientdata(client);
 	int nr = (attr->index == PSU_FAN1_DUTY_CYCLE) ? 0 : 1;
 	long speed;
 	int error;
@@ -100,7 +100,7 @@ static ssize_t set_fan_duty_cycle_input(struct device *dev, struct device_attrib
 
 	mutex_lock(&data->update_lock);
 	data->fan_duty_cycle_input[nr] = speed;
-	x3b_psu_write_word(client, 0x3B + nr, data->fan_duty_cycle_input[nr]);
+	psu_verm_write_word(client, 0x3B + nr, data->fan_duty_cycle_input[nr]);
 	mutex_unlock(&data->update_lock);
 
 	return count;
@@ -110,7 +110,7 @@ static ssize_t for_linear_data(struct device *dev, struct device_attribute \
 							*dev_attr, char *buf)
 {
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
-	struct x3b_psu_data *data = x3b_psu_update_device(dev);
+	struct psu_verm_data *data = psu_verm_update_device(dev);
 
 	u16 value = 0;
 	int exponent, mantissa;
@@ -164,7 +164,7 @@ static ssize_t for_fan_target(struct device *dev, struct device_attribute \
 							*dev_attr, char *buf)
 {
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
-	struct x3b_psu_data *data = x3b_psu_update_device(dev);
+	struct psu_verm_data *data = psu_verm_update_device(dev);
 
 	u8 shift = (attr->index == PSU_FAN1_FAULT) ? 7 : 6;
 
@@ -174,7 +174,7 @@ static ssize_t for_fan_target(struct device *dev, struct device_attribute \
 static ssize_t for_vout_data(struct device *dev, struct device_attribute \
 		 					*dev_attr, char *buf)
 {
-	struct x3b_psu_data *data = x3b_psu_update_device(dev);
+	struct psu_verm_data *data = psu_verm_update_device(dev);
 	int exponent = 0;
 	int mantissa = 0;
 	int multiplier = 1000;
@@ -187,23 +187,23 @@ static ssize_t for_vout_data(struct device *dev, struct device_attribute \
 		sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
 }
 
-static int x3b_psu_read_byte(struct i2c_client *client, u8 reg)
+static int psu_verm_read_byte(struct i2c_client *client, u8 reg)
 {
 	return i2c_smbus_read_byte_data(client, reg);
 }
 
-static int x3b_psu_read_word(struct i2c_client *client, u8 reg)
+static int psu_verm_read_word(struct i2c_client *client, u8 reg)
 {
 	return i2c_smbus_read_word_data(client, reg);
 }
 
-static int x3b_psu_write_word(struct i2c_client *client, u8 reg, \
+static int psu_verm_write_word(struct i2c_client *client, u8 reg, \
 								u16 value)
 {
 	union i2c_smbus_data data;
 	data.word = value;
 	return i2c_smbus_xfer(client->adapter, client->addr, 
-				client->flags |= I2C_CLIENT_PEC,
+				client->flags | I2C_CLIENT_PEC,
 								I2C_SMBUS_WRITE, reg,
 								I2C_SMBUS_WORD_DATA, &data);
 }
@@ -218,11 +218,11 @@ struct reg_data_word {
 	u16 *value;
 };
 
-static struct x3b_psu_data *x3b_psu_update_device( \
+static struct psu_verm_data *psu_verm_update_device( \
 							struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct x3b_psu_data *data = i2c_get_clientdata(client);
+	struct psu_verm_data *data = i2c_get_clientdata(client);
 	
 	mutex_lock(&data->update_lock);
 
@@ -251,7 +251,7 @@ static struct x3b_psu_data *x3b_psu_update_device( \
 		data->last_updated = jiffies + HZ / 1000;
 		
 		for (i = 0; i < ARRAY_SIZE(regs_byte); i++) {
-			status = x3b_psu_read_byte(client, 
+			status = psu_verm_read_byte(client, 
 							regs_byte[i].reg);
 			if (status < 0) {
 				dev_dbg(&client->dev, "reg %d, err %d\n",
@@ -263,7 +263,7 @@ static struct x3b_psu_data *x3b_psu_update_device( \
 		}
 
 		for (i = 0; i < ARRAY_SIZE(regs_word); i++) {
-			status = x3b_psu_read_word(client,
+			status = psu_verm_read_word(client,
 							regs_word[i].reg);
 			if (status < 0) {
 				dev_dbg(&client->dev, "reg %d, err %d\n",
@@ -288,8 +288,8 @@ static ssize_t psu_status_show(struct device *dev, struct device_attribute \
 	struct i2c_client *client = to_i2c_client(dev);
 	int retval;
 
-	retval = x3b_psu_read_word(client, PMBUS_CODE_STATUS_WORD);
-	
+	retval = psu_verm_read_word(client, PMBUS_CODE_STATUS_WORD);
+
 	return sprintf(buf, "%d\n", retval);
 }
 
@@ -307,7 +307,7 @@ static SENSOR_DEVICE_ATTR(fan1_set_percentage, S_IWUSR | S_IRUGO, \
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, for_linear_data,	NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(psu_status, S_IRUGO, psu_status_show,	NULL, 0);
 
-static struct attribute *x3b_psu_attributes[] = {
+static struct attribute *psu_verm_attributes[] = {
 	&sensor_dev_attr_in1_input.dev_attr.attr,
 	&sensor_dev_attr_in2_input.dev_attr.attr,
 	&sensor_dev_attr_curr1_input.dev_attr.attr,
@@ -322,13 +322,13 @@ static struct attribute *x3b_psu_attributes[] = {
 	NULL
 };
 
-static const struct attribute_group x3b_psu_group = {
-	.attrs = x3b_psu_attributes,
+static const struct attribute_group psu_verm_group = {
+	.attrs = psu_verm_attributes,
 };
 
-static int x3b_psu_probe(struct i2c_client *client)
+static int psu_verm_probe(struct i2c_client *client)
 {
-	struct x3b_psu_data *data;
+	struct psu_verm_data *data;
 	int status;
 
 	if (!i2c_check_functionality(client->adapter, 
@@ -349,7 +349,7 @@ static int x3b_psu_probe(struct i2c_client *client)
 	data->valid = 0;
 	mutex_init(&data->update_lock);
 	
-	status = sysfs_create_group(&client->dev.kobj, &x3b_psu_group);
+	status = sysfs_create_group(&client->dev.kobj, &psu_verm_group);
 	if (status) 
 		goto exit_sysfs_create_group;
 
@@ -362,51 +362,51 @@ static int x3b_psu_probe(struct i2c_client *client)
 	return 0;
 	
 exit_hwmon_device_register:
-	sysfs_remove_group(&client->dev.kobj, &x3b_psu_group);
+	sysfs_remove_group(&client->dev.kobj, &psu_verm_group);
 exit_sysfs_create_group:
 	kfree(data);
 exit:
 	return status;
 }
 
-static void x3b_psu_remove(struct i2c_client *client)
+static void psu_verm_remove(struct i2c_client *client)
 {
-	struct x3b_psu_data *data = i2c_get_clientdata(client);
+	struct psu_verm_data *data = i2c_get_clientdata(client);
 	hwmon_device_unregister(data->hwmon_dev);
-	sysfs_remove_group(&client->dev.kobj, &x3b_psu_group);
+	sysfs_remove_group(&client->dev.kobj, &psu_verm_group);
 	kfree(data);
 }
 
-static const struct i2c_device_id x3b_psu_id[] = {
+static const struct i2c_device_id psu_verm_id[] = {
 	{ PSU_DRIVER_NAME, 0 },
 	{}
 };
-MODULE_DEVICE_TABLE(i2c, x3b_psu_id);
+MODULE_DEVICE_TABLE(i2c, psu_verm_id);
 
-static struct i2c_driver x3b_psu_driver = {
+static struct i2c_driver psu_verm_driver = {
 	.class          = I2C_CLASS_HWMON,
 	.driver = {
 		.name   = PSU_DRIVER_NAME,
 	},
-	.probe          = x3b_psu_probe,
-	.remove         = x3b_psu_remove,
-	.id_table       = x3b_psu_id,
+	.probe          = psu_verm_probe,
+	.remove         = psu_verm_remove,
+	.id_table       = psu_verm_id,
 	.address_list   = normal_i2c,
 };
 
-static int __init x3b_psu_init(void)
+static int __init psu_verm_init(void)
 {
-	return i2c_add_driver(&x3b_psu_driver);
+	return i2c_add_driver(&psu_verm_driver);
 }
 
-static void __exit x3b_psu_exit(void)
+static void __exit psu_verm_exit(void)
 {
-	i2c_del_driver(&x3b_psu_driver);
+	i2c_del_driver(&psu_verm_driver);
 }
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("PSU Driver");
 MODULE_AUTHOR("Nokia");
 
-module_init(x3b_psu_init);
-module_exit(x3b_psu_exit);
+module_init(psu_verm_init);
+module_exit(psu_verm_exit);
