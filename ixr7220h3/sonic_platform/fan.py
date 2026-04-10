@@ -17,8 +17,9 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-MAX_7220H3_FANS_PER_DRAWER = 2
-
+H3_FANS_PER_DRAWER = 2
+FAN_PN_F2B = "3HE16436AA"
+FAN_PN_B2F = "3HE16437AA"
 FORWARD_FAN_F_SPEED = 23000
 FORWARD_FAN_R_SPEED = 20500
 FORWARD_FAN_TOLERANCE = 50    #8
@@ -56,12 +57,13 @@ class Fan(FanBase):
 
         if not self.is_psu_fan:
             # Fan is 1-based in Nokia platforms
-            self.index = drawer_index * MAX_7220H3_FANS_PER_DRAWER + fan_index + 1
-            self.fan_drawer = drawer_index
+            self.index = drawer_index * H3_FANS_PER_DRAWER + fan_index + 1
+            self.drawer_index = drawer_index
             fan_index_emc230x = FAN_INDEX_IN_DRAWER[drawer_index][fan_index]
             self.set_fan_speed_reg = hwmon_path[0] + "pwm{}".format(fan_index_emc230x)
             self.get_fan_speed_reg = hwmon_path[0] + "fan{}_input".format(fan_index_emc230x)
             self.gpio_dir = GPIO_DIR.format(GPIO_PORT[drawer_index])
+            self.system_led_supported_color = ['off', 'amber', 'green']
            
             # Fan eeprom
             self.eeprom = Eeprom(False, 0, True, drawer_index)
@@ -69,22 +71,13 @@ class Fan(FanBase):
             if self.get_direction() == self.FAN_DIRECTION_EXHAUST:
                 if fan_index == 0:
                     self.std_fan_speed = REVERSE_FAN_F_SPEED
-                    #self.max_fan_speed = REVERSE_FAN_F_SPEED * (1 + REVERSE_FAN_TOLERANCE / 100)
-                    #self.min_fan_speed = REVERSE_FAN_F_SPEED * (1 - REVERSE_FAN_TOLERANCE / 100)
                 else:
-                    self.std_fan_speed = REVERSE_FAN_R_SPEED
-                    #self.max_fan_speed = REVERSE_FAN_R_SPEED * (1 + REVERSE_FAN_TOLERANCE / 100)
-                    #self.min_fan_speed = REVERSE_FAN_R_SPEED * (1 - REVERSE_FAN_TOLERANCE / 100)                
+                    self.std_fan_speed = REVERSE_FAN_R_SPEED               
             else:
                 if fan_index == 0:
                     self.std_fan_speed = FORWARD_FAN_F_SPEED
-                    #self.max_fan_speed = FORWARD_FAN_F_SPEED * (1 + FORWARD_FAN_TOLERANCE / 100)
-                    #self.min_fan_speed = FORWARD_FAN_F_SPEED * (1 - FORWARD_FAN_TOLERANCE / 100)
                 else:
                     self.std_fan_speed = FORWARD_FAN_R_SPEED
-                    #self.max_fan_speed = FORWARD_FAN_R_SPEED * (1 + FORWARD_FAN_TOLERANCE / 100)
-                    #self.min_fan_speed = FORWARD_FAN_R_SPEED * (1 - FORWARD_FAN_TOLERANCE / 100)
-
         else:
             # this is a PSU Fan
             self.index = fan_index
@@ -100,6 +93,7 @@ class Fan(FanBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -117,6 +111,7 @@ class Fan(FanBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -216,9 +211,9 @@ class Fan(FanBase):
             FAN_DIRECTION_EXHAUST depending on fan direction
         """
         model_name = self.get_part_number()
-        if model_name[0:10] == "3HE16436AA":
+        if model_name[0:10] == FAN_PN_F2B:
             return self.FAN_DIRECTION_INTAKE
-        elif model_name[0:10] == "3HE16437AA":
+        elif model_name[0:10] == FAN_PN_B2F:
             return self.FAN_DIRECTION_EXHAUST
         else:
             return 'N/A'
@@ -291,8 +286,20 @@ class Fan(FanBase):
         if self.is_psu_fan:
             return False
 
-        if speed >= 0 and speed <= 100:
-            fandutycycle = round(float(speed)/100*255)        
+        if speed in range(0, 10):
+            fandutycycle = 0x00
+        elif speed in range(10, 21):
+            fandutycycle = 32
+        elif speed in range(21, 31):
+            fandutycycle = 64
+        elif speed in range(31, 46):
+            fandutycycle = 102
+        elif speed in range(46, 61):
+            fandutycycle = 140
+        elif speed in range(61, 81):
+            fandutycycle = 204
+        elif speed in range(81, 101):
+            fandutycycle = 255
         else:
             return False
 
@@ -300,7 +307,7 @@ class Fan(FanBase):
         if (rv != 'ERR'):
             return True
         else:
-            return False
+            return False      
 
     def set_status_led(self, color):
         """
@@ -311,11 +318,10 @@ class Fan(FanBase):
         Returns:
             bool: True if set success, False if fail.
 
-            off , red and green are the only settings 7215 fans
+            No indivial led for each H3 fans
         """
-        
         return False
-
+    
     def get_status_led(self):
         """
         Gets the state of the fan status LED
@@ -326,7 +332,7 @@ class Fan(FanBase):
         if not self.get_presence(): 
             return self.STATUS_LED_COLOR_OFF
          
-        file_str = SWPLD1_DIR + "fan{}_led".format(self.fan_drawer+1)
+        file_str = SWPLD1_DIR + "fan{}_led".format(self.drawer_index+1)
         result = self._read_sysfs_file(file_str)
         if result == '1':
             return self.STATUS_LED_COLOR_GREEN
@@ -349,6 +355,20 @@ class Fan(FanBase):
 
         fan_duty = self._read_sysfs_file(self.set_fan_speed_reg)
         if (fan_duty != 'ERR'):
-            speed = round(float(fan_duty)/255*100)            
+            dutyspeed = int(fan_duty)
+            if dutyspeed == 0:
+                speed = 0
+            elif dutyspeed == 32:
+                speed = 15
+            elif dutyspeed == 64:
+                speed = 25
+            elif dutyspeed == 102:
+                speed = 40
+            elif dutyspeed == 140:
+                speed = 50
+            elif dutyspeed == 204:
+                speed = 70
+            elif dutyspeed == 255:
+                speed = 100
 
         return speed

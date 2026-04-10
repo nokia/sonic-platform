@@ -121,6 +121,13 @@ echo ir35221 0x10 > /sys/bus/i2c/devices/i2c-15/new_device
 # Enumerate Voltage Ragulator (3V3)
 echo tps53667 0x64 > /sys/bus/i2c/devices/i2c-15/new_device
 
+# Set the PCA9548 mux behavior
+echo -2 > /sys/bus/i2c/devices/3-0070/idle_state
+echo -2 > /sys/bus/i2c/devices/3-0071/idle_state
+echo -2 > /sys/bus/i2c/devices/3-0072/idle_state
+echo -2 > /sys/bus/i2c/devices/3-0073/idle_state
+echo -2 > /sys/bus/i2c/devices/3-0074/idle_state
+
 #Enumerate CPLDs
 echo nokia_7220h3_cpupld 0x31 > /sys/bus/i2c/devices/i2c-0/new_device
 echo nokia_7220h3_swpld1 0x32 > /sys/bus/i2c/devices/i2c-17/new_device
@@ -158,18 +165,13 @@ nokia_7220H3_profile
 for port in {4..9}
 do
     echo 1022${port} > /sys/class/gpio/export
+    echo in > /sys/class/gpio/gpio1022${port}/direction
+    sleep 0.1
 done
 
 for fan in {58..63}
 do
     chmod 644 /sys/bus/i2c/devices/${fan}-0050/eeprom
 done
-
-# Set the PCA9548 mux behavior
-echo -2 > /sys/bus/i2c/devices/3-0070/idle_state
-echo -2 > /sys/bus/i2c/devices/3-0071/idle_state
-echo -2 > /sys/bus/i2c/devices/3-0072/idle_state
-echo -2 > /sys/bus/i2c/devices/3-0073/idle_state
-echo -2 > /sys/bus/i2c/devices/3-0074/idle_state
 
 exit 0

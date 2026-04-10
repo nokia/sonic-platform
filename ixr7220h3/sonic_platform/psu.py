@@ -34,6 +34,8 @@ class Psu(PsuBase):
 
         # PSU eeprom
         #self.eeprom = Eeprom(is_psu=True, psu_index=self.index)
+        self.MAX_VOLTAGE = 14
+        self.MIN_VOLTAGE = 10
 
     def _read_sysfs_file(self, sysfs_file):
         # On successful read, returns the value read from given
@@ -45,6 +47,7 @@ class Psu(PsuBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -62,6 +65,7 @@ class Psu(PsuBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -241,6 +245,26 @@ class Psu(PsuBase):
         """
         return self.index
 
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return self.MAX_VOLTAGE
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return self.MIN_VOLTAGE
+    
     def is_replaceable(self):
         """
         Indicate whether this device is replaceable.

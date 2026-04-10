@@ -19,16 +19,14 @@ QSFP_PORT_NUM = 32
 SFP_PORT_NUM = 2
 QSFP_IN_SWPLD = 16
 
-CPUPLD_DIR = "/sys/bus/i2c/devices/0-0031/"
-SWPLD1_DIR = "/sys/bus/i2c/devices/17-0031/"
 SWPLD2_DIR = "/sys/bus/i2c/devices/17-0034/"
 SWPLD3_DIR = "/sys/bus/i2c/devices/17-0035/"
 
 SYSLOG_IDENTIFIER = "sfp_event"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
+sonic_logger.set_min_log_priority_info()
 
-
-class sfp_event:
+class sfp_event():
     ''' Listen to plugin/plugout cable events '''
 
     def __init__(self):
@@ -44,6 +42,7 @@ class sfp_event:
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -51,34 +50,71 @@ class sfp_event:
         rv = rv.lstrip(" ")
         return rv
     
+    def _write_sysfs_file(self, sysfs_file, value):
+        # reg_name and on failure returns 'ERR'
+        rv = 'ERR'
+
+        if (not os.path.isfile(sysfs_file)):
+            return rv
+        try:
+            with open(sysfs_file, 'w') as fd:
+                rv = fd.write(value)
+                fd.close()
+        except Exception as e:
+            rv = 'ERR'        
+
+        return rv
+    
     def initialize(self):
         self.modprs_list = []
         # Get Transceiver status
-        time.sleep(5)
+        time.sleep(5)         
         self.modprs_list = self._get_transceiver_status()
+        
         sonic_logger.log_info("Initial SFP presence=%s" % str(self.modprs_list))
 
     def deinitialize(self):
         if self.handle is None:
             return
 
-    def _get_transceiver_status(self):
-        
+    def _get_transceiver_status(self):        
         port_status = []
-        for port in range (PORT_START, PORT_START + PORT_END):
-            if port <= QSFP_IN_SWPLD:
-                swpld_path = SWPLD2_DIR
-            else:
-                swpld_path = SWPLD3_DIR              
-            if port <= QSFP_PORT_NUM:
-                status = self._read_sysfs_file(swpld_path+"qsfp{}_prs".format(port))
-            else:
-                status = self._read_sysfs_file(swpld_path+"sfp{}_prs".format(port - QSFP_PORT_NUM - 1))            
+        reg_value = []            
+        reg_value.append(self._read_sysfs_file(SWPLD2_DIR + "modprs_reg1"))
+        reg_value.append(self._read_sysfs_file(SWPLD2_DIR + "modprs_reg2"))
+        reg_value.append(self._read_sysfs_file(SWPLD3_DIR + "modprs_reg1"))
+        reg_value.append(self._read_sysfs_file(SWPLD3_DIR + "modprs_reg2"))       
+        for i in range(4):
+            bin_str = '{:08b}'.format(int(reg_value[i], 16))
+            bool_list = [not bool(int(bit)) for bit in bin_str]
+            port_status.extend(bool_list)
             
-            if status == '0':
-                port_status.append(True)
+        for port in range (PORT_START, PORT_START + PORT_END):                          
+            if port <= QSFP_PORT_NUM:                
+                if port_status[port-1]:
+                    if port <= QSFP_IN_SWPLD:
+                        swpld_path = SWPLD2_DIR
+                    else:
+                        swpld_path = SWPLD3_DIR
+                    reset_status = self._read_sysfs_file(swpld_path+"qsfp{}_reset".format(port))
+                    if reset_status == '1':
+                        sonic_logger.log_info("Port #%d is reseting... " % port)
+                        port_status[port-1] = False
+                        self._write_sysfs_file(swpld_path+"qsfp{}_reset".format(port), '2')
+                    elif reset_status == '2':
+                        sonic_logger.log_info("Port #%d is still reseting... " % port)
+                        port_status[port-1] = False
+                    elif reset_status == '3':
+                        sonic_logger.log_info("Port #%d reset done... " % port)
+                        port_status[port-1] = True
+                        self._write_sysfs_file(swpld_path+"qsfp{}_reset".format(port), '0')
+
             else:
-                port_status.append(False)
+                status = self._read_sysfs_file(SWPLD3_DIR+"sfp{}_prs".format(port - QSFP_PORT_NUM - 1))
+                if status == '0':
+                    port_status.append(True)
+                else:
+                    port_status.append(False)
 
         return port_status
 
@@ -86,7 +122,7 @@ class sfp_event:
         """
         check_sfp_status called from get_change_event, this will return correct
             status of all SFP ports if there is a change in any of them
-        """
+        """        
         start_time = time.time()
         forever = False
 

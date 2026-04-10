@@ -11,7 +11,7 @@ try:
     import os
     import time
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
-    from sonic_py_common.logger import Logger
+    from sonic_py_common import logger
     from sonic_py_common import device_info
     from sonic_py_common.general import getstatusoutput_noshell
 
@@ -28,17 +28,15 @@ SWPLD1_DIR = "/sys/bus/i2c/devices/17-0031/"
 SWPLD2_DIR = "/sys/bus/i2c/devices/17-0034/"
 SWPLD3_DIR = "/sys/bus/i2c/devices/17-0035/"
 
-# SFP PORT numbers
-
-logger = Logger()
+SYSLOG_IDENTIFIER = "sfp"
+sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
+sonic_logger.set_min_log_priority_info()
 
 class Sfp(SfpOptoeBase):
     """
     Nokia IXR-7220 H3 Platform-specific Sfp refactor class
     """
     instances = []
-
-    port_to_i2c_mapping = 0
     
     def __init__(self, index, sfp_type, eeprom_path, port_i2c_map):
         SfpOptoeBase.__init__(self)
@@ -57,11 +55,14 @@ class Sfp(SfpOptoeBase):
             self.port_name = sfp_type + '_' + str(index-QSFP_PORT_NUM-1)
         self.port_to_eeprom_mapping = {}
         self.port_to_eeprom_mapping[index] = eeprom_path
+        if self.index <= QSFP_IN_SWPLD:
+            self.swpld_path = SWPLD2_DIR
+        else:
+            self.swpld_path = SWPLD3_DIR
         
         self._version_info = device_info.get_sonic_version_info()
-        self.lastPresence = False
 
-        logger.log_debug("Sfp __init__ index {} setting name to {} and eeprom_path to {}".format(index, self.name, self.eeprom_path))
+        #sonic_logger.log_info("Sfp __init__ index {} setting name to {} and eeprom_path to {}".format(index, self.name, self.eeprom_path))
 
         Sfp.instances.append(self)
 
@@ -75,6 +76,7 @@ class Sfp(SfpOptoeBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -91,6 +93,7 @@ class Sfp(SfpOptoeBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'        
 
@@ -105,15 +108,10 @@ class Sfp(SfpOptoeBase):
         Returns:
             bool: True if is present, False if not
         """ 
-        if self.index <= QSFP_IN_SWPLD:
-            swpld_path = SWPLD2_DIR
-        else:
-            swpld_path = SWPLD3_DIR 
-
         if self.index <= QSFP_PORT_NUM:
-            sfpstatus = self._read_sysfs_file(swpld_path+"qsfp{}_prs".format(self.index))
+            sfpstatus = self._read_sysfs_file(self.swpld_path+"qsfp{}_prs".format(self.index))
         else:
-            sfpstatus = self._read_sysfs_file(swpld_path+"sfp{}_prs".format(self.index - QSFP_PORT_NUM - 1))
+            sfpstatus = self._read_sysfs_file(self.swpld_path+"sfp{}_prs".format(self.index - QSFP_PORT_NUM - 1))
             
         if sfpstatus == '0':
             return True
@@ -178,8 +176,16 @@ class Sfp(SfpOptoeBase):
         Returns:
             A Boolean, True if reset enabled, False if disabled
         """
-        return False
-
+        if self.index <= QSFP_PORT_NUM:
+            result = self._read_sysfs_file(self.swpld_path+"qsfp{}_rstn".format(self.index))
+            if result == '0':
+                return True
+            else:
+                return False
+        else:
+            return False
+        
+    
     def get_status(self):
         """
         Retrieves the operational status of the device
@@ -199,17 +205,33 @@ class Sfp(SfpOptoeBase):
         Returns:
             A boolean, True if successful, False if not
         """
+        sonic_logger.log_info("Reseting port #{}.".format(self.index))
+
         result1 = 'ERR'
         result2 = 'ERR'
-        if self.index <= QSFP_IN_SWPLD:
-            swpld_path = SWPLD2_DIR
-        else:
-            swpld_path = SWPLD3_DIR
+        t = 0
 
         if self.index <= QSFP_PORT_NUM:
-            result1 = self._write_sysfs_file(swpld_path+"qsfp{}_rstn".format(self.index), '0')
-            time.sleep(1)
-            result2 = self._write_sysfs_file(swpld_path+"qsfp{}_rstn".format(self.index), '1')
+            result2 = self._write_sysfs_file(self.swpld_path+"qsfp{}_reset".format(self.index), '1')
+            result2 = self._write_sysfs_file(self.swpld_path+"qsfp{}_lpmod".format(self.index), '1')
+            result1 = self._write_sysfs_file(self.swpld_path+"qsfp{}_rstn".format(self.index), '0')            
+            time.sleep(0.5)            
+            while t < 10:
+                if self._read_sysfs_file(self.swpld_path+"qsfp{}_reset".format(self.index)) == '2':
+                    result1 = self._write_sysfs_file(self.swpld_path+"qsfp{}_rstn".format(self.index), '1')
+                    time.sleep(2)
+                    break
+                else:
+                    time.sleep(0.5)
+                if t == 8:
+                    sonic_logger.log_info("Reset port #{} timeout, reset failed.".format(self.index))
+                    return False
+                else:
+                    t = t + 1
+            
+            result2 = self._write_sysfs_file(self.swpld_path+"qsfp{}_reset".format(self.index), '3')
+        else:
+            return False
         
         if result1 != 'ERR' and result2 != 'ERR':
             return True
@@ -225,17 +247,13 @@ class Sfp(SfpOptoeBase):
         Returns:
             A boolean, True if lpmode is set successfully, False if not
         """
-        result = 'ERR'
-        if self.index <= QSFP_IN_SWPLD:
-            swpld_path = SWPLD2_DIR
-        else:
-            swpld_path = SWPLD3_DIR
+        result = 'ERR'        
 
         if self.index <= QSFP_PORT_NUM:
             if lpmode:
-                result = self._write_sysfs_file(swpld_path+"qsfp{}_lpmod".format(self.index), '1')
+                result = self._write_sysfs_file(self.swpld_path+"qsfp{}_lpmod".format(self.index), '1')
             else:
-                result = self._write_sysfs_file(swpld_path+"qsfp{}_lpmod".format(self.index), '0')
+                result = self._write_sysfs_file(self.swpld_path+"qsfp{}_lpmod".format(self.index), '0')
         
         if result != 'ERR':
             return True
@@ -249,15 +267,15 @@ class Sfp(SfpOptoeBase):
             A Boolean, True if lpmode is enabled, False if disabled
         """
         result = 'ERR'
-        if self.index <= QSFP_IN_SWPLD:
-            swpld_path = SWPLD2_DIR
-        else:
-            swpld_path = SWPLD3_DIR
 
         if self.index <= QSFP_PORT_NUM:
-            result = self._read_sysfs_file(swpld_path+"qsfp{}_lpmod".format(self.index))
+            result = self._read_sysfs_file(self.swpld_path+"qsfp{}_lpmod".format(self.index))
         
         if result == '1':
             return True
 
         return False
+    
+
+        
+
