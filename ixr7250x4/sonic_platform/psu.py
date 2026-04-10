@@ -32,7 +32,7 @@ class Psu(PsuBase):
         self._fan_list = []
         self.psu_dir = f"/sys/bus/i2c/devices/{I2C_BUS[psu_index]}-00{PSU_ADDR}/"
         self.eeprom_dir = f"/sys/bus/i2c/devices/{I2C_BUS[psu_index]}-00{PSU_EEPROM_ADDR}/"
-        self.new_cmd = f"echo psu_eeprom 0x{PSU_EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
+        self.new_cmd = f"echo psu_verm_eeprom 0x{PSU_EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/new_device"
         self.del_cmd = f"echo 0x{PSU_EEPROM_ADDR} > /sys/bus/i2c/devices/i2c-{I2C_BUS[psu_index]}/delete_device"
         self.psu_led_color = ['off', 'green', 'amber']
         self._master_psu_led = 'off'
@@ -48,7 +48,9 @@ class Psu(PsuBase):
         """
         active_psus = 0
         for i in range(PSU_NUM):
-            if self.get_status():
+            psu_dir = f"/sys/bus/i2c/devices/{I2C_BUS[i]}-00{PSU_ADDR}/"
+            result = read_sysfs_file(psu_dir + "psu_status")        
+            if (int(result, 10) & 0x800) >> 11 == 0:
                 active_psus = active_psus + 1
 
         return active_psus

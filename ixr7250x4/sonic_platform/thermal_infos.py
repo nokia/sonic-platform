@@ -71,7 +71,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
     """
     # Fan information name
     INFO_NAME = 'thermal_info'
-    WARNING_THRESHHOLD = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 95.0, 95.0, 95.0, 95.0, 105.0, 105.0, 0.0]
+    WARNING_THRESHHOLD = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 95.0, 95.0, 105.0, 0.0]
 
     def __init__(self):
         self._old_threshold_level = -1
@@ -180,7 +180,7 @@ class ThermalInfo(ThermalPolicyInfoBase):
         return round(result)
     
     def get_fanctl_speed(self):
-        if (self.fanctl_speed >= self.nc or self.fanctl_speed <= self.mc):
+        if (self.fanctl_speed >= self.nc and self.fanctl_speed <= self.mc):
             return self.fanctl_speed
         else:
             return 0
