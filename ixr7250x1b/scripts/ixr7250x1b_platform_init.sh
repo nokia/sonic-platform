@@ -21,12 +21,6 @@ load_kernel_drivers() {
     modprobe rtc_ds1307
     modprobe optoe
     modprobe at24
-    modprobe max31790
-    modprobe jc42
-    modprobe psu_x3b
-    modprobe fan_eeprom
-    modprobe psu_eeprom
-    modprobe fan_led
     modprobe pcon
 }
 
@@ -45,7 +39,7 @@ file_exists() {
 dev_conf_init() {
     CONF_FILE=/var/run/sonic-platform-nokia/devices.conf
     mkdir -p /var/run/sonic-platform-nokia/
-    cat /dev/null > CONF_FILE
+    cat /dev/null > $CONF_FILE
 
     echo board=x1b >> $CONF_FILE
 
@@ -106,24 +100,21 @@ echo tmp75 0x4a > /sys/bus/i2c/devices/i2c-19/new_device
 echo tmp75 0x4b > /sys/bus/i2c/devices/i2c-19/new_device
 
 #fan
-i2cset -y 11 0x20 0x0 0x26
-i2cset -y 12 0x20 0x0 0x26
-i2cset -y 13 0x20 0x0 0x26
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-11/new_device
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-12/new_device
-echo max31790 0x20 > /sys/bus/i2c/devices/i2c-13/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-11/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-12/new_device
-echo fan_eeprom 0x54 > /sys/bus/i2c/devices/i2c-13/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-11/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-12/new_device
-echo fan_led 0x60 > /sys/bus/i2c/devices/i2c-13/new_device
+for idx in {1..3}
+do
+    prs=$(cat /sys/bus/pci/devices/0000:01:00.0/fandraw_${idx}_prs)
+    if [ "$prs" == "0" ]; then
+        echo max31790_wd 0x20 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+        echo fan_verm_led 0x60 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+        echo fan_verm_eeprom 0x54 > /sys/bus/i2c/devices/i2c-$((${idx}+10))/new_device
+    fi
+done
 
 # PSU
-echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-14/new_device
-echo psu_x3b 0x5b > /sys/bus/i2c/devices/i2c-15/new_device
-echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-14/new_device
-echo psu_eeprom 0x53 > /sys/bus/i2c/devices/i2c-15/new_device
+echo psu_verm 0x5b > /sys/bus/i2c/devices/i2c-14/new_device
+echo psu_verm 0x5b > /sys/bus/i2c/devices/i2c-15/new_device
+echo psu_verm_eeprom 0x53 > /sys/bus/i2c/devices/i2c-14/new_device
+echo psu_verm_eeprom 0x53 > /sys/bus/i2c/devices/i2c-15/new_device
 
 for num in {27..62}; do
     echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-${num}/new_device
@@ -144,7 +135,7 @@ status=$?
 if [ "$status" == "1" ]; then
     chmod 644 /sys/bus/i2c/devices/1-0054/eeprom
 else
-    echo "SYSEEPROM file not foud"
+    echo "SYSEEPROM file not found"
 fi
 
 exit 0
