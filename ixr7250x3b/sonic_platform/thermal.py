@@ -1,5 +1,5 @@
 """
-    NOKIA 7250 IXR-X3B
+    NOKIA 7250 IXR-X3b
 
     Module contains an implementation of SONiC Platform Base API and
     provides the Thermals' information which are available in the platform
@@ -27,6 +27,7 @@ class Thermal(ThermalBase):
     THERMAL_NAME = ["FPGA", "MB Left", "MB Right", "MB Center", "MB CPU", "DDR1", "DDR2", "Max Port Temp.",
                     "ASIC0_DRAM0", "ASIC0_DRAM1", "ASIC1_DRAM0", "ASIC1_DRAM1", "ASIC0", "ASIC1", "CPU"]
     THRESHHOLD = [78.0, 68.0, 68.0, 68.0, 68.0, 75.0, 75.0, 71.0, 83.0, 83.0, 83.0, 83.0, 93.0, 93.0, 88.0]
+    CRITICAL_THRESHHOLD = ['N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 103.0, 103.0, 103.0, 103.0, 112.0, 112.0, 102.0]
 
     def __init__(self, thermal_index, sfps):
         ThermalBase.__init__(self)
@@ -49,8 +50,11 @@ class Thermal(ThermalBase):
             self.thermal_temperature_file = None
             self.sfps = sfps
         else:
-            self.device_path = glob.glob(self.HWMON_DIR.format(self.I2C_DEV_LIST[self.index - 1]))
-            self.thermal_temperature_file = self.device_path[0] + "temp1_input"
+            try:
+                self.device_path = glob.glob(self.HWMON_DIR.format(self.I2C_DEV_LIST[self.index - 1]))
+                self.thermal_temperature_file = self.device_path[0] + "temp1_input"
+            except:
+                self.thermal_temperature_file = None
 
     def get_name(self):
         """
@@ -115,17 +119,20 @@ class Thermal(ThermalBase):
                 namespace = 'asic1'
             if self.index == THERMAL_NUM-2 or self.index == THERMAL_NUM-5 or self.index == THERMAL_NUM-6:
                 namespace = 'asic0'
-            if not swsscommon.SonicDBConfig.isGlobalInit():
-                swsscommon.SonicDBConfig.initializeGlobalConfig()
-            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
-            db.connect(db.STATE_DB)
-            data_dict = db.get_all(db.STATE_DB, 'ASIC_TEMPERATURE_INFO')
-            if self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-2:
-                thermal_temperature = float(data_dict['maximum_temperature'])
-            elif self.index == THERMAL_NUM-6 or self.index == THERMAL_NUM-4:
-                thermal_temperature = float(data_dict['temperature_9'])
-            elif self.index == THERMAL_NUM-5 or self.index == THERMAL_NUM-3:
-                thermal_temperature = float(data_dict['temperature_10'])
+            try:
+                if not swsscommon.SonicDBConfig.isGlobalInit():
+                    swsscommon.SonicDBConfig.initializeGlobalConfig()
+                db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+                db.connect(db.STATE_DB)
+                data_dict = db.get_all(db.STATE_DB, 'ASIC_TEMPERATURE_INFO')
+                if self.index == THERMAL_NUM-1 or self.index == THERMAL_NUM-2:
+                    thermal_temperature = float(data_dict['maximum_temperature'])
+                elif self.index == THERMAL_NUM-6 or self.index == THERMAL_NUM-4:
+                    thermal_temperature = float(data_dict['temperature_9'])
+                elif self.index == THERMAL_NUM-5 or self.index == THERMAL_NUM-3:
+                    thermal_temperature = float(data_dict['temperature_10'])
+            except:
+                thermal_temperature = 0
         elif self.index == THERMAL_NUM-7:
             thermal_temperature = 0
             for sfp in self.sfps:
@@ -187,7 +194,7 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return 'N/A'
+        return self.CRITICAL_THRESHHOLD[self.index - 1]
 
     def set_high_critical_threshold(self):
         """

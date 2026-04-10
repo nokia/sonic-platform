@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  *  Nokia 7250-IXR X Fan LED Driver
-*
-*  Copyright (C) 2024 Nokia
-*
-*/
+ *
+ *  Copyright (C) 2024 Nokia
+ *
+ */
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -14,7 +14,7 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 
-#define DRIVER_NAME "fan_led"
+#define DRIVER_NAME "fan_verm_led"
 
 // REGISTERS ADDRESS MAP
 #define REG_MODE1       0x0
@@ -49,7 +49,7 @@ static void smbus_i2c_write(struct fan_led_data *data, u8 reg, u8 value)
 	mutex_lock(&data->update_lock);
 	res = i2c_smbus_write_byte_data(client, reg, value);
 	if (res < 0) {
-		dev_err(&client->dev, "I2C WRITE ERROR: reg(0x%02x) err %d\n", reg, res);
+		dev_warn(&client->dev, "I2C WRITE ERROR: reg(0x%02x) err %d\n", reg, res);
 	}
 	mutex_unlock(&data->update_lock);
 }
@@ -127,7 +127,7 @@ static int fan_led_probe(struct i2c_client *client)
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
 		dev_err(&client->dev, "Fan_LED PROBE ERROR: i2c_check_functionality failed (0x%x)\n", client->addr);
 		status = -EIO;
-	goto exit;
+		goto exit;
 	}
 
 	dev_info(&client->dev, "Nokia Fan_LED driver found.\n");
@@ -146,7 +146,7 @@ static int fan_led_probe(struct i2c_client *client)
 	status = sysfs_create_group(&client->dev.kobj, &fan_led_group);
 	if (status) {
 		dev_err(&client->dev, "Fan_LED INIT ERROR: Cannot create sysfs\n");
-		goto exit;
+		goto exit_sysfs_create_group;
 	}
 
 	set_mode(data);
@@ -160,6 +160,8 @@ static int fan_led_probe(struct i2c_client *client)
 
 	return 0;
 
+exit_sysfs_create_group:
+	kfree(data);
 exit:
 	return status;
 }
@@ -187,12 +189,12 @@ static struct i2c_driver fan_led_driver = {
 	.address_list = led_address_list,
 };
 
-static int __init fan_led_init(void)
+static int __init fan_verm_led_init(void)
 {
 	return i2c_add_driver(&fan_led_driver);
 }
 
-static void __exit fan_led_exit(void)
+static void __exit fan_verm_led_exit(void)
 {
 	i2c_del_driver(&fan_led_driver);
 }
@@ -201,5 +203,5 @@ MODULE_AUTHOR("Nokia");
 MODULE_DESCRIPTION("NOKIA Fan LED driver");
 MODULE_LICENSE("GPL");
 
-module_init(fan_led_init);
-module_exit(fan_led_exit);
+module_init(fan_verm_led_init);
+module_exit(fan_verm_led_exit);
