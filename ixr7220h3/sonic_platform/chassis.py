@@ -37,19 +37,21 @@ MAX_7220H3_FAN_DRAWERS = 6
 MAX_7220H3_FANS_PER_DRAWER = 2
 MAX_7220H3_PSU = 2
 MAX_7220H3_THERMAL = 7
-MAX_7220H3_COMPONENT = 4
+MAX_7220H3_COMPONENT = 5
 
 SYSLOG_IDENTIFIER = "chassis"
 sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
+#sonic_logger.set_min_log_priority_info()
 
 class Chassis(ChassisBase):
     """
     Nokia platform-specific Chassis class        
         customized for the 7220 H3 platform.
-    """
-
+    """ 
+    
     def __init__(self):
         ChassisBase.__init__(self)
+        
         self.system_led_supported_color = ['off', 'amber', 'green', 'amber_blink', 'green_blink']
         # Port numbers for SFP List Initialization
         self.PORT_START = PORT_START        
@@ -58,7 +60,7 @@ class Chassis(ChassisBase):
         # Verify optoe driver QSFP-DD eeprom devices were enumerated and exist
         # then create the sfp nodes
         eeprom_path = "/sys/bus/i2c/devices/{0}-0050/eeprom"  
-        mux_dev = sorted(glob.glob("/sys/bus/i2c/devices/i2c-0/0-0077/channel-1/i2c-[1-4][0-9]"))     
+        mux_dev = sorted(glob.glob("/sys/bus/i2c/devices/i2c-0/0-0077/channel-1/i2c-[1-4][0-9]"))
         y = 0
 
         for index in range(PORT_START, PORT_START + QSFP_PORT_NUM):
@@ -69,22 +71,21 @@ class Chassis(ChassisBase):
             if not os.path.exists(port_eeprom_path):
                 sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)
             sfp_node = Sfp(index, 'QSFPDD', port_eeprom_path, port_i2c_map)
-            self._sfp_list.append(sfp_node)
-        
+            self._sfp_list.append(sfp_node)            
 
         port_eeprom_path = "/sys/bus/i2c/devices/50-0050/eeprom"
         if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
+                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)
         sfp_node = Sfp(QSFP_PORT_NUM + 1, 'SFP+', port_eeprom_path, 50)
         self._sfp_list.append(sfp_node)
 
-        self.sfp_event_initialized = False
-
-        port_eeprom_path = "/sys/bus/i2c/devices/50-0051/eeprom"
+        port_eeprom_path = "/sys/bus/i2c/devices/51-0050/eeprom"
         if not os.path.exists(port_eeprom_path):
-                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)        
+                sonic_logger.log_info("path %s didnt exist" % port_eeprom_path)
         sfp_node = Sfp(QSFP_PORT_NUM + 2, 'SFP+', port_eeprom_path, 51)
         self._sfp_list.append(sfp_node)
+
+        self.sfp_event_initialized = False 
 
         # Instantiate system eeprom object
         self._eeprom = Eeprom(False, 0, False, 0)
@@ -124,6 +125,7 @@ class Chassis(ChassisBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -141,6 +143,7 @@ class Chassis(ChassisBase):
         try:
             with open(sysfs_file, 'w') as fd:
                 rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -195,7 +198,7 @@ class Chassis(ChassisBase):
                   Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
-        """
+        """        
         # Initialize SFP event first
         if not self.sfp_event_initialized:
             from sonic_platform.sfp_event import sfp_event
@@ -327,21 +330,19 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        result = self._read_sysfs_file(CPUPLD_DIR+"cold_reset")
-        if result == '1':
-            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
+        result = self._read_sysfs_file(CPUPLD_DIR + "cpu_sys_rst")
 
-        result = self._read_sysfs_file(CPUPLD_DIR+"warm_reset")
-        if result == '1':
-            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
+        if (int(result, 16) & 0x10) >> 4 == 1:
+             return (self.REBOOT_CAUSE_WATCHDOG, None)
+        
+        if (int(result, 16) & 0x01) == 1:
+             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Error")
 
-        result = self._read_sysfs_file(CPUPLD_DIR+"wd_reset")
-        if result == '1':
-            return (self.REBOOT_CAUSE_WATCHDOG, None)
+        if (int(result, 16) & 0x80) >> 7 == 1:
+             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Cold Reset")
 
-        result = self._read_sysfs_file(CPUPLD_DIR+"cpu_pwr_err")
-        if result == '1':
-            return (self.REBOOT_CAUSE_POWER_LOSS, None)
+        if (int(result, 16) & 0x40) >> 6 == 1:
+             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
         
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
     
@@ -363,8 +364,7 @@ class Chassis(ChassisBase):
         try:
             if self._watchdog is None:
                 from sonic_platform.watchdog import WatchdogImplBase
-                watchdog_device_path = "/dev/watchdog0"
-                self._watchdog = WatchdogImplBase(watchdog_device_path)
+                self._watchdog = WatchdogImplBase()
         except Exception as e:
             sonic_logger.log_warning(" Fail to load watchdog {}".format(repr(e)))
 
@@ -404,16 +404,16 @@ class Chassis(ChassisBase):
         if color not in self.system_led_supported_color:
             return False
 
-        if (color == 'off'):
-            value = '5'
-        elif (color == 'amber'):
-            value = '3'
-        elif (color == 'green'):
+        if (color == 'green'):
             value = '1'
-        elif (color == 'amber_blink'):
-            value = '4'
         elif (color == 'green_blink'):
             value = '2'
+        elif (color == 'amber'):
+            value = '3'
+        elif (color == 'amber_blink'):
+            value = '4'
+        elif (color == 'off'):
+            value = '0'
         else:
             return False
         # Write sys led
