@@ -14,6 +14,7 @@ try:
     from sonic_platform.eeprom import Eeprom
     from sonic_py_common import daemon_base, device_info
     from swsscommon import swsscommon
+    import ast
     import time
     import os
     from sonic_py_common.logger import Logger
@@ -121,7 +122,7 @@ class Module(ModuleBase):
             status, fvs = nokia_lc_tbl.get(key)
             if status:
                 eeprom_info= dict(fvs)
-                return eval(eeprom_info['eeprom_info'])
+                return ast.literal_eval(eeprom_info['eeprom_info'])
         return None
   
     def _update_lc_info_to_supervisor(self, default):
