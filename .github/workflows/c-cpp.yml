@@ -2,14 +2,14 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "202512" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "202512" ]
 
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container: 
+    container:
       image: debian:trixie
       options: --user root
     steps:
@@ -37,4 +37,4 @@ jobs:
         export CONFIGURED_ARCH=amd64
         export KERNEL_SRC=/lib/modules/${KVERSION}
         dpkg-buildpackage -b -us -uc -tc -j$(nproc)
-        
+
