@@ -57,7 +57,7 @@ def subscribe_port_config_change():
     sel = swsscommon.Select()
     config_db = daemon_base.db_connect("CONFIG_DB")
     port_tbl = swsscommon.SubscriberStateTable(config_db, swsscommon.CFG_PORT_TABLE_NAME)
-    port_tbl.filter = ['admin_status', 'speed']
+    port_tbl.filter = ['admin_status', 'lanes']
     sel.addSelectable(port_tbl)
     return sel, port_tbl
 
@@ -90,38 +90,48 @@ def handle_port_config_change(sel, port_config, logger):
                     admin_file_name = pld_path + f"port_{pld_port_idx}_en"
                     brkt_file_name = pld_path + f"port_{pld_port_idx}_brkt"
                 else:
-                    logger.log_warning(f"Wrong port index {port_index} for port {port_name}")
+                    logger.log_info(f"Wrong port index {port_index} for port {port_name}")
                     continue
             else:
-                logger.log_warning(f"Wrong index from port {port_name}: {fvp}")
+                logger.log_info(f"Wrong index from port {port_name}: {fvp}")
                 continue
 
+            if 'lanes' in fvp:
+                lanes = len(fvp['lanes'].split(','))
+                if lanes <= 0 and lanes > 8:
+                    continue
+                else:
+                    if lanes == 8:
+                        if read_sysfs_file(brkt_file_name) != '0x00':
+                            write_sysfs_file(brkt_file_name, '0x00')
+                    elif lanes == 4:
+                        if read_sysfs_file(brkt_file_name) != '0x11':
+                            write_sysfs_file(brkt_file_name, '0x11')
+                    elif lanes == 2:
+                        if read_sysfs_file(brkt_file_name) != '0x55':
+                            write_sysfs_file(brkt_file_name, '0x55')
+                    elif lanes == 1:
+                        if read_sysfs_file(brkt_file_name) != '0xff':
+                            write_sysfs_file(brkt_file_name, '0xff')
+            else:
+                continue
+                
             if 'admin_status' in fvp:
-                if 'speed' in fvp and fvp['speed'] in ('100000', '200000', '400000', '800000'):
-                    if 'subport' in fvp and fvp['subport'] == '0':
-                        if fvp['admin_status'] == 'up':
-                            write_sysfs_file(admin_file_name, '0xff')
-                        elif fvp['admin_status'] == 'down':
-                            write_sysfs_file(admin_file_name, '0x0')
-                    else:
-                        speed = int(fvp['speed'])
-                        mask = 0xff >> ((800000 - speed)//100000)
-                        subport = int(fvp['subport'])
-                        reg_mask = (~(mask << ((subport - 1) * (speed//100000)))) & 0xFF
-                        reg_val = int(read_sysfs_file(admin_file_name), 16)
-                        reg_val = reg_val & reg_mask
-                        admin = {'up': 1, 'down': 0}[fvp['admin_status']]
-                        set_bits = mask if admin else 0
-                        result = reg_val | (set_bits << ((subport - 1) * (speed//100000)))
-                        write_sysfs_file(admin_file_name, hex(result))
-
-            if 'speed' in fvp:
-                if fvp['speed'] == '800000':
-                    if read_sysfs_file(brkt_file_name) != '0x00':
-                        write_sysfs_file(brkt_file_name, '0x0')
-                elif fvp['speed'] == '400000':
-                    if fvp['subport'] == '1' and read_sysfs_file(brkt_file_name) != '0x11':
-                        write_sysfs_file(brkt_file_name, '0x11')
+                if 'subport' in fvp and fvp['subport'] == '0':
+                    if fvp['admin_status'] == 'up':
+                        write_sysfs_file(admin_file_name, '0xff')
+                    elif fvp['admin_status'] == 'down':
+                        write_sysfs_file(admin_file_name, '0x0')
+                else:
+                    mask = 0xff >> (8 - lanes)
+                    subport = int(fvp['subport'])
+                    reg_mask = (~(mask << ((subport - 1) * lanes))) & 0xFF
+                    reg_val = int(read_sysfs_file(admin_file_name), 16)
+                    reg_val = reg_val & reg_mask
+                    admin = {'up': 1, 'down': 0}[fvp['admin_status']]
+                    set_bits = mask if admin else 0
+                    result = reg_val | (set_bits << ((subport - 1) * lanes))
+                    write_sysfs_file(admin_file_name, hex(result))
 
     return 0
 
