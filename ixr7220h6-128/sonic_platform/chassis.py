@@ -31,7 +31,7 @@ MAX_SELECT_DELAY = 10
 FAN_DRAWERS = 8
 FANS_PER_DRAWER = 2
 PSU_NUM = 4
-THERMAL_NUM = 20
+THERMAL_NUM = 21
 COMPONENT_NUM = 11
 
 PLD_DIR = "/sys/bus/i2c/devices/135-0071/"
@@ -86,7 +86,7 @@ class Chassis(ChassisBase):
             drawer = drawer_ctor(drawer_index)
             self._fan_drawer_list.append(drawer)
             for fan_index in range(fan_num_per_drawer):
-                fan = Fan(fan_index, drawer_index)
+                fan = Fan(fan_index, drawer_index, drawer=drawer)
                 drawer._fan_list.append(fan)
                 self._fan_list.append(fan)
 
@@ -285,20 +285,21 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        result = read_sysfs_file(SYSFPGA_DIR + "reset_cause")
+        result1 = read_sysfs_file(SYSFPGA_DIR + "reset_cause")
+        result2 = read_sysfs_file(PLD_DIR + "bmc_reset")
+        val1 = int(result1, 16)
+        val2 = int(result2, 16)
 
-        if (int(result, 16) & 0x10) >> 4 == 1:
+        if val1 & 0x10:
             return (self.REBOOT_CAUSE_WATCHDOG, "CPU_WD")
-
-        if (int(result, 16) & 0x01) == 1:
+        if val1 & 0x01:
             return (self.REBOOT_CAUSE_WATCHDOG, "EC_WD")
-
-        if (int(result, 16) & 0x02) >> 1 == 1:
+        if val1 & 0x02:
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "CPU Over Heat")
-
-        if (int(result, 16) & 0x08) >> 3 == 1:
-            return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Power Cycle")
-
+        if val2 == 0x5A:
+            return (self.REBOOT_CAUSE_POWER_LOSS, "BMC Remote Power Cycle")
+        if val1 & 0x08:
+            return (self.REBOOT_CAUSE_POWER_LOSS, "Power Cycle")
         return (self.REBOOT_CAUSE_NON_HARDWARE, None)
 
     def get_watchdog(self):

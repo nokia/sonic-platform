@@ -14,8 +14,11 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 FANS_PER_DRAWER = 2
-MAX_FAN_F_SPEED = 15400
-MAX_FAN_R_SPEED = 13600
+MAX_FAN15_F_SPEED = 15400
+MAX_FAN15_R_SPEED = 13600
+MAX_FAN20_F_SPEED = 20000
+MAX_FAN20_R_SPEED = 17500
+FAN15_PN = '3HE21988AA01'
 FAN_TOLERANCE = 50
 WORKING_FAN_SPEED = 2000
 
@@ -36,8 +39,11 @@ sonic_logger = logger.Logger('fan')
 class Fan(FanBase):
     """Nokia platform-specific Fan class"""
 
-    def __init__(self, fan_index, drawer_index, psu_fan=False, dependency=None):
+    def __init__(self, fan_index, drawer_index, psu_fan=False, dependency=None, drawer=None):
+        self._fan_index = fan_index
         self.is_psu_fan = psu_fan
+        self._drawer = drawer
+        self._max_speed_inited = False
         i2c_dev = I2C_DEV_LIST[drawer_index%2]
         hwmon_path = glob.glob(HWMON_DIR.format(i2c_dev))
         self.fan_led_color = ['off', 'green', 'amber', 'green_blink']
@@ -51,10 +57,10 @@ class Fan(FanBase):
             self.get_fan_presence_reg = hwmon_path[0] + f"fan{(drawer_index//2)+1}_present"
             self.fan_led_reg = hwmon_path[0] + f"fan{(drawer_index//2)+1}_led"
 
-            if fan_index == 0:
-                self.max_fan_speed = MAX_FAN_F_SPEED
+            if self._fan_index == 0:
+                self.max_fan_speed = MAX_FAN20_F_SPEED
             else:
-                self.max_fan_speed = MAX_FAN_R_SPEED
+                self.max_fan_speed = MAX_FAN20_R_SPEED
 
         else:
             # this is a PSU Fan
@@ -82,8 +88,11 @@ class Fan(FanBase):
         """
         result = read_sysfs_file(self.get_fan_presence_reg)
         if result == '1': # present
+            if not self._max_speed_inited and not self.is_psu_fan:
+                self._get_max_fan_speed()
             return True
         
+        self._max_speed_inited = False
         return False
 
     def get_model(self):
@@ -102,9 +111,6 @@ class Fan(FanBase):
         Returns:
             string: Serial number of Fan
         """
-        #if self.get_presence():
-        #    result = read_sysfs_file(self.eeprom_dir + "serial_number")
-        #    return result.strip()
         return 'N/A'
 
     def get_part_number(self):
@@ -114,9 +120,6 @@ class Fan(FanBase):
         Returns:
             string: Part number of Fan
         """
-        #if self.get_presence():
-        #    result = read_sysfs_file(self.eeprom_dir + "part_number")
-        #    return result.strip()
         return 'N/A'
 
     def get_service_tag(self):
@@ -178,6 +181,10 @@ class Fan(FanBase):
         :return: integer, denoting front FAN speed
         """
         speed = 0
+        if not self.get_presence():
+            return speed
+        elif not self._max_speed_inited:
+            return speed
 
         fan_speed = read_sysfs_file(self.get_fan_speed_reg)
         if (fan_speed != 'ERR'):
@@ -260,3 +267,19 @@ class Fan(FanBase):
         if fan_duty != 'ERR':
             return int(fan_duty)
         return 0
+    
+    def _get_max_fan_speed(self):
+        if self._drawer is None:
+            self._max_speed_inited = True
+            return
+
+        part_number = self._drawer.get_part_number()
+        if part_number == 'N/A' or part_number is None:
+            return
+
+        is_front = (self._fan_index == 0)
+
+        if part_number.startswith(FAN15_PN):
+            self.max_fan_speed = MAX_FAN15_F_SPEED if is_front else MAX_FAN15_R_SPEED
+        
+        self._max_speed_inited = True
