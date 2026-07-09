@@ -31,7 +31,7 @@
 // REGISTERS ADDRESS MAP
 #define VER_MAJOR_REG           0x00
 #define VER_MINOR_REG           0x01
-#define SCRATCH_REG             0x04
+#define BMC_RESET_REG           0x04
 #define OSFP_EFUSE_REG0         0x10
 #define SYS_LED_REG0            0x80
 #define SYS_LED_REG1            0x81
@@ -42,6 +42,7 @@ struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
     int osfp_efuse;
+    int bmc_reset;
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -82,32 +83,10 @@ static ssize_t show_ver(struct device *dev, struct device_attribute *devattr, ch
     return sprintf(buf, "%02x.%02x\n", reg_major, reg_minor);
 }
 
-static ssize_t show_scratch(struct device *dev, struct device_attribute *devattr, char *buf)
+static ssize_t show_bmc_reset(struct device *dev, struct device_attribute *devattr, char *buf)
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    u8 val = 0;
-
-    val = cpld_i2c_read(data, SCRATCH_REG);
-
-    return sprintf(buf, "0x%02x\n", val);
-}
-
-static ssize_t set_scratch(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    u8 usr_val = 0;
-
-    int ret = kstrtou8(buf, 16, &usr_val);
-    if (ret != 0) {
-        return ret;
-    }
-    if (usr_val > 0xFF) {
-        return -EINVAL;
-    }
-
-    cpld_i2c_write(data, SCRATCH_REG, usr_val);
-
-    return count;
+    return sprintf(buf, "%02x\n", data->bmc_reset);
 }
 
 static ssize_t show_led0(struct device *dev, struct device_attribute *devattr, char *buf)
@@ -220,7 +199,7 @@ static ssize_t set_osfp_efuse(struct device *dev, struct device_attribute *devat
 
 // sysfs attributes
 static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_ver, NULL, 0);
-static SENSOR_DEVICE_ATTR(scratch, S_IRUGO | S_IWUSR, show_scratch, set_scratch, 0);
+static SENSOR_DEVICE_ATTR(bmc_reset, S_IRUGO, show_bmc_reset, NULL, 0);
 
 static SENSOR_DEVICE_ATTR(led_sys, S_IRUGO | S_IWUSR, show_led0, set_led0, 0);
 static SENSOR_DEVICE_ATTR(led_psu, S_IRUGO, show_led0, NULL, 4);
@@ -231,7 +210,7 @@ static SENSOR_DEVICE_ATTR(osfp_efuse, S_IRUGO | S_IWUSR, show_osfp_efuse, set_os
 
 static struct attribute *mb_pld_attributes[] = {
     &sensor_dev_attr_version.dev_attr.attr,
-    &sensor_dev_attr_scratch.dev_attr.attr,
+    &sensor_dev_attr_bmc_reset.dev_attr.attr,
 
     &sensor_dev_attr_led_sys.dev_attr.attr,
     &sensor_dev_attr_led_psu.dev_attr.attr,
@@ -280,6 +259,9 @@ static int mb_pld_probe(struct i2c_client *client)
     int i;
     for (i=0;i<8;i++) cpld_i2c_write(data, OSFP_EFUSE_REG0+i, 0xFF);
     data->osfp_efuse = 1;
+
+    data->bmc_reset = cpld_i2c_read(data, BMC_RESET_REG);
+    cpld_i2c_write(data, BMC_RESET_REG, 0x0);
 
     return 0;
 

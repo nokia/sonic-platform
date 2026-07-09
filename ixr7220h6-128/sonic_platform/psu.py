@@ -91,7 +91,7 @@ class Psu(PsuBase):
             string: Part number of PSU
         """
         if self.get_presence():
-            return read_sysfs_file(self.eeprom_dir+"product_name")
+            return read_sysfs_file(self.eeprom_dir+"part_number")
 
         return 'N/A'
 
@@ -103,7 +103,7 @@ class Psu(PsuBase):
             string: Serial number of PSU
         """
         if self.get_presence():
-            return read_sysfs_file(self.eeprom_dir+"serial_number")
+            return read_sysfs_file(self.eeprom_dir+"customer_sn")
 
         return 'N/A'
 
@@ -266,10 +266,13 @@ class Psu(PsuBase):
             A string, one of the predefined STATUS_LED_COLOR_* strings.
         """
         result = read_sysfs_file(LED_REG_DIR+"led_psu")
-        if result == '1':
-            return 'green'
-        else:
-            return 'amber'
+        val = int(result, 16)
+        if val == 0x1:
+            return self.psu_led_color[1]
+        elif val == 0x2 or val == 0x0:
+            return self.psu_led_color[3]
+
+        return 'N/A'
 
     def set_status_master_led(self, _color):
         """
