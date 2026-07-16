@@ -15,7 +15,7 @@ except ImportError as e:
 
 sonic_logger = logger.Logger('thermal')
 
-THERMAL_NUM = 20
+THERMAL_NUM = 21
 
 class Thermal(ThermalBase):
     """Nokia platform-specific Thermal class"""
@@ -23,24 +23,24 @@ class Thermal(ThermalBase):
     HWMON_DIR = "/sys/bus/i2c/devices/{}/hwmon/hwmon*/"
     I2C_DEV_LIST = ["144-0048", "155-004b", "155-004c", "155-004d",
                     "155-0049", "155-0048", "155-004a", "175-0048", "178-0048",
-                    "181-0048", "184-0048", "168-004d","169-004e", "162-004d",
-                    "163-004e", "0-0021", "0-0021"]
+                    "181-0048", "184-0048", "162-004d","163-004e", "168-004d",
+                    "169-004e", "0-0021", "0-0021", "0-0021"]
     THERMAL_NAME = ["Carrier Board", "MB Top U34", "MB Top U178", "MB Bottom U196",
                     "MB Bottom U183", "MB Top U3", "MB Top U15", "LDB Left", "LDB Right",
                     "UDB Left", "UDB Right", "Top FCM 1", "Top FCM 2", "Bottom FCM 1",
-                    "Bottom FCM 2",  "CPU", "DDR", "Max Port Temp.",  "SSD",
+                    "Bottom FCM 2",  "CPU", "DDR1", "DDR2", "Max Port Temp.", "SSD",
                     "ASIC TH6"]
 
-    THRESHOLD = [62.0, 75.0, 75.0, 75.0, 
-                  75.0, 75.0, 75.0, 60.0, 60.0, 
-                  60.0, 60.0, 60.0, 60.0, 62.0, 
-                  62.0, 95.0, 70.0, 75.0, 70.0, 
-                  95.0]
-    CRITICAL_THRESHOLD = [70.0, 85.0, 85.0, 85.0, 
-                           85.0, 85.0, 85.0, 70.0, 70.0, 
-                           70.0, 70.0, 70.0, 70.0, 72.0, 
-                           72.0, 99.0, 80.0, 77.0, 80.0, 
-                           100.0]
+    THRESHOLD = [55.0, 75.0, 60.0, 70.0, 
+                 52.0, 60.0, 60.0, 55.0, 55.0, 
+                 55.0, 55.0, 60.0, 60.0, 55.0, 
+                 52.0, 80.0, 51.0, 51.0, 65.0, 50.0, 
+                 111.0]
+    CRITICAL_THRESHOLD = [65.0, 85.0, 85.0, 80.0, 
+                          65.0, 70.0, 70.0, 65.0, 65.0, 
+                          65.0, 65.0, 70.0, 70.0, 65.0, 
+                          65.0, 99.0, 70.0, 70.0, 77.0, 65.0, 
+                          115.0]
 
     def __init__(self, thermal_index, sfps):
         ThermalBase.__init__(self)
@@ -63,8 +63,10 @@ class Thermal(ThermalBase):
         elif self.index == THERMAL_NUM - 3:
             self.thermal_temperature_file = "/sys/bus/i2c/devices/" + self.I2C_DEV_LIST[self.index - 1] + "/mem1_temperature"
         elif self.index == THERMAL_NUM - 4:
+            self.thermal_temperature_file = "/sys/bus/i2c/devices/" + self.I2C_DEV_LIST[self.index - 1] + "/mem0_temperature"
+        elif self.index == THERMAL_NUM - 5:
             self.thermal_temperature_file = "/sys/bus/i2c/devices/" + self.I2C_DEV_LIST[self.index - 1] + "/cpu_temperature"
-        elif self.index < THERMAL_NUM - 4:
+        elif self.index < THERMAL_NUM - 5:
             self.device_path = glob.glob(self.HWMON_DIR.format(self.I2C_DEV_LIST[self.index - 1]))
             if len(self.device_path) > 0:
                 self.thermal_temperature_file = self.device_path[0] + "temp1_input"

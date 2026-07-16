@@ -32,6 +32,7 @@
 #define HW_BOARD_VER_REG                 0x00
 #define VER_MAJOR_REG                    0x01
 #define VER_MINOR_REG                    0x02
+#define BMC_RESET_REG                    0x04
 #define PSU_PRESENT_REG                  0x07
 #define SSD_PRESENT_REG                  0x08
 #define MUX_SEL_REG                      0x0F
@@ -45,6 +46,7 @@ struct cpld_data {
     struct i2c_client *client;
     struct mutex  update_lock;
     int reset_cause;
+    int bmc_reset;
 };
 
 static int cpld_i2c_read(struct cpld_data *data, u8 reg)
@@ -175,9 +177,16 @@ static ssize_t set_console_wdt(struct device *dev, struct device_attribute *deva
     return count;
 }
 
+static ssize_t show_bmc_reset(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    return sprintf(buf, "%02X\n", data->bmc_reset);
+}
+
 // sysfs attributes
 static SENSOR_DEVICE_ATTR(hw_board_version, S_IRUGO, show_hw_board_ver, NULL, 0);
 static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_ver, NULL, 0);
+static SENSOR_DEVICE_ATTR(bmc_reset, S_IRUGO, show_bmc_reset, NULL, 0);
 static SENSOR_DEVICE_ATTR(psu1_ok, S_IRUGO, show_psu_ok, NULL, 4);
 static SENSOR_DEVICE_ATTR(psu2_ok, S_IRUGO, show_psu_ok, NULL, 5);
 static SENSOR_DEVICE_ATTR(psu3_ok, S_IRUGO, show_psu_ok, NULL, 6);
@@ -195,6 +204,7 @@ static SENSOR_DEVICE_ATTR(console_wdt, S_IRUGO | S_IWUSR, show_console_wdt, set_
 static struct attribute *cb_pld_attributes[] = {
     &sensor_dev_attr_hw_board_version.dev_attr.attr,
     &sensor_dev_attr_version.dev_attr.attr,
+    &sensor_dev_attr_bmc_reset.dev_attr.attr,
     &sensor_dev_attr_psu1_ok.dev_attr.attr,
     &sensor_dev_attr_psu2_ok.dev_attr.attr,
     &sensor_dev_attr_psu3_ok.dev_attr.attr,
@@ -246,7 +256,9 @@ static int cb_pld_probe(struct i2c_client *client)
     }
 
     data->reset_cause = cpld_i2c_read(data, RESET_REASON_REG);
+    data->bmc_reset = cpld_i2c_read(data, BMC_RESET_REG);
     cpld_i2c_write(data, RESET_REASON_REG, 0xFF);
+    cpld_i2c_write(data, BMC_RESET_REG, 0x0);
 
     return 0;
 

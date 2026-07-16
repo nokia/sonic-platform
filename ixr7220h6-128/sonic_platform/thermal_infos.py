@@ -1,11 +1,11 @@
 try:
     from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
     from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
-    from sonic_py_common.logger import Logger
+    from sonic_py_common import logger
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-logger = Logger()
+sonic_logger = logger.Logger('thermal_infos')
 
 @thermal_json_object('fan_info')
 class FanInfo(ThermalPolicyInfoBase):
@@ -19,6 +19,9 @@ class FanInfo(ThermalPolicyInfoBase):
         self._absence_fans = set()
         self._presence_fans = set()
         self._status_changed = False
+        self._was_any_absent = False
+        self._boost_fan_ctl = False
+        self._skip_fan_ctl = False
 
     def collect(self, chassis):
         """
@@ -27,17 +30,27 @@ class FanInfo(ThermalPolicyInfoBase):
         :return:
         """
         self._status_changed = False
-        for fan in chassis.get_all_fans():
-            if fan.get_presence() and fan not in self._presence_fans:
-                self._presence_fans.add(fan)
-                self._status_changed = True
-                if fan in self._absence_fans:
-                    self._absence_fans.remove(fan)
-            elif not fan.get_presence() and fan not in self._absence_fans:
-                self._absence_fans.add(fan)
-                self._status_changed = True
-                if fan in self._presence_fans:
-                    self._presence_fans.remove(fan)
+        for fandrawer in chassis.get_all_fan_drawers():
+            drawer_present = fandrawer.get_presence()
+            for fan in fandrawer.get_all_fans():
+                if drawer_present and fan not in self._presence_fans:
+                    self._presence_fans.add(fan)
+                    self._status_changed = True
+                    if fan in self._absence_fans:
+                        self._absence_fans.remove(fan)
+                elif not drawer_present and fan not in self._absence_fans:
+                    self._absence_fans.add(fan)
+                    self._status_changed = True
+                    if fan in self._presence_fans:
+                        self._presence_fans.remove(fan)
+
+        currently_any_absent = bool(self._absence_fans)
+        if self._was_any_absent and not currently_any_absent:
+            self._boost_fan_ctl = True
+            sonic_logger.log_warning(f"!Warning: detected last fan drawer inserted.")
+        else:
+            self._boost_fan_ctl = False
+        self._was_any_absent = currently_any_absent
 
     def get_absence_fans(self):
         """
@@ -60,6 +73,15 @@ class FanInfo(ThermalPolicyInfoBase):
         """
         return self._status_changed
 
+    def is_boost_fan_ctl(self):
+        return self._boost_fan_ctl
+
+    def set_skip_fan_ctl(self, skip_fan_ctl):
+        self._skip_fan_ctl = skip_fan_ctl 
+
+    def is_skip_fan_ctl(self):
+        return self._skip_fan_ctl
+
 @thermal_json_object('thermal_info')
 class ThermalInfo(ThermalPolicyInfoBase):
     """
@@ -72,13 +94,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._old_threshold_level = -1
         self._current_threshold_level = 0
         self._num_fan_levels = 3
-        self._level_up_threshold = [[44, 54, 51, 52, 45, 53, 50, 44, 43, 45, 44, 43, 43, 47, 47, 83, 56, 58, 47, 73],
-                                    [50, 60, 57, 58, 51, 59, 56, 51, 50, 52, 51, 50, 50, 53, 53, 88, 61, 68, 51, 86],
-                                    [55, 65, 62, 63, 56, 64, 61, 56, 55, 57, 56, 55, 55, 57, 57, 93, 66, 73, 55, 91]]
+        self._level_up_threshold = [[27, 55, 38, 50, 27, 36, 40, 29, 29, 28, 28, 35, 35, 24, 24, 57, 25, 26, 45, 24, 83],
+                                    [39, 63, 48, 58, 38, 45, 49, 40, 40, 40, 39, 45, 45, 37, 37, 65, 37, 37, 58, 36, 101],
+                                    [49, 71, 56, 65, 47, 54, 56, 49, 49, 49, 48, 54, 55, 48, 47, 71, 46, 46, 60, 45, 105]]
 
-        self._level_down_threshold = [[31, 44, 41, 42, 35, 43, 40, 34, 33, 35, 34, 32, 32, 35, 35, 70, 42, 50, 33, 70],
-                                      [39, 52, 49, 50, 43, 51, 48, 42, 41, 43, 42, 41, 41, 45, 45, 78, 48, 60, 40, 75],
-                                      [48, 58, 55, 56, 49, 57, 54, 49, 48, 50, 49, 48, 48, 51, 51, 83, 54, 69, 47, 80]]
+        self._level_down_threshold = [[19, 40, 26, 35, 18, 24, 27, 20, 20, 19, 19, 24, 25, 17, 17, 47, 17, 17, 39, 16, 69],
+                                      [33, 53, 40, 47, 32, 37, 40, 33, 33, 33, 33, 38, 39, 32, 32, 58, 30, 31, 50, 29, 83],
+                                      [38, 55, 43, 49, 35, 41, 43, 38, 38, 38, 37, 46, 46, 40, 40, 61, 35, 35, 54, 34, 86]]
 
     def collect(self, chassis):
         """
@@ -96,7 +118,17 @@ class ThermalInfo(ThermalPolicyInfoBase):
         # Calculate average temp within the device
         num_of_thermals = chassis.get_num_thermals()
         for index in range(num_of_thermals):
-            self._temps.insert(index, chassis.get_thermal(index).get_temperature())
+            temp_obj = chassis.get_thermal(index)
+            temp_current = temp_obj.get_temperature()
+            self._temps.insert(index, temp_current)
+            temp_threshold = temp_obj.get_high_threshold()
+            temp_crit_threshold = temp_obj.get_high_critical_threshold()
+
+            if temp_crit_threshold != 'N/A' and temp_current >= temp_crit_threshold:
+                self._over_high_critical_threshold = True
+                sonic_logger.log_warning(f"!!!Alarm: {temp_obj.get_name()} temperature is {temp_current}C!!!")
+            elif temp_threshold != 'N/A' and temp_current >= temp_threshold:
+                sonic_logger.log_warning(f"!Warning: {temp_obj.get_name()} temperature is {temp_current}C!")
 
         # Find current required threshold level
         max_level =0

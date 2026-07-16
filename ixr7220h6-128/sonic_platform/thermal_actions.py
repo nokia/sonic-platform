@@ -25,7 +25,7 @@ class SetFanSpeedAction(ThermalPolicyActionBase):
         Constructor of SetFanSpeedAction
         """
         self.default_speed = 46
-        self.threshold1_speed = 60
+        self.threshold1_speed = 66
         self.threshold2_speed = 80
         self.hightemp_speed = 100
         self.speed = self.default_speed
@@ -137,19 +137,30 @@ class ThermalRecoverAction(SetFanSpeedAction):
         :param thermal_info_dict: A dictionary stores all thermal information.
         :return:
         """
-        from .thermal_infos import ThermalInfo
+        from .thermal_infos import ThermalInfo, FanInfo
+        fan_info_obj = thermal_info_dict.get(FanInfo.INFO_NAME)
+        if isinstance(fan_info_obj, FanInfo) and fan_info_obj.is_boost_fan_ctl():
+            ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, 60)
+            fan_info_obj.set_skip_fan_ctl(True)
+            sonic_logger.log_warning(f"Last fan drawer has been inserted, executing boost fan control.")
+            return
+
         if ThermalInfo.INFO_NAME in thermal_info_dict and \
            isinstance(thermal_info_dict[ThermalInfo.INFO_NAME], ThermalInfo):
-
-            thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
-            if thermal_info_obj.is_set_fan_high_temp_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
-            elif thermal_info_obj.is_set_fan_threshold_two_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold2_speed)
-            elif thermal_info_obj.is_set_fan_threshold_one_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold1_speed)
-            elif thermal_info_obj.is_set_fan_default_speed():
-                ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
+            if isinstance(fan_info_obj, FanInfo) and not fan_info_obj.is_skip_fan_ctl():                
+                thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
+                if thermal_info_obj.is_set_fan_high_temp_speed():
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
+                elif thermal_info_obj.is_set_fan_threshold_two_speed():
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold2_speed)
+                elif thermal_info_obj.is_set_fan_threshold_one_speed():
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold1_speed)
+                elif thermal_info_obj.is_set_fan_default_speed():
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.default_speed)
+            else:
+                fan_info_obj.set_skip_fan_ctl(False)
+                thermal_info_dict[ThermalInfo.INFO_NAME]._old_threshold_level = -1
+                sonic_logger.log_warning(f"Skip fan speed control for boost fan control.")
 
 @thermal_json_object('switch.shutdown')
 class SwitchPolicyAction(ThermalPolicyActionBase):

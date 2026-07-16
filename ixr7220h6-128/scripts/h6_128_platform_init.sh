@@ -41,6 +41,8 @@ sleep 1
 i2cset -y 1 0x77 0x0 0x03
 sleep 2
 i2cset -y 1 0x71 0xc 0xff
+i2cset -y 1 0x71 0x82 0x1
+i2cset -y 1 0x71 0x80 0x7f
 sleep 1
 
 echo cb_pld 0x60 > /sys/bus/i2c/devices/i2c-1/new_device
@@ -50,7 +52,7 @@ sleep 1
 echo mux_mb 0x72 > /sys/bus/i2c/devices/i2c-135/new_device
 
 echo mb_pld 0x71 > /sys/bus/i2c/devices/i2c-135/new_device
-
+i2cset -y 149 0x74 0x5 0x1f
 echo mux_fcm 0x75 > /sys/bus/i2c/devices/i2c-145/new_device
 echo mux_fcm 0x76 > /sys/bus/i2c/devices/i2c-146/new_device
 sleep 1
@@ -136,7 +138,6 @@ i2cset -y 132 0x61 0x11 0x80
 i2cset -y 132 0x61 0x18 0x80
 i2cset -y 132 0x61 0x23 0x00
 i2cset -y 132 0x61 0x2d 0x00
-ip link set eth1 up
 
 for ch in {1..8}; do
     echo 60 > /sys/bus/i2c/devices/145-0032/hwmon/hwmon*/fan${ch}_pwm

@@ -263,7 +263,7 @@ static u32 reg_val_to_speed_rpm(u8 reg_val)
 
 static u8 reg_val_to_is_present(u8 reg_val, enum fan_id id)
 {
-	return !((reg_val >> id) & 0x1);
+	return !((reg_val >> (id+4)) & 0x1);
 }
 
 static u8 reg_val_to_color(u8 reg_val, enum fan_id id)
