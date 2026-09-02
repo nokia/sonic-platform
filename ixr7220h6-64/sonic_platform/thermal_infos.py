@@ -1,11 +1,14 @@
 try:
+    import time
     from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
     from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
     from sonic_py_common.logger import Logger
 except ImportError as e:
     raise ImportError(str(e) + ' - required module not found') from e
 
-logger = Logger()
+sonic_logger = Logger('fan_info')
+sonic_logger.set_min_log_priority_info()
+LAST_FAN_SOFT_START_DELAY_TIME = 18
 
 @thermal_json_object('fan_info')
 class FanInfo(ThermalPolicyInfoBase):
@@ -19,6 +22,9 @@ class FanInfo(ThermalPolicyInfoBase):
         self._absence_fans = set()
         self._presence_fans = set()
         self._status_changed = False
+        self.pre_presence_fan_num = 0
+        self.last_fan_timestamp = 0
+        self.last_fan_slow_start_enable = False
 
     def collect(self, chassis):
         """
@@ -27,7 +33,8 @@ class FanInfo(ThermalPolicyInfoBase):
         :return:
         """
         self._status_changed = False
-        for fan in chassis.get_all_fans():
+        fans = chassis.get_all_fans()
+        for fan in fans:
             if fan.get_presence() and fan not in self._presence_fans:
                 self._presence_fans.add(fan)
                 self._status_changed = True
@@ -38,6 +45,28 @@ class FanInfo(ThermalPolicyInfoBase):
                 self._status_changed = True
                 if fan in self._presence_fans:
                     self._presence_fans.remove(fan)
+
+        fan_total_num = len(fans)
+        fan_presence_num = len(self._presence_fans)
+        if fan_presence_num == fan_total_num and (self.pre_presence_fan_num == fan_total_num - 2 or self.pre_presence_fan_num == fan_total_num - 4):
+            self.last_fan_timestamp = time.time()
+            sonic_logger.log_info(f"The last fan drawer(s) inserted.")
+
+        self.pre_presence_fan_num = fan_presence_num
+
+        current_time = time.time()
+
+        if current_time - self.last_fan_timestamp >= LAST_FAN_SOFT_START_DELAY_TIME and self.last_fan_timestamp != 0:
+            self.last_fan_timestamp = 0
+            sonic_logger.log_warning(f"The last_fan_timestamp is cleared to 0 after {LAST_FAN_SOFT_START_DELAY_TIME} seconds.")
+        self.last_fan_slow_start_enable = (self.last_fan_timestamp > 0)
+
+        drawers = chassis.get_all_fan_drawers()
+        if len(drawers) > 1:
+            if drawers[0].get_presence():
+                drawers[0].feed_fan_watchdog()
+            if drawers[1].get_presence():
+                drawers[1].feed_fan_watchdog()
 
     def get_absence_fans(self):
         """

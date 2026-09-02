@@ -143,4 +143,10 @@ if [ "$dev" == "68" ]; then
     echo pcf8523 0x68 > /sys/bus/i2c/devices/i2c-1/new_device
 fi
 
+# RTC
+if decode-syseeprom | grep -q "Device Version       0x26   1 1"; then
+   modprobe rtc-pcf85363
+   echo pcf85363 0x51 >  /sys/bus/i2c/devices/i2c-1/new_device
+fi
+
 exit 0

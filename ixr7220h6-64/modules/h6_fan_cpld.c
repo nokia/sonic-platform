@@ -51,6 +51,10 @@ static ssize_t reg_read(struct device *dev, struct device_attribute *da,
 			char *buf);
 static ssize_t reg_write(struct device *dev, struct device_attribute *da,
 			 const char *buf, size_t count);
+static ssize_t show_fan_ctrl_mode(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_fan_ctrl_mode(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
+static ssize_t show_fan_watchdog(struct device *dev, struct device_attribute *da, char *buf);
+static ssize_t set_fan_watchdog(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
 /* fan related data, the index should match sysfs_fan_attributes
  */
@@ -58,7 +62,10 @@ static const u8 fan_reg[] = {
 	0x00,			/* fan pcb information */
 	0x01,			/* fan cpld major version */
 	0x02,			/* fan cpld minor version */
+	0x06,			/* fan PWM debug mode*/
 	0x08,			/* fan 0-3 present status */
+	0x0a,			/* fan watchdog 1 */
+	0x0b,			/* fan watchdog 2 */
 	0x0e,			/* fan 0-3 led */
 	0x10,			/* front fan 0 pwm */
 	0x11,			/* rear fan 0 pwm */
@@ -100,7 +107,10 @@ enum sysfs_fan_attributes {
 	FAN_PCB_REG,
 	FAN_MAJOR_VERSION_REG,
 	FAN_MINOR_VERSION_REG,
+	FAN_PWM_DEBUG_MODE,
 	FAN_PRESENT_REG,
+	FAN_WATCHDOG_1,
+	FAN_WATCHDOG_2,
 	FAN_LED_REG,
 	FAN1_FRONT_PWM_REG,
 	FAN1_REAR_PWM_REG,
@@ -190,6 +200,10 @@ enum fan_led_light_mode {
 
 #define DECLARE_FAN_PCB_VERSION_ATTR()	&sensor_dev_attr_pcb_version.dev_attr.attr
 
+static SENSOR_DEVICE_ATTR(fan_ctrl_mode, S_IRUGO | S_IWUSR, show_fan_ctrl_mode, set_fan_ctrl_mode, 0);
+static SENSOR_DEVICE_ATTR(fan_wd1, S_IRUGO | S_IWUSR, show_fan_watchdog, set_fan_watchdog, 0);
+static SENSOR_DEVICE_ATTR(fan_wd2, S_IRUGO | S_IWUSR, show_fan_watchdog, set_fan_watchdog, 1);
+
 #define DECLARE_FAN_ACCESS_SENSOR_DEV_ATTR() \
 	static SENSOR_DEVICE_ATTR(access, S_IWUSR | S_IRUGO, reg_read, reg_write, FAN_ACCESS)
 
@@ -212,12 +226,18 @@ static struct attribute *h6_fan_attributes[] = {
 	DECLARE_FAN_FW_VERSION_ATTR(),
 	DECLARE_FAN_PCB_VERSION_ATTR(),
 	DECLARE_FAN_ACCESS_ATTR(),
+	&sensor_dev_attr_fan_ctrl_mode.dev_attr.attr,
+	&sensor_dev_attr_fan_wd1.dev_attr.attr,
+	&sensor_dev_attr_fan_wd2.dev_attr.attr,
 	NULL
 };
 
-#define FAN_DUTY_CYCLE_REG_MASK		 0xF
-#define FAN_MAX_DUTY_CYCLE			  100
-#define FAN_REG_VAL_TO_SPEED_RPM_STEP   150
+#define FAN_DUTY_CYCLE_REG_MASK           0xF
+#define FAN_MAX_DUTY_CYCLE                100
+#define FAN_REG_VAL_TO_SPEED_RPM_STEP     150
+#define FAN_SWCTL_MASK                    0x1
+#define FAN_WDG_MASK                      0x1
+
 
 static int h6_fan_read_value(struct i2c_client *client, u8 reg)
 {
@@ -526,6 +546,66 @@ static struct h6_fan_data *h6_fan_update_device(struct device
 
 	mutex_unlock(&data->update_lock);
 	return data;
+}
+
+static ssize_t show_fan_ctrl_mode(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct h6_fan_data *data = dev_get_drvdata(dev);
+    u8 val = 0;
+
+    val = h6_fan_read_value(data->client, fan_reg[FAN_PWM_DEBUG_MODE]);
+
+    return sprintf(buf, "%d\n", (val & FAN_SWCTL_MASK) ? 1:0);
+}
+
+static ssize_t set_fan_ctrl_mode(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct h6_fan_data *data = dev_get_drvdata(dev);
+    u8 usr_val = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret;
+    }
+    if (usr_val > 1) {
+        return -EINVAL;
+    }
+
+    h6_fan_write_value(data->client, fan_reg[FAN_PWM_DEBUG_MODE], usr_val & FAN_SWCTL_MASK);
+
+    return count;
+}
+
+static ssize_t show_fan_watchdog(struct device *dev, struct device_attribute *da, char *buf)
+{
+    struct h6_fan_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(da);
+    u8 val = 0;
+
+    val = h6_fan_read_value(data->client, fan_reg[FAN_WATCHDOG_1 + sda->index]);
+
+    return sprintf(buf, "%d\n", (val & FAN_WDG_MASK) ? 1:0);
+}
+
+static ssize_t set_fan_watchdog(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    struct h6_fan_data *data = dev_get_drvdata(dev);
+    struct sensor_device_attribute *sda = to_sensor_dev_attr(da);
+
+    u8 usr_val = 0;
+
+    int ret = kstrtou8(buf, 10, &usr_val);
+    if (ret != 0) {
+        return ret;
+    }
+
+    if (usr_val > 1) {
+        return -EINVAL;
+    }
+
+    h6_fan_write_value(data->client, fan_reg[FAN_WATCHDOG_1 + sda->index], usr_val & FAN_WDG_MASK);
+
+    return count;
 }
 
 static int h6_fan_probe(struct i2c_client *client)

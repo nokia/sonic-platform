@@ -125,6 +125,17 @@ else
     echo "SYSEEPROM file not found"
 fi
 
+echo 1 > /sys/bus/i2c/devices/79-0033/hwmon/hwmon*/fan_ctrl_mode
+echo 1 > /sys/bus/i2c/devices/80-0033/hwmon/hwmon*/fan_ctrl_mode
+
+echo 1 > /sys/bus/i2c/devices/79-0033/hwmon/hwmon*/fan_wd1
+echo 1 > /sys/bus/i2c/devices/80-0033/hwmon/hwmon*/fan_wd1
+
+echo 1 > /sys/bus/i2c/devices/79-0033/hwmon/hwmon5/fan_wd2
+echo 0 > /sys/bus/i2c/devices/79-0033/hwmon/hwmon5/fan_wd2
+echo 1 > /sys/bus/i2c/devices/80-0033/hwmon/hwmon5/fan_wd2
+echo 0 > /sys/bus/i2c/devices/80-0033/hwmon/hwmon5/fan_wd2
+
 h6-64_profile
 
 exit

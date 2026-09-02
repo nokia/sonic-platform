@@ -90,7 +90,7 @@ class Psu(PsuBase):
             string: Part number of PSU
         """
         if self.get_presence():
-            return read_sysfs_file(self.eeprom_dir+"product_name")
+            return read_sysfs_file(self.eeprom_dir+"part_number")
 
         return 'N/A'
 
@@ -102,7 +102,7 @@ class Psu(PsuBase):
             string: Serial number of PSU
         """
         if self.get_presence():
-            return read_sysfs_file(self.eeprom_dir+"serial_number")
+            return read_sysfs_file(self.eeprom_dir+"customer_sn")
 
         return 'N/A'
 

@@ -148,4 +148,10 @@ do
     sleep 0.1
 done
 
+# RTC
+if decode-syseeprom | grep -q "Device Version       0x26   1 1"; then
+   modprobe rtc-pcf85363
+   echo pcf85363 0x51 >  /sys/bus/i2c/devices/i2c-0/new_device
+fi
+
 exit 0

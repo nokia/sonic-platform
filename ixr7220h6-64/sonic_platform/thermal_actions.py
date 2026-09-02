@@ -135,11 +135,19 @@ class ThermalRecoverAction(SetFanSpeedAction):
         :param thermal_info_dict: A dictionary stores all thermal information.
         :return:
         """
-        from .thermal_infos import ThermalInfo
+        from .thermal_infos import ThermalInfo,FanInfo
         if ThermalInfo.INFO_NAME in thermal_info_dict and \
            isinstance(thermal_info_dict[ThermalInfo.INFO_NAME], ThermalInfo):
 
             thermal_info_obj = thermal_info_dict[ThermalInfo.INFO_NAME]
+
+            if FanInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[FanInfo.INFO_NAME], FanInfo):
+                fan_info_obj = thermal_info_dict[FanInfo.INFO_NAME]
+                if fan_info_obj.last_fan_slow_start_enable:
+                    ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.threshold1_speed)
+                    sonic_logger.log_warning(f"Fan slow start for the last fan insertion speed {self.threshold1_speed}")
+                    return
+
             if thermal_info_obj.is_set_fan_high_temp_speed():
                 ThermalRecoverAction.set_all_fan_speed(thermal_info_dict, self.hightemp_speed)
             elif thermal_info_obj.is_set_fan_threshold_two_speed():

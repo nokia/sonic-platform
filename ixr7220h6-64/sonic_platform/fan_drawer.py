@@ -40,6 +40,8 @@ class NokiaFanDrawer(FanDrawerBase):
         self.eeprom_dir = f"/sys/bus/i2c/devices/{EEPROM_ADDR[index]}-0050"
         self.new_eeprom_cmd = f"echo 24c64 0x50 > /sys/bus/i2c/devices/i2c-{EEPROM_ADDR[index]}/new_device"
         self.del_eeprom_cmd = f"echo 0x50 > /sys/bus/i2c/devices/i2c-{EEPROM_ADDR[index]}/delete_device"
+        self.watchdog_file = hwmon_path[0] + "fan_wd2"
+        self.feed_watchdog_cmd = f"echo 1 > {self.watchdog_file};echo 0 > {self.watchdog_file}"
 
     def get_index(self):
         """
@@ -190,6 +192,10 @@ class NokiaFanDrawer(FanDrawerBase):
             integer: The 1-based relative physical position in parent device
         """
         return self._index
+
+    def feed_fan_watchdog(self):
+        if os.path.exists(self.watchdog_file):
+            os.system(self.feed_watchdog_cmd)
 
 class RealDrawer(NokiaFanDrawer):
     """
