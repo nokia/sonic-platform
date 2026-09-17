@@ -323,7 +323,7 @@ static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
 
 	switch (attr->index) {
 	case FAN1_PWM ... FAN8_PWM:
-		reg_val = (value * 100) / 666;
+		reg_val = (value * 100 + 333) / 666;
 		idx = (attr->index - FAN1_PWM);
 
 		mutex_lock(&data->update_lock);
