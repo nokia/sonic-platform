@@ -28,15 +28,15 @@ class Thermal(ThermalBase):
                     "MB MAC", "MB Center 2", "MB Right", "MB Front Right", "FCM Upper",
                     "FCM Lower", "CPU", "DDR", "Max Port Temp.","SSD",
                     "ASIC TH6"]
-    THRESHHOLD = [65.0, 65.0, 60.0, 85.0, 99.0,
-                  99.0, 110.0, 85.0, 72.0, 67.0,
-                  65.0, 94.0, 75.0, 75.0, 75.0,
-                  95.0]
+    THRESHHOLD = [75.0, 74.0, 52.0, 87.0, 115.0,
+                  115.0, 118.0, 94.0, 71.0, 68.0,
+                  61.0, 97.0, 83.0, 75.0, 75.0,
+                  101.0]
 
-    CRITICAL_THRESHHOLD = [70.0, 70.0, 65.0, 90.0, 100.0,
-                           100.0, 115.0, 90.0, 77.0, 72.0,
-                           70.0, 99.0, 80.0, 77.0, 80.0,
-                           100.0]
+    CRITICAL_THRESHHOLD = [80.0, 80.0, 65.0, 90.0, 120.0,
+                           120.0, 125.0, 100.0, 77.0, 72.0,
+                           70.0, 99.0, 85.0, 77.0, 80.0,
+                           103.0]
 
     def __init__(self, thermal_index, sfps):
         ThermalBase.__init__(self)
