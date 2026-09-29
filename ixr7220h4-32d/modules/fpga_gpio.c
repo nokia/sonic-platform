@@ -70,7 +70,6 @@ static void fpga_gpio_set(struct gpio_chip *gc,
 
 int gpiodev_init(struct pci_dev *dev, struct fpga_dev *fpga)
 {
-    char name[20] = "fpga-gpio chip";
     int err;
     fpga->gpio = kzalloc(sizeof(struct fpga_gpio_chip), GFP_KERNEL);
     if (!fpga->gpio)
@@ -78,7 +77,7 @@ int gpiodev_init(struct pci_dev *dev, struct fpga_dev *fpga)
 
     fpga->gpio->bar = ioremap(pci_resource_start(dev, 0), pci_resource_len(dev, 0));
     fpga->gpio->gpio_chip.base = -1;
-    fpga->gpio->gpio_chip.label = name;
+    fpga->gpio->gpio_chip.label = "fpga-gpio chip";
     fpga->gpio->gpio_chip.owner = THIS_MODULE;
     fpga->gpio->gpio_chip.ngpio = 32;
     fpga->gpio->gpio_chip.parent = &dev->dev; //(struct devices) fpga
