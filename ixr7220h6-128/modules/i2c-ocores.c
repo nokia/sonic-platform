@@ -215,8 +215,6 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
     /* error? */
     if (stat & OCI2C_STAT_ARBLOST) {
         i2c->state = STATE_ERROR;
-        /*_WARN("I2C %s arbitration lost", i2c->adap.name);*/
-        dev_warn(i2c->adap.dev.parent, "arbitration lost, stat:%02x", stat);
         oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
         goto out;
     }
@@ -227,8 +225,6 @@ static void ocores_process(struct ocores_i2c *i2c, u8 stat)
 
         if (stat & OCI2C_STAT_NACK) {
             i2c->state = STATE_ERROR;
-            /*DEBUG("I2C %s, no ACK from slave 0x%02x", i2c->adap.name, msg->addr);*/
-            dev_warn(i2c->adap.dev.parent, "no ACK from slave 0x%02x", msg->addr);
             oc_setreg(i2c, OCI2C_CMD, OCI2C_CMD_STOP);
             goto out;
         }
